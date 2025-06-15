@@ -1,0 +1,58 @@
+<div class="position-relative" style="background-image: url(<%= asset_path('home.jpg') %>); background-size: cover; background-position: center; height: 400px;">
+  <div class="position-absolute top-50 start-50 translate-middle bg-primary text-white p-4 p-md-5" style="max-width: 700px; border-radius: 6px;">
+    <h4 class="fw-bold">NHS Project Ambience</h4>
+    <h2 class="fw-bold mb-0">Ecosystem for fine-tuning LLMs<br>with local hospital data</h2>
+  </div>
+</div>
+
+<div class="container mt-4" style="padding: 30px 150px;">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+  <h3 class="mb-0 text-primary d-flex align-items-center">
+    <span class="bg-success rounded-circle d-flex justify-content-center align-items-center me-2" style="width: 28px; height: 28px;">
+      <i class="bi bi-arrow-right-short text-white" style="font-size: 20px;"></i>
+    </span>
+    Clinician
+  </h3>
+
+    <%= form_with url: root_path, method: :get, local: true, class: "d-flex" do |f| %>
+      <%= f.text_field :q, value: params[:q], placeholder: "Search by clinician...", class: "form-control me-2" %>
+      <%= f.button type: "submit", class: "btn btn-outline-primary" do %>
+        <i class="bi bi-search"></i>
+      <% end %>
+    <% end %>
+  </div>
+
+  <div class="accordion" id="clinicianAccordion">
+    <% @clinician_types.each_with_index do |clinician_type, index| %>
+      <div class="accordion-item">
+        <h2 class="accordion-header" id="heading-<%= index %>">
+          <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-<%= index %>" aria-expanded="false" aria-controls="collapse-<%= index %>">
+            <%= clinician_type.name %>
+          </button>
+        </h2>
+
+        <div id="collapse-<%= index %>" class="accordion-collapse collapse" aria-labelledby="heading-<%= index %>" data-bs-parent="#clinicianAccordion">
+          <div class="accordion-body">
+            <% if clinician_type.ai_models.any? %>
+              <% clinician_type.ai_models.each do |model| %>
+                <div class="mb-3 p-3 border rounded">
+                  <h5><%= model.name %></h5>
+                  <% if model.average_rating.present? %>
+                    <p>⭐ <%= model.average_rating %> / 5</p>
+                  <% end %>
+                  <p class="text-muted mb-2"><%= model.description.presence || "No description available." %></p>
+                  <%= link_to "View more", ai_model_path(model), class: "btn btn-primary btn-sm" %>
+                </div>
+              <% end %>
+            <% else %>
+              <p class="text-muted">No AI models available.</p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  <div class="d-flex justify-content-end mt-4">
+    <%= paginate @clinician_types %>
+  </div>
+</div>

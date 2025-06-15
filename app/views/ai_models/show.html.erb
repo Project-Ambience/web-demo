@@ -1,0 +1,72 @@
+<div class="container py-5" style="padding: 30px 150px;">
+
+  <h2 class="mb-3">
+    <%= @ai_model.name %>
+    <% if @ai_model.average_rating.present? %>
+      <small class="h6">⭐ <%= @ai_model.average_rating %> / 5</small>
+    <% end %>
+  </h2>
+
+  <hr>
+
+  <div class="card mb-4 shadow-sm bg-info bg-opacity-10">
+    <div class="card-body">
+      <h5 class="card-title">Model Description</h5>
+      <p class="card-text"><%= @ai_model.description.presence || "No description provided." %></p>
+
+      <h5 class="card-title">Keywords</h5>
+      <% if @ai_model.keywords.present? %>
+        <% @ai_model.keywords.each do |keyword| %>
+          <span class="badge bg-secondary me-1"><%= keyword %></span>
+        <% end %>
+      <% else %>
+        <p class="text-muted">No keywords listed.</p>
+      <% end %>
+    </div>
+  </div>
+
+
+  <div class="card mb-4 shadow-sm bg-info bg-opacity-10">
+    <div class="card-body">
+      <h5 class="card-title">Comments</h5>
+      <% if @ai_model.comments.any? %>
+        <% @ai_model.comments.each do |comment| %>
+          <div class="alert alert-light border"><%= comment.comment %></div>
+        <% end %>
+      <% else %>
+        <p class="text-muted">No comments yet.</p>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="card mb-4 shadow-sm bg-info bg-opacity-10">
+    <div class="card-body">
+      <h5 class="card-title">Add a Comment</h5>
+      <%= form_with(model: [@ai_model, Comment.new], local: true) do |f| %>
+        <div class="mb-3">
+          <%= f.text_area :comment, rows: 4, class: "form-control", placeholder: "Enter your comment..." %>
+        </div>
+        <%= f.submit "Submit", class: "btn btn-primary" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="mb-5">
+    <h5>Rate this AI Model</h5>
+    <div class="d-flex gap-2">
+      <% (1..5).each do |star| %>
+        <%= button_to "⭐ #{star}", ai_model_ratings_path(@ai_model, rating: star),
+              method: :post,
+              class: "btn btn-outline-success btn-sm",
+              form_class: "d-inline" %>
+      <% end %>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <%= button_to "Fine-tune 🛠️", "#", class: "btn btn-outline-secondary" %>
+    <%= button_to "Share 📤", "#", class: "btn btn-outline-secondary" %>
+    <%= button_to "Download ⬇️", "#", class: "btn btn-outline-secondary" %>
+  </div>
+
+</div>
