@@ -3,9 +3,6 @@ require "active_support/core_ext/integer/time"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
 
-  # IMPORTANT: ONLY DO THIS BECAUSE THE APP IS NOT PUBLICLY ACCESSIBLE.
-  config.action_controller.forgery_protection_origin_check = false
-
   # Code is not reloaded between requests.
   config.enable_reloading = false
 
