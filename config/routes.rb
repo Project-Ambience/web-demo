@@ -1,10 +1,12 @@
 Rails.application.routes.draw do
   get "up" => "rails/health#show", as: :rails_health_check
 
-  resources :ai_models, only: [:index, :show] do
-    resources :ratings, only: [:create]
-    resources :comments, only: [:create]
-  end
+  namespace :api do
+    resources :clinician_types, only: [:index]
 
-  root "home#index"
+    resources :ai_models, only: [:show] do
+      resources :comments, only: [:create]
+      resources :ratings, only: [:create]
+    end
+  end
 end
