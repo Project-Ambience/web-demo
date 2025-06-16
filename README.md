@@ -38,8 +38,8 @@ bin/rails s
 
 ```
 docker compose up --build -d
-docker-compose exec web ./bin/rails db:create
-docker-compose exec web ./bin/rails db:migrate
+docker compose exec web ./bin/rails db:create
+docker compose exec web ./bin/rails db:migrate
 ```
 
 The app will available at port 5090
