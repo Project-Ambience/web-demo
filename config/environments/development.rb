@@ -1,7 +1,7 @@
 require "active_support/core_ext/integer/time"
-config.hosts << "128.16.12.219"
 Rails.application.configure do
   # Settings specified here will take precedence over those in config/application.rb.
+  config.hosts << "128.16.12.219"
 
   # Make code changes take effect immediately without server restart.
   config.enable_reloading = true
