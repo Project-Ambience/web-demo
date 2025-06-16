@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: project_ambience_production
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - app-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    ports:
+      - "5090:5090"
+    env_file:
+      - .env
+    environment:
+      RAILS_ENV: production
+      DATABASE_URL: "postgresql://postgres:password@db:5432/project_ambience_production"
+      RAILS_SERVE_STATIC_FILES: true
+    volumes:
+      - ./storage:/rails/storage
+    networks:
+      - app-net
+    restart: unless-stopped
+    command: ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "5090"]
+
+volumes:
+  db-data:
+
+networks:
+  app-net:
