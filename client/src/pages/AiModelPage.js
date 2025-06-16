@@ -1,53 +1,76 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
+import { useGetAiModelByIdQuery } from '../app/apiSlice';
+import Spinner from '../components/common/Spinner';
+import ErrorMessage from '../components/common/ErrorMessage';
+
+const DetailWrapper = styled.div`
+  background-color: #fff;
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+`;
+
+const CommentList = styled.ul`
+  list-style-type: none;
+  padding-left: 0;
+  margin-top: 1rem;
+`;
+
+const CommentItem = styled.li`
+  background-color: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+`;
 
 const AiModelPage = () => {
-  const [model, setModel] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const { id } = useParams(); // Gets the :id from the URL
+  const { id } = useParams();
+  const {
+    data: model,
+    isLoading,
+    isSuccess,
+    isError,
+    error,
+  } = useGetAiModelByIdQuery(id);
 
-  useEffect(() => {
-    const fetchModelDetails = async () => {
-      try {
-        const response = await fetch(`http://localhost:5090/api/ai_models/${id}`);
-        const data = await response.json();
-        setModel(data);
-      } catch (error) {
-        console.error("Failed to fetch model details:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchModelDetails();
-  }, [id]); // Refetch if the ID in the URL changes
+  let content;
 
-  if (isLoading) return <p>Loading model details...</p>;
-  if (!model) return <p>Model not found.</p>;
+  if (isLoading) {
+    content = <Spinner />;
+  } else if (isSuccess) {
+    content = (
+      <DetailWrapper>
+        <h2>{model.name}</h2>
+        <p><strong>Clinician Type:</strong> {model.clinician_type}</p>
+        <p><strong>Average Rating:</strong> {model.average_rating || 'Not yet rated'}</p>
+        <hr />
+        <h3>Description</h3>
+        <p>{model.description}</p>
+        <hr />
+        <h3>Comments</h3>
+        <CommentList>
+          {model.comments.length > 0 ? (
+            model.comments.map(comment => (
+              <CommentItem key={comment.id}>
+                <p>"{comment.comment}"</p>
+                <small>Posted on: {new Date(comment.created_at).toLocaleDateString()}</small>
+              </CommentItem>
+            ))
+          ) : (
+            <p>No comments yet.</p>
+          )}
+        </CommentList>
+      </DetailWrapper>
+    );
+  } else if (isError) {
+    // FIX: Stringify the error object to see its contents
+    content = <ErrorMessage>{JSON.stringify(error)}</ErrorMessage>;
+  }
 
-  return (
-    <div>
-      <h2>{model.name}</h2>
-      <p><strong>Clinician Type:</strong> {model.clinician_type}</p>
-      <p><strong>Average Rating:</strong> {model.average_rating || 'Not yet rated'}</p>
-      <hr />
-      <h3>Description</h3>
-      <p>{model.description}</p>
-      <hr />
-      <h3>Comments</h3>
-      {model.comments.length > 0 ? (
-        <ul>
-          {model.comments.map(comment => (
-            <li key={comment.id}>
-              <p>{comment.comment}</p>
-              <small>Posted on: {new Date(comment.created_at).toLocaleDateString()}</small>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p>No comments yet.</p>
-      )}
-    </div>
-  );
+  return <div>{content}</div>;
 };
 
 export default AiModelPage;

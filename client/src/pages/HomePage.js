@@ -1,45 +1,55 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import styled from 'styled-components';
 import { Link } from 'react-router-dom';
+import { useGetClinicianTypesQuery } from '../app/apiSlice';
+import Spinner from '../components/common/Spinner';
+import ErrorMessage from '../components/common/ErrorMessage';
+
+const Section = styled.section`
+  margin-bottom: 2.5rem;
+`;
+
+const ModelList = styled.ul`
+  list-style-type: none;
+  padding-left: 0;
+`;
+
+const ModelListItem = styled.li`
+  margin-bottom: 0.5rem;
+`;
 
 const HomePage = () => {
-  const [clinicianTypes, setClinicianTypes] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const {
+    data: clinicianTypes,
+    isLoading,
+    isSuccess,
+    isError,
+    error,
+  } = useGetClinicianTypesQuery();
 
-  useEffect(() => {
-    const fetchClinicianTypes = async () => {
-      try {
-        const response = await fetch('http://localhost:5090/api/clinician_types');
-        const data = await response.json();
-        setClinicianTypes(data);
-      } catch (error) {
-        console.error("Failed to fetch data:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchClinicianTypes();
-  }, []);
+  let content;
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading) {
+    content = <Spinner />;
+  } else if (isSuccess) {
+    content = clinicianTypes.map(type => (
+      <Section key={type.id}>
+        <h2>{type.name}</h2>
+        <ModelList>
+          {type.ai_models.map(model => (
+            <ModelListItem key={model.id}>
+              <Link to={`/ai-models/${model.id}`}>{model.name}</Link>
+            </ModelListItem>
+          ))}
+        </ModelList>
+      </Section>
+    ));
+  } else if (isError) {
+    // FIX: Stringify the error object to see its contents
+    content = <ErrorMessage>{JSON.stringify(error)}</ErrorMessage>;
+  }
 
-  return (
-    <div>
-      {clinicianTypes.map(type => (
-        <section key={type.id}>
-          <h2>{type.name}</h2>
-          <ul>
-            {type.ai_models.map(model => (
-              <li key={model.id}>
-                <Link to={`/ai-models/${model.id}`} className="model-link">
-                  {model.name}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
-  );
+  return <div>{content}</div>;
 };
 
 export default HomePage;
