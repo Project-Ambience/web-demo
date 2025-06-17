@@ -1,14 +1,18 @@
 class AiModel < ApplicationRecord
-  has_many :comments, dependent: :destroy
-  has_many :ratings
   belongs_to :clinician_type
-
-  validates :name, presence: true
-  validates :description, presence: true
+  has_many :ratings
+  has_many :comments, -> { order(created_at: :desc) }
 
   def average_rating
-    return nil if ratings.empty?
-  
-    ratings.average(:rating)&.round(1)
+    ratings.average(:rating).to_f.round(1)
+  end
+
+  # Override as_json to add the clinician_type name conditionally
+  def as_json(options = {})
+    super(options).tap do |json|
+      if options[:add_clinician_type_name]
+        json['clinician_type'] = self.clinician_type.name
+      end
+    end
   end
 end
