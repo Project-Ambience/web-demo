@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_12_122418) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_17_193202) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -38,6 +38,23 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_12_122418) do
     t.index ["ai_model_id"], name: "index_comments_on_ai_model_id"
   end
 
+  create_table "conversations", force: :cascade do |t|
+    t.string "title"
+    t.bigint "ai_model_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_conversations_on_ai_model_id"
+  end
+
+  create_table "messages", force: :cascade do |t|
+    t.string "role"
+    t.text "content"
+    t.bigint "conversation_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+  end
+
   create_table "ratings", force: :cascade do |t|
     t.integer "rating"
     t.bigint "ai_model_id", null: false
@@ -48,5 +65,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_12_122418) do
 
   add_foreign_key "ai_models", "clinician_types"
   add_foreign_key "comments", "ai_models"
+  add_foreign_key "conversations", "ai_models"
+  add_foreign_key "messages", "conversations"
   add_foreign_key "ratings", "ai_models"
 end

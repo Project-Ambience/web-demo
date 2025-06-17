@@ -1,7 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
-// Import Redux hooks and the new action
 import { useSelector, useDispatch } from 'react-redux';
 import { specialtySelected } from '../features/ui/uiSlice';
 import { useGetClinicianTypesQuery } from '../app/apiSlice';
@@ -9,20 +8,33 @@ import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import StarRating from '../components/common/StarRating';
 
-// ... (All styled-components remain the same, no changes needed here)
+// --- ICONS ---
+
+const SearchIcon = (props) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
+        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+    </svg>
+);
+
+// --- STYLED COMPONENTS ---
+
 const CatalogueLayout = styled.div`
   display: grid;
   grid-template-columns: 240px 1fr;
   gap: 2rem;
-  height: calc(100vh - 120px);
+  height: 100%;
   width: 100%;
 `;
+
 const Sidebar = styled.aside`
   background-color: #f0f4f5;
   border-right: 1px solid #e8edee;
   padding: 1.5rem 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 `;
+
 const SidebarTitle = styled.h2`
   font-size: 1.25rem;
   color: #003087;
@@ -30,11 +42,41 @@ const SidebarTitle = styled.h2`
   margin: 0;
   border-bottom: 1px solid #e8edee;
 `;
+
+const SearchContainer = styled.div`
+  padding: 0.75rem 1.5rem;
+  position: relative;
+  flex-shrink: 0;
+  
+  svg {
+    position: absolute;
+    top: 50%;
+    left: 2.25rem;
+    transform: translateY(-50%);
+    color: #5f6368;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.6rem 1rem 0.6rem 2.5rem;
+  border-radius: 20px;
+  border: none;
+  background-color: #dde3ea;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: 2px solid #005eb8;
+  }
+`;
+
 const SpecialtyList = styled.ul`
   list-style-type: none;
   padding: 0;
   margin: 0;
+  overflow-y: auto;
 `;
+
 const SpecialtyListItem = styled.li`
   padding: 0.75rem 1.5rem;
   cursor: pointer;
@@ -43,15 +85,22 @@ const SpecialtyListItem = styled.li`
   border-right: ${({ isActive }) => (isActive ? '3px solid #005eb8' : 'none')};
   color: ${({ isActive }) => (isActive ? '#005eb8' : '#4c6272')};
   transition: background-color 0.2s;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
   &:hover {
     background-color: #e8edee;
   }
 `;
+
 const MainContent = styled.main`
-  padding: 1rem 0;
+  padding: 1rem 2rem 1rem 0;
   overflow-y: auto;
   width: 100%;
 `;
+
 const ContentHeader = styled.div`
   margin-bottom: 1.5rem;
   text-align: center;
@@ -60,11 +109,13 @@ const ContentHeader = styled.div`
     margin: 0 0 0.5rem 0;
   }
 `;
+
 const ModelGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
 `;
+
 const ModelCard = styled(Link)`
   background-color: #fff;
   border: 1px solid #e8edee;
@@ -83,11 +134,13 @@ const ModelCard = styled(Link)`
     text-decoration: none; 
   }
 `;
+
 const ModelName = styled.h3`
   font-size: 1.25rem;
   color: #005eb8;
   margin: 0 0 0.5rem 0;
 `;
+
 const ModelDescription = styled.p`
     font-size: 0.9rem;
     color: #4c6272;
@@ -95,11 +148,12 @@ const ModelDescription = styled.p`
     line-height: 1.4;
 `;
 
+// --- COMPONENT ---
 
 const ModelCataloguePage = () => {
-  // --- STATE MANAGEMENT REFACTORED TO USE REDUX ---
   const dispatch = useDispatch();
   const { selectedSpecialtyId } = useSelector((state) => state.ui);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const {
     data: clinicianTypes,
@@ -109,7 +163,6 @@ const ModelCataloguePage = () => {
     error,
   } = useGetClinicianTypesQuery();
 
-  // Effect to select the first specialty by default, but ONLY if one isn't already selected in the store
   useEffect(() => {
     if (isSuccess && clinicianTypes && clinicianTypes.length > 0 && !selectedSpecialtyId) {
       dispatch(specialtySelected(clinicianTypes[0].id));
@@ -123,21 +176,38 @@ const ModelCataloguePage = () => {
   if (isError) {
     return <ErrorMessage>Error: {JSON.stringify(error)}</ErrorMessage>;
   }
-
-  // Find the full specialty object from the fetched data using the ID from the store
+  
+  const filteredClinicianTypes = clinicianTypes?.filter(type =>
+    type.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
   const selectedSpecialty = clinicianTypes?.find(type => type.id === selectedSpecialtyId);
 
   return (
-    <div style={{ display: 'flex', flex: 1 }}>
+    <div style={{
+        position: 'fixed',
+        top: '70px',
+        left: '0',
+        width: '100vw',
+        height: 'calc(100vh - 70px)',
+    }}>
       <CatalogueLayout>
         <Sidebar>
           <SidebarTitle>Clinical Specialties</SidebarTitle>
+          <SearchContainer>
+            <SearchIcon />
+            <SearchInput
+              type="text"
+              placeholder="Search specialties"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </SearchContainer>
           <SpecialtyList>
-            {clinicianTypes?.map(type => (
+            {filteredClinicianTypes?.map(type => (
               <SpecialtyListItem
                 key={type.id}
                 isActive={selectedSpecialtyId === type.id}
-                // Dispatch an action to update the selected ID in the Redux store
                 onClick={() => dispatch(specialtySelected(type.id))}
               >
                 {type.name}

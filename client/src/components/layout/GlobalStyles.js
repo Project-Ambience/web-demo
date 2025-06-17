@@ -17,12 +17,6 @@ const GlobalStyles = createGlobalStyle`
     box-sizing: border-box;
   }
 
-  main {
-    max-width: 960px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-
   h1, h2, h3 {
     color: #2c3e50;
   }

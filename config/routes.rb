@@ -5,6 +5,10 @@ Rails.application.routes.draw do
       resources :comments, only: [:create]
       resources :ratings, only: [:create]
     end
+    
+    resources :conversations, only: [:index, :show, :create, :update, :destroy] do
+      resources :messages, only: [:create]
+    end
   end
 
   get "up" => "rails/health#show", as: :rails_health_check
