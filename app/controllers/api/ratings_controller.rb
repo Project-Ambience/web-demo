@@ -1,18 +1,25 @@
 class Api::RatingsController < Api::ApplicationController
-  def create
-    ai_model = AiModel.find(params[:ai_model_id])
-    rating = ai_model.ratings.build(rating_params)
+    before_action :set_ai_model
 
-    if rating.save
-      render json: rating, status: :created
-    else
-      render json: { errors: rating.errors.full_messages }, status: :unprocessable_entity
+    def create
+      @rating = @ai_model.ratings.new(rating_params)
+  
+      if @rating.save
+        render json: @rating, status: :created
+      else
+        render json: @rating.errors, status: :unprocessable_entity
+      end
     end
-  end
-
-  private
-
-  def rating_params
-    params.require(:rating).permit(:rating)
-  end
+  
+    private
+  
+    def set_ai_model
+      @ai_model = AiModel.find(params[:ai_model_id])
+    end
+  
+    def rating_params
+      # --- FIX IS HERE ---
+      # Change :value to :rating to match the database column name
+      params.require(:rating).permit(:rating)
+    end
 end

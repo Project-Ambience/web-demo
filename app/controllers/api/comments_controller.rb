@@ -1,18 +1,23 @@
 class Api::CommentsController < Api::ApplicationController
-  def create
-    ai_model = AiModel.find(params[:ai_model_id])
-    comment = ai_model.comments.build(comment_params)
+    before_action :set_ai_model
 
-    if comment.save
-      render json: comment, status: :created
-    else
-      render json: { errors: comment.errors.full_messages }, status: :unprocessable_entity
+    def create
+      @comment = @ai_model.comments.new(comment_params)
+  
+      if @comment.save
+        render json: @comment, status: :created
+      else
+        render json: @comment.errors, status: :unprocessable_entity
+      end
     end
-  end
-
-  private
-
-  def comment_params
-    params.require(:comment).permit(:comment)
-  end
+  
+    private
+  
+    def set_ai_model
+      @ai_model = AiModel.find(params[:ai_model_id])
+    end
+  
+    def comment_params
+      params.require(:comment).permit(:comment)
+    end
 end

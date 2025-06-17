@@ -1,15 +1,18 @@
 class Api::AiModelsController < Api::ApplicationController
-  # Handles GET /api/ai_models/:id
   def show
-    ai_model = AiModel.includes(:comments, :ratings).find(params[:id])
-
-    render json: {
-      id: ai_model.id,
-      name: ai_model.name,
-      description: ai_model.description,
-      average_rating: ai_model.average_rating,
-      clinician_type: ai_model.clinician_type.name,
-      comments: ai_model.comments.order(created_at: :desc).as_json(only: [:id, :comment, :created_at])
-    }
+    @ai_model = AiModel.includes(:comments, :ratings, :clinician_type).find(params[:id])
+    
+    # --- FIX IS HERE ---
+    # We now explicitly include the :average_rating method in the JSON response
+    # and also include the clinician_type's name for a better UI experience.
+    render json: @ai_model.as_json(
+      include: {
+        comments: { only: [:id, :comment, :created_at] },
+        ratings: { only: [:id, :rating] }
+      },
+      methods: :average_rating,
+      # Add a 'clinician_type' key to the JSON response with just the name
+      add_clinician_type_name: true 
+    )
   end
 end

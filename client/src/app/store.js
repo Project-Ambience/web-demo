@@ -1,12 +1,12 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { apiSlice } from './apiSlice';
+import uiReducer from '../features/ui/uiSlice'; // Import the new reducer
 
 export const store = configureStore({
   reducer: {
-    // Add the generated reducer as a specific top-level slice
     [apiSlice.reducerPath]: apiSlice.reducer,
+    ui: uiReducer, // Add the ui reducer to the store
   },
-  // Adding the api middleware enables caching, invalidation, polling, etc.
   middleware: getDefaultMiddleware =>
     getDefaultMiddleware().concat(apiSlice.middleware),
 });
