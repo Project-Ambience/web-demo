@@ -4,4 +4,3 @@ FactoryBot.define do
     ai_model
   end
 end
-        

@@ -3,4 +3,3 @@ FactoryBot.define do
     name { "Test Clinician" }
   end
 end
-    

@@ -7,4 +7,3 @@ FactoryBot.define do
     path { "http://example.com/model" }
   end
 end
-          

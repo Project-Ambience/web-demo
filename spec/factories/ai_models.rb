@@ -6,4 +6,3 @@ FactoryBot.define do
     keywords { ["keyword1", "keyword2"] }
   end
 end
-  
