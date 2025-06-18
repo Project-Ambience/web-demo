@@ -32,16 +32,26 @@ class ModelInstallRequest < ApplicationRecord
     response = HTTParty.post(
       ENV["MODEL_INSTALLER_SERVICE_PATH"],
       body: {
-        id: self.id,
         model_path: self.path
       }.to_json,
       headers: { "Content-Type" => "application/json" }
     )
 
+    # Skip endpoint for now
     if response.code.to_i == 200
-      self.in_progress!
+      create_ai_model
+      self.done!
     else
       self.failed!
     end
+  end
+
+  def create_ai_model
+    AiModel.create!(
+      name: self.name,
+      description: self.description,
+      clinician_type_id: self.clinician_type_id,
+      keywords: [self.keyword]
+    )
   end
 end
