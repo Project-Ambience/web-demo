@@ -44,9 +44,9 @@ RSpec.describe ModelInstallRequest, type: :model do
             .to_return(status: 200, body: "", headers: {})
         end
 
-        it "sets status to done" do
+        it "sets status to in_progress" do
           request = create(:model_install_request)
-          expect(request.reload.status).to eq("done")
+          expect(request.reload.status).to eq("in_progress")
         end
       end
 
