@@ -8,6 +8,14 @@ Rails.application.routes.draw do
     resources :ratings, only: [:create]
     resources :comments, only: [:create]
   end
+  
+  namespace :api do
+    resources :clinician_types, only: [:index]
+    resources :ai_models, only: [:index, :show] do
+      resources :comments, only: [:create]
+      resources :ratings, only: [:create]
+    end
+  end
 
   root "home#index"
 
