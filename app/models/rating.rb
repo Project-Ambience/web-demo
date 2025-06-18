@@ -1,6 +1,5 @@
 class Rating < ApplicationRecord
   belongs_to :ai_model
-  # --- FIX IS HERE ---
-  # Change :value to :rating to match the database column name
-  validates :rating, presence: true, inclusion: { in: 1..5 }
+  
+  validates :rating, presence: true, numericality: { only_integer: true, greater_than: 0, less_than_or_equal_to: 5 }
 end
