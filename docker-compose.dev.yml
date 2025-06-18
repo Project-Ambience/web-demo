@@ -28,7 +28,17 @@ services:
       - app-net-dev
     depends_on:
       - db
+      - endpoints
     command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+
+  endpoints:
+    build:
+      context: ./endpoints
+      dockerfile: Dockerfile
+    networks:
+      - app-net-dev
+    ports:
+      - "5050:8000"  # Host port 5050 → Container port 8000 (FastAPI)
 
 volumes:
   db-data-dev:
@@ -36,3 +46,4 @@ volumes:
 
 networks:
   app-net-dev:
+
