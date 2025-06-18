@@ -27,11 +27,18 @@ RSpec.describe "ModelInstallRequests", type: :request do
     end
 
     it "updates status to done and creates AiModel on success" do
-      request = create(:model_install_request, clinician_type: clinician_type)
+      request = create(:model_install_request, clinician_type: clinician_type, keyword: "example_keyword", path: "http://example.com/model")
 
       expect {
         post "/model_install_requests/update_status", params: { id: request.id, status: "success" }
       }.to change(AiModel, :count).by(1)
+
+      expect(AiModel.last).to have_attributes(
+        name: request.name,
+        description: request.description,
+        clinician_type_id: request.clinician_type_id,
+        keywords: ["example_keyword"]
+      )
 
       expect(response).to have_http_status(:ok)
       expect(request.reload.status).to eq("done")
