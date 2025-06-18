@@ -7,6 +7,12 @@ gem "propshaft"
 
 gem "pg"
 gem "kaminari"
+gem "activeadmin"
+gem "devise"
+gem "sassc-rails"
+gem "httparty"
+gem "dotenv-rails"
+gem "pry"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
@@ -51,6 +57,14 @@ group :development, :test do
 
   # Omakase Ruby styling [https://github.com/rails/rubocop-rails-omakase/]
   gem "rubocop-rails-omakase", require: false
+
+  gem "rspec-rails"
+
+  gem "factory_bot_rails"
+
+  gem "shoulda-matchers"
+
+  gem "webmock"
 end
 
 group :development do
