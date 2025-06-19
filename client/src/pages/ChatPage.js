@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
+import { createConsumer } from '@rails/actioncable';
 import { conversationSelected } from '../features/ui/uiSlice';
 import { 
+  apiSlice,
   useGetConversationsQuery, 
   useGetConversationQuery,
   useAddMessageMutation,
@@ -10,8 +12,6 @@ import {
   useDeleteConversationMutation
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
-
-// --- ICONS ---
 
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -24,8 +24,6 @@ const SendIcon = () => (
         <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
     </svg>
 );
-
-// --- STYLED COMPONENTS ---
 
 const ChatPageWrapper = styled.div`
     position: fixed;
@@ -317,8 +315,6 @@ const SendButton = styled.button`
   }
 `;
 
-// --- COMPONENT ---
-
 const ChatPage = () => {
   const dispatch = useDispatch();
   const { activeConversationId } = useSelector((state) => state.ui);
@@ -329,6 +325,7 @@ const ChatPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   
   const menuRef = useRef(null);
+  const cable = useRef();
 
   const { data: conversations, isLoading: isLoadingConversations } = useGetConversationsQuery();
   const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(activeConversationId, {
@@ -365,6 +362,49 @@ const ChatPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuRef]);
 
+  // --- NEW: ACTION CABLE USE EFFECT ---
+  useEffect(() => {
+    if (activeConversationId) {
+      // Create the consumer only once
+      if (!cable.current) {
+        // Connect to the public-facing port of your 'api' service (5090)
+        cable.current = createConsumer('ws://localhost:5090/cable');
+      }
+      
+      const channelParams = {
+        channel: 'ConversationChannel',
+        conversation_id: activeConversationId,
+      };
+
+      const channelHandlers = {
+        received(data) {
+          console.log('Received new message via Action Cable:', data.message);
+          // Invalidate the RTK Query cache for this conversation.
+          // This will automatically trigger a refetch and update the UI.
+          dispatch(
+            apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
+          );
+        },
+        connected() {
+          console.log(`Connected to ConversationChannel ${activeConversationId}`);
+        },
+        disconnected() {
+          console.log(`Disconnected from ConversationChannel ${activeConversationId}`);
+        },
+      };
+
+      const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
+
+      // Cleanup: Unsubscribe when component unmounts or activeConversationId changes
+      return () => {
+        console.log(`Unsubscribing from ConversationChannel ${activeConversationId}`);
+        subscription.unsubscribe();
+      };
+    }
+  }, [activeConversationId, dispatch]);
+  // --- END OF ACTION CABLE USE EFFECT ---
+
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (input.trim() && activeConversationId && !isSendingMessage) {
@@ -373,6 +413,7 @@ const ChatPage = () => {
       if(textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
+      // No change needed here, this still triggers the initial user message display
       await addMessage({ conversation_id: activeConversationId, message: { content: messageContent } });
     }
   };
