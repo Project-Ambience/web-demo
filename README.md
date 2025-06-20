@@ -2,9 +2,15 @@
 
 ## Environment Variables
 
-Create a `.env` file and a `/config/master.key` in your project:
+Create a `.env` file in your project root:
 
-Ask William for the keys. 
+```
+RAILS_MASTER_KEY=
+MODEL_INSTALLER_SERVICE_PATH=
+MODEL_INSTALL_REQUEST_CALLBACK_PATH=
+```
+
+Ask William or Saruj for "your-rails-master-key"
 
 ---
 
