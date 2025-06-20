@@ -18,8 +18,6 @@ class Api::RatingsController < Api::ApplicationController
     end
   
     def rating_params
-      # --- FIX IS HERE ---
-      # Change :value to :rating to match the database column name
       params.require(:rating).permit(:rating)
     end
 end
