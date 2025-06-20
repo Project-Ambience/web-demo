@@ -1,11 +1,11 @@
-require 'bunny'
+require "bunny"
 
-class AiRequestPublisher
+class UserPromptPublisher
   def self.publish(payload)
-    connection = Bunny.new(hostname: 'rabbitmq')
+    connection = Bunny.new(hostname: "rabbitmq")
     connection.start
     channel = connection.create_channel
-    queue = channel.queue('ai_requests', durable: true)
+    queue = channel.queue("user_prompts", durable: true)
     secret = Rails.application.credentials.hmac_secret
     json_payload_to_sign = payload.to_json
     signature = OpenSSL::HMAC.hexdigest("SHA256", secret, json_payload_to_sign)

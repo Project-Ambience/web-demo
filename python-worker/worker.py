@@ -9,7 +9,7 @@ import hashlib
 def process_message(channel, method, properties, body):
     """
     This function is the heart of the worker. It's called every time a new
-    message (job) is received from the 'ai_requests' queue.
+    message (job) is received from the 'user_prompts' queue.
 
     Args:
         channel: The channel instance from Pika.
@@ -99,12 +99,12 @@ def main():
 
     # Create a channel and declare the queue we will be listening to.
     channel = connection.channel()
-    channel.queue_declare(queue='ai_requests', durable=True)
+    channel.queue_declare(queue='user_prompts', durable=True)
 
     print(' [*] Waiting for messages. To exit press CTRL+C')
 
     # Tell the channel to call the 'process_message' function for each message.
-    channel.basic_consume(queue='ai_requests', on_message_callback=process_message)
+    channel.basic_consume(queue='user_prompts', on_message_callback=process_message)
 
     # Start the endless loop of listening for messages.
     channel.start_consuming()

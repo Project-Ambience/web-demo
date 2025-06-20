@@ -4,7 +4,7 @@ class Api::MessagesController < Api::ApplicationController
     @message = @conversation.messages.create(content: params[:message][:content], role: 'user')
 
     if @message.persisted?
-      AiRequestPublisher.publish({
+      UserPromptPublisher.publish({
         conversation_id: @conversation.id,
         prompt: @message.content
       })
