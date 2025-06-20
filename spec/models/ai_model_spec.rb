@@ -33,4 +33,16 @@ RSpec.describe AiModel, type: :model do
       end
     end
   end
+
+  describe "#as_json" do
+    it "includes clinician type name when requested" do
+      json = ai_model.as_json(add_clinician_type_name: true)
+      expect(json["clinician_type"]).to eq(clinician_type.name)
+    end
+
+    it "does not include clinician type name by default" do
+      json = ai_model.as_json
+      expect(json).not_to have_key("clinician_type")
+    end
+  end
 end
