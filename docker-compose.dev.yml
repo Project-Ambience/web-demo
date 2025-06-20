@@ -28,7 +28,7 @@ services:
       - app-net-dev
     depends_on:
       - db
-    command: sh -c "rm -f /rails/tmp/pids/server.pid && bin/rails server -b 0.0.0.0 -p 3000"
+    command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
 
   client:
     build:
@@ -53,21 +53,6 @@ services:
       - "15672:15672"
     networks:
       - app-net-dev
-
-  python-worker:
-    build:
-      context: ./python-worker
-      dockerfile: Dockerfile
-    volumes:
-      - ./python-worker:/app
-    depends_on:
-      - rabbitmq
-      - api
-    networks:
-      - app-net-dev
-    environment:
-      - RAILS_API_CALLBACK_URL=http://api:3000/api/internal/results
-      - HMAC_SECRET=${HMAC_SECRET}
 
 volumes:
   db-data-dev:
