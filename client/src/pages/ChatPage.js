@@ -462,7 +462,7 @@ const ChatPage = () => {
     <ChatPageWrapper>
       <ChatLayout>
         <Sidebar>
-          <SidebarTitle>Chat History</SidebarTitle>
+          <SidebarTitle>Prompt History</SidebarTitle>
           <SearchContainer>
             <SearchIcon />
             <SearchInput 

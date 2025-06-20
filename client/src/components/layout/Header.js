@@ -1,6 +1,5 @@
 import React from 'react';
 import styled from 'styled-components';
-// Import Link and NavLink from React Router
 import { Link, NavLink } from 'react-router-dom';
 
 const HeaderContainer = styled.header`
@@ -15,10 +14,14 @@ const HeaderContainer = styled.header`
 `;
 
 const Logo = styled(Link)`
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: white;
+  display: flex;
+  align-items: center;
   text-decoration: none;
+
+  img {
+    height: 35px;
+    display: block;
+  }
 `;
 
 const Nav = styled.nav`
@@ -40,9 +43,9 @@ const StyledNavLink = styled(NavLink)`
     opacity: 1;
   }
 
-  // This style is applied automatically by NavLink when the route is active
   &.active {
     opacity: 1;
+
     &::after {
       content: '';
       position: absolute;
@@ -59,13 +62,15 @@ const StyledNavLink = styled(NavLink)`
 const Header = () => {
   return (
     <HeaderContainer>
-      <Logo to="/">Project Ambience</Logo>
+      <Logo to="/">
+        <img src="/logo.png" alt="Logo" />
+      </Logo>
       <Nav>
         <StyledNavLink to="/" end>
           Model Catalogue
         </StyledNavLink>
         <StyledNavLink to="/chat">
-          Chat
+          Prompt
         </StyledNavLink>
       </Nav>
     </HeaderContainer>

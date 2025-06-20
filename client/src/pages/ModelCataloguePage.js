@@ -193,12 +193,12 @@ const ModelCataloguePage = () => {
     }}>
       <CatalogueLayout>
         <Sidebar>
-          <SidebarTitle>Clinical Specialties</SidebarTitle>
+          <SidebarTitle>Clinicians</SidebarTitle>
           <SearchContainer>
             <SearchIcon />
             <SearchInput
               type="text"
-              placeholder="Search specialties"
+              placeholder="Search clinicians"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -218,10 +218,6 @@ const ModelCataloguePage = () => {
         <MainContent>
           {selectedSpecialty ? (
             <>
-              <ContentHeader>
-                <h1>{selectedSpecialty.name}</h1>
-                <p>Browse and select a model to view more details.</p>
-              </ContentHeader>
               <ModelGrid>
                 {selectedSpecialty.ai_models.length > 0 ? (
                   selectedSpecialty.ai_models.map(model => (
