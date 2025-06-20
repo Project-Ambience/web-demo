@@ -12,4 +12,12 @@ class AiModel < ApplicationRecord
 
     ratings.average(:rating)&.round(1)
   end
+
+  def as_json(options = {})
+    super(options).tap do |json|
+      if options[:add_clinician_type_name]
+        json["clinician_type"] = self.clinician_type.name
+      end
+    end
+  end
 end

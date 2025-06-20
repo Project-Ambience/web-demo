@@ -64,7 +64,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
     t.index ["ai_model_id"], name: "index_comments_on_ai_model_id"
   end
 
-
   create_table "conversations", force: :cascade do |t|
     t.string "title"
     t.bigint "ai_model_id", null: false
