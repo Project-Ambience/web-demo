@@ -8,7 +8,7 @@ gem "propshaft"
 gem "pg"
 gem "kaminari"
 gem "rack-cors"
-gem 'bunny'
+gem "bunny"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"
