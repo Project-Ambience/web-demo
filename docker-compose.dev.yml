@@ -12,7 +12,7 @@ services:
     networks:
       - app-net-dev
 
-  api:
+  web:
     build:
       context: .
       dockerfile: Dockerfile.dev

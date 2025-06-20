@@ -10,9 +10,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_17_193202) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
+
+  create_table "active_admin_comments", force: :cascade do |t|
+    t.string "namespace"
+    t.text "body"
+    t.string "resource_type"
+    t.bigint "resource_id"
+    t.string "author_type"
+    t.bigint "author_id"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["author_type", "author_id"], name: "index_active_admin_comments_on_author"
+    t.index ["namespace"], name: "index_active_admin_comments_on_namespace"
+    t.index ["resource_type", "resource_id"], name: "index_active_admin_comments_on_resource"
+  end
+
+  create_table "admin_users", force: :cascade do |t|
+    t.string "email", default: "", null: false
+    t.string "encrypted_password", default: "", null: false
+    t.string "reset_password_token"
+    t.datetime "reset_password_sent_at"
+    t.datetime "remember_created_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["email"], name: "index_admin_users_on_email", unique: true
+    t.index ["reset_password_token"], name: "index_admin_users_on_reset_password_token", unique: true
+  end
 
   create_table "ai_models", force: :cascade do |t|
     t.string "name"
@@ -38,6 +64,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_193202) do
     t.index ["ai_model_id"], name: "index_comments_on_ai_model_id"
   end
 
+
   create_table "conversations", force: :cascade do |t|
     t.string "title"
     t.bigint "ai_model_id", null: false
@@ -55,6 +82,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_193202) do
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
   end
 
+  create_table "model_install_requests", force: :cascade do |t|
+    t.string "name"
+    t.string "description"
+    t.bigint "clinician_type_id", null: false
+    t.string "keyword"
+    t.integer "status"
+    t.string "path"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["clinician_type_id"], name: "index_model_install_requests_on_clinician_type_id"
+  end
+
   create_table "ratings", force: :cascade do |t|
     t.integer "rating"
     t.bigint "ai_model_id", null: false
@@ -67,5 +106,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_193202) do
   add_foreign_key "comments", "ai_models"
   add_foreign_key "conversations", "ai_models"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "model_install_requests", "clinician_types"
   add_foreign_key "ratings", "ai_models"
 end
