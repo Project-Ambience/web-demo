@@ -1,7 +1,7 @@
 class Api::MessagesController < Api::ApplicationController
   def create
     @conversation = Conversation.find(params[:conversation_id])
-    @message = @conversation.messages.create(content: params[:message][:content], role: 'user')
+    @message = @conversation.messages.create(content: params[:message][:content], role: "user")
 
     if @message.persisted?
       UserPromptPublisher.publish({
