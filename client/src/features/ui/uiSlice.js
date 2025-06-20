@@ -1,8 +1,8 @@
-// client/src/features/ui/uiSlice.js
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   selectedSpecialtyId: null,
+  activeConversationId: null,
 };
 
 const uiSlice = createSlice({
@@ -12,9 +12,12 @@ const uiSlice = createSlice({
     specialtySelected(state, action) {
       state.selectedSpecialtyId = action.payload;
     },
+    conversationSelected(state, action) {
+      state.activeConversationId = action.payload;
+    },
   },
 });
 
-export const { specialtySelected } = uiSlice.actions;
+export const { specialtySelected, conversationSelected } = uiSlice.actions;
 
 export default uiSlice.reducer;

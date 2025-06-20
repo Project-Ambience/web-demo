@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Model', 'ClinicianType'],
+  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message'], // Add new tags
   endpoints: builder => ({
     getClinicianTypes: builder.query({
       query: () => '/clinician_types',
@@ -19,8 +19,6 @@ export const apiSlice = createApi({
         method: 'POST',
         body: { rating },
       }),
-      // --- FIX IS HERE ---
-      // Invalidate both the specific Model and the list of ClinicianTypes
       invalidatesTags: (result, error, arg) => [
         { type: 'Model', id: arg.ai_model_id },
         'ClinicianType',
@@ -32,11 +30,57 @@ export const apiSlice = createApi({
         method: 'POST',
         body: { comment },
       }),
-      // --- AND HERE ---
-      // Also apply the same logic to comments for consistency
       invalidatesTags: (result, error, arg) => [
         { type: 'Model', id: arg.ai_model_id },
         'ClinicianType',
+      ],
+    }),
+
+    getConversations: builder.query({
+      query: () => '/conversations',
+      providesTags: (result = []) => [
+        ...result.map(({ id }) => ({ type: 'Conversation', id })),
+        { type: 'Conversation', id: 'LIST' },
+      ],
+    }),
+    getConversation: builder.query({
+      query: id => `/conversations/${id}`,
+      providesTags: (result, error, id) => [{ type: 'Conversation', id }],
+    }),
+    createConversation: builder.mutation({
+      query: (conversation) => ({
+        url: '/conversations',
+        method: 'POST',
+        body: conversation,
+      }),
+      invalidatesTags: [{ type: 'Conversation', id: 'LIST' }],
+    }),
+    updateConversation: builder.mutation({
+      query: ({ id, conversation }) => ({
+        url: `/conversations/${id}`,
+        method: 'PATCH',
+        body: { conversation },
+      }),
+      invalidatesTags: (result, error, { id }) => [
+        { type: 'Conversation', id: 'LIST' },
+        { type: 'Conversation', id }
+      ],
+    }),
+    deleteConversation: builder.mutation({
+      query: (id) => ({
+        url: `/conversations/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'Conversation', id: 'LIST' }],
+    }),
+    addMessage: builder.mutation({
+      query: ({ conversation_id, message }) => ({
+        url: `/conversations/${conversation_id}/messages`,
+        method: 'POST',
+        body: { message },
+      }),
+      invalidatesTags: (result, error, arg) => [
+        { type: 'Conversation', id: arg.conversation_id }
       ],
     }),
   }),
@@ -47,4 +91,10 @@ export const {
   useGetAiModelByIdQuery,
   useAddRatingMutation,
   useAddCommentMutation,
+  useGetConversationsQuery,
+  useGetConversationQuery,
+  useCreateConversationMutation,
+  useUpdateConversationMutation,
+  useDeleteConversationMutation,
+  useAddMessageMutation,
 } = apiSlice;

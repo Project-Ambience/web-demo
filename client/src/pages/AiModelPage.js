@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import { useParams, Link } from 'react-router-dom';
-import { useGetAiModelByIdQuery, useAddRatingMutation, useAddCommentMutation } from '../app/apiSlice';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { 
+  useGetAiModelByIdQuery, 
+  useAddRatingMutation, 
+  useAddCommentMutation,
+  useCreateConversationMutation
+} from '../app/apiSlice';
+import { useDispatch } from 'react-redux';
+import { conversationSelected } from '../features/ui/uiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import StarRating from '../components/common/StarRating';
@@ -133,8 +140,7 @@ const TextArea = styled.textarea`
   font-size: 1rem;
   min-height: 100px;
   margin-bottom: 1rem;
-  /* --- FIX IS HERE --- */
-  resize: vertical; /* Or use 'both' to allow horizontal, or 'none' to disable */
+  resize: vertical;
 
   &:focus {
     outline: 2px solid #005eb8;
@@ -166,9 +172,10 @@ const BackLink = styled(Link)`
   }
 `;
 
-
 const AiModelPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [newRating, setNewRating] = useState(0);
   const [commentText, setCommentText] = useState('');
 
@@ -182,6 +189,24 @@ const AiModelPage = () => {
 
   const [addRating, { isLoading: isRatingLoading }] = useAddRatingMutation();
   const [addComment, { isLoading: isCommenting }] = useAddCommentMutation();
+  const [createConversation, { isLoading: isCreatingConversation }] = useCreateConversationMutation();
+
+  const handleUseModel = async () => {
+    try {
+      const newConversation = await createConversation({
+        conversation: {
+          ai_model_id: model.id,
+          title: `Chat with ${model.name}`,
+        },
+      }).unwrap();
+      
+      dispatch(conversationSelected(newConversation.id));
+      
+      navigate('/chat');
+    } catch (err) {
+      console.error('Failed to start conversation:', err);
+    }
+  };
 
   const handleRateSubmit = async () => {
     if (newRating > 0) {
@@ -206,7 +231,6 @@ const AiModelPage = () => {
     }
   };
 
-
   let content;
 
   if (isLoading) {
@@ -222,12 +246,10 @@ const AiModelPage = () => {
               <p><strong>Clinical Specialty:</strong> {model.clinician_type}</p>
               <StarRating rating={model.average_rating} />
             </ModelHeader>
-
             <Section>
               <h3>Description</h3>
               <p>{model.description}</p>
             </Section>
-
             <Section>
               <h3>Comments</h3>
               <CommentList>
@@ -246,9 +268,8 @@ const AiModelPage = () => {
           </MainContent>
           <Sidebar>
             <h3>Actions</h3>
-            
             <Section>
-              <h5>Add a Comment</h5>
+              <h4>Add a Comment</h4>
               <form onSubmit={handleCommentSubmit}>
                 <TextArea 
                   placeholder="Enter your comment..."
@@ -260,7 +281,6 @@ const AiModelPage = () => {
                 </PrimaryButton>
               </form>
             </Section>
-
             <Section>
               <InteractiveStarRating onRate={setNewRating} />
               <PrimaryButton 
@@ -270,10 +290,11 @@ const AiModelPage = () => {
                 {isRatingLoading ? 'Submitting...' : 'Submit Rating'}
               </PrimaryButton>
             </Section>
-            
             <Section>
-              <h5>Model Utilities</h5>
-              <PrimaryButton>Use the model</PrimaryButton>
+              <h4>Model Utilities</h4>
+              <PrimaryButton onClick={handleUseModel} disabled={isCreatingConversation}>
+                {isCreatingConversation ? 'Starting...' : 'Use the model'}
+              </PrimaryButton>
               <ButtonGroup>
                  <SecondaryButton>Download</SecondaryButton>
                  <SecondaryButton>Fine-tune</SecondaryButton>

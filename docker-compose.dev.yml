@@ -12,12 +12,12 @@ services:
     networks:
       - app-net-dev
 
-  web:
+  api:
     build:
       context: .
       dockerfile: Dockerfile.dev
     ports:
-      - "5090:3000"
+      - "5091:3000"
     volumes:
       - .:/rails
       - bundle-cache:/usr/local/bundle
@@ -29,6 +29,30 @@ services:
     depends_on:
       - db
     command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5090:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - app-net-dev
+    depends_on:
+      - api
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    networks:
+      - app-net-dev
 
 volumes:
   db-data-dev:

@@ -1,6 +1,4 @@
-class ModelInstallRequestsController < ApplicationController
-  skip_before_action :verify_authenticity_token # Skip CSRF token verification for now (during dev phase)
-
+class Api::ModelInstallRequestsController < Api::ApplicationController
   def update_status
     request_id = params[:id]
     status = params[:status]
