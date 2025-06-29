@@ -6,6 +6,7 @@ RSpec.describe AiModel, type: :model do
 
   describe "associations" do
     it { is_expected.to have_many(:comments).dependent(:destroy) }
+    it { is_expected.to have_many(:fine_tune_tasks).dependent(:destroy) }
     it { is_expected.to have_many(:ratings) }
     it { is_expected.to belong_to(:clinician_type) }
     it { is_expected.to belong_to(:base_model).class_name("AiModel").optional }
