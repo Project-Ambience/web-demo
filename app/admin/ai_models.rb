@@ -1,6 +1,6 @@
 ActiveAdmin.register AiModel do
   permit_params :fine_tune_data_format, :allow_fine_tune
-  actions :all, except: [:new, :destroy, :create]
+  actions :all, except: [ :new, :destroy, :create ]
 
   filter :id
   filter :name
