@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_29_114206) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -47,6 +47,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
     t.text "keywords", default: [], array: true
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "fine_tune_data_format", default: {}
+    t.boolean "allow_fine_tune"
+    t.bigint "base_model_id"
+    t.index ["base_model_id"], name: "index_ai_models_on_base_model_id"
     t.index ["clinician_type_id"], name: "index_ai_models_on_clinician_type_id"
   end
 
@@ -72,6 +76,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
     t.index ["ai_model_id"], name: "index_conversations_on_ai_model_id"
   end
 
+  create_table "fine_tune_tasks", force: :cascade do |t|
+    t.string "title"
+    t.jsonb "parameters"
+    t.bigint "ai_model_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_fine_tune_tasks_on_ai_model_id"
+  end
+
   create_table "messages", force: :cascade do |t|
     t.string "role"
     t.text "content"
@@ -79,6 +92,19 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["conversation_id"], name: "index_messages_on_conversation_id"
+  end
+
+  create_table "model_fine_tune_requests", force: :cascade do |t|
+    t.string "name"
+    t.string "description"
+    t.bigint "ai_model_id", null: false
+    t.bigint "clinician_type_id", null: false
+    t.jsonb "parameters", default: {}
+    t.integer "status"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_model_fine_tune_requests_on_ai_model_id"
+    t.index ["clinician_type_id"], name: "index_model_fine_tune_requests_on_clinician_type_id"
   end
 
   create_table "model_install_requests", force: :cascade do |t|
@@ -101,10 +127,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_17_225216) do
     t.index ["ai_model_id"], name: "index_ratings_on_ai_model_id"
   end
 
+  create_table "tasks", force: :cascade do |t|
+    t.string "title"
+    t.json "parameters"
+    t.bigint "ai_model_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_tasks_on_ai_model_id"
+  end
+
+  add_foreign_key "ai_models", "ai_models", column: "base_model_id"
   add_foreign_key "ai_models", "clinician_types"
   add_foreign_key "comments", "ai_models"
   add_foreign_key "conversations", "ai_models"
+  add_foreign_key "fine_tune_tasks", "ai_models"
   add_foreign_key "messages", "conversations"
+  add_foreign_key "model_fine_tune_requests", "ai_models"
+  add_foreign_key "model_fine_tune_requests", "clinician_types"
   add_foreign_key "model_install_requests", "clinician_types"
   add_foreign_key "ratings", "ai_models"
+  add_foreign_key "tasks", "ai_models"
 end

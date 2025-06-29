@@ -1,6 +1,7 @@
 class AiModel < ApplicationRecord
   has_many :ratings
   has_many :comments, dependent: :destroy
+  belongs_to :base_model, class_name: "AiModel", optional: true
 
   belongs_to :clinician_type
 
@@ -19,5 +20,13 @@ class AiModel < ApplicationRecord
         json["clinician_type"] = self.clinician_type.name
       end
     end
+  end
+
+  def self.ransackable_associations(auth_object = nil)
+    ["base_model", "clinician_type"]
+  end
+
+  def self.ransackable_attributes(auth_object = nil)
+    ["allow_fine_tune", "base_model_id", "clinician_type_id", "created_at", "description", "fine_tune_data_format", "id", "id_value", "keywords", "name", "updated_at"]
   end
 end
