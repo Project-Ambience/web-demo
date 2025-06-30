@@ -6,21 +6,6 @@ on:
     branches: [ main ]
 
 jobs:
-  pr_title_check:
-    name: PR Title Check
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
-    steps:
-      - name: Validate PR title format
-        run: |
-          TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
-          echo "PR Title: $TITLE"
-          if ! echo "$TITLE" | grep -Eq '^PA[0-9]+: .+'; then
-            echo "Pull request title must follow format: 'PA<Jira ticket number>: Description'"
-            exit 1
-          fi
-
   lint:
     name: RuboCop Lint
     runs-on: ubuntu-latest
