@@ -2,26 +2,66 @@ name: CI
 
 on:
   pull_request:
+    branches:
+      - main
+      - develop
   push:
-    branches: [ main ]
+    branches:
+      - main
 
 jobs:
-  lint:
-    name: RuboCop Lint
+  ci:
+    name: Lint and Test
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:14
+        ports: ["5432:5432"]
+        env:
+          POSTGRES_DB: test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    env:
+      RAILS_ENV: test
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
+
     steps:
+      - name: Check PR title format
+        if: github.event_name == 'pull_request'
+        run: |
+          TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
+          echo "PR Title: $TITLE"
+          if ! echo "$TITLE" | grep -Eq '^PA[0-9]+: .+'; then
+            echo "❌ Pull request title must follow format: 'PA<number>: Description'"
+            exit 1
+          fi
+
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
-          ruby-version: "3.2"
+          ruby-version: "3.4"
           bundler-cache: true
 
       - name: Install dependencies
         run: bundle install --jobs 4 --retry 3
 
+      - name: Prepare database
+        run: |
+          bin/rails db:create
+          bin/rails db:schema:load
+
       - name: Run RuboCop
-        run: bundle exec rubocop
+        run: bundle exec rubocop --parallel
+
+      - name: Run RSpec
+        run: bundle exec rspec
