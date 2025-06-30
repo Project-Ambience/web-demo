@@ -39,7 +39,6 @@ class ModelInstallRequest < ApplicationRecord
       headers: { "Content-Type" => "application/json" }
     )
 
-    # Skip endpoint for now
     if response.code.to_i == 200
       self.in_progress!
     else

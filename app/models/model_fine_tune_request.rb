@@ -2,6 +2,7 @@ class ModelFineTuneRequest < ApplicationRecord
   belongs_to :ai_model
   belongs_to :clinician_type
   validates :name, :description, :parameters, presence: true
+  validate :ai_model_must_allow_fine_tune
 
   enum :status, {
     pending: 0,
@@ -9,4 +10,37 @@ class ModelFineTuneRequest < ApplicationRecord
     done: 2,
     failed: 3
   }
+
+  after_initialize :set_default_status, if: :new_record?
+  after_create :publish_fine_tune_request_to_rabbit_mq
+
+  private
+
+  def set_default_status
+    self.status ||= :pending
+  end
+
+  def publish_fine_tune_request_to_rabbit_mq
+    payload = {
+      fine_tune_request_id: self.id,
+      ai_model_path: self.ai_model.path,
+      parameters: self.parameters,
+      fine_tune_data: "some JSON",
+      callback_url: ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"]
+    }
+
+    # TODO: Add this to a job
+    MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
+    self.in_progress!
+
+    # TODO: check how this success or fail?
+    # if success -> self.in_progress!
+    # if fail -> self.failed!
+  end
+
+  def ai_model_must_allow_fine_tune
+    if ai_model && !ai_model.allow_fine_tune
+      errors.add(:ai_model, "must allow fine-tuning")
+    end
+  end
 end

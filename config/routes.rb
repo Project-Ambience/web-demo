@@ -14,6 +14,7 @@ Rails.application.routes.draw do
     end
 
     post "/model_install_requests/update_status", to: "model_install_requests#update_status"
+    post "/model_fine_tune_requests/update_status", to: "model_fine_tune_requests#update_status"
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

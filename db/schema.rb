@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_29_114206) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_30_114929) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -48,8 +48,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_29_114206) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.jsonb "fine_tune_data_format", default: {}
-    t.boolean "allow_fine_tune"
+    t.boolean "allow_fine_tune", default: false
     t.bigint "base_model_id"
+    t.string "path"
     t.index ["base_model_id"], name: "index_ai_models_on_base_model_id"
     t.index ["clinician_type_id"], name: "index_ai_models_on_clinician_type_id"
   end
