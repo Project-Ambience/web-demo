@@ -5,7 +5,7 @@ RSpec.describe "ModelInstallRequests", type: :request do
 
   describe "POST api/model_install_requests/:id/update_status" do
     before do
-      stub_request(:post, ENV["MODEL_INSTALLER_SERVICE_PATH"] || "https://dummy-json.mock.beeceptor.com/posts")
+      stub_request(:post, ENV["MODEL_INSTALLER_SERVICE_PATH"].presence || "https://dummy-json.mock.beeceptor.com/posts")
         .with(
           body: hash_including("model_path" => "http://example.com/model"),
           headers: { 'Content-Type' => 'application/json' }

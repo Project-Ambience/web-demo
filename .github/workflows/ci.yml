@@ -34,12 +34,12 @@ jobs:
 
     steps:
       - name: Check PR title format
-        if: github.event_name == 'pull_request'
+        if: github.event_name == "pull_request"
         run: |
           TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
           echo "PR Title: $TITLE"
           if ! echo "$TITLE" | grep -Eq '^PA[0-9]+: .+'; then
-            echo "❌ Pull request title must follow format: 'PA<number>: Description'"
+            echo "Pull request title must follow format: 'PA<JIRA TICKET NUMBER>: Description'"
             exit 1
           fi
 
