@@ -1,6 +1,6 @@
 class Api::AiModelsController < Api::ApplicationController
   def show
-    @ai_model = AiModel.includes(:comments, :ratings, :clinician_type, :fine_tune_tasks).find(params[:id])
+    @ai_model = AiModel.includes(:comments, :ratings, :clinician_type, :fine_tune_tasks, :model_fine_tune_requests).find(params[:id])
 
     render json: @ai_model.as_json(
       include: {

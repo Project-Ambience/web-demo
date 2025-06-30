@@ -12,7 +12,7 @@ class ModelFineTuneRequest < ApplicationRecord
   }
 
   after_initialize :set_default_status, if: :new_record?
-  # after_create :publish_fine_tune_request_to_rabbit_mq
+  after_create :publish_fine_tune_request_to_rabbit_mq
 
   private
 
@@ -25,7 +25,7 @@ class ModelFineTuneRequest < ApplicationRecord
       fine_tune_request_id: self.id,
       ai_model_path: self.ai_model.path,
       parameters: self.parameters,
-      fine_tune_data: "some JSON",
+      fine_tune_data: self.fine_tune_data,
       callback_url: ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"]
     }
 

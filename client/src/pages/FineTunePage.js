@@ -224,8 +224,9 @@ const FineTunePage = () => {
     const uploaded = e.target.files[0];
     if (uploaded && uploaded.type === 'application/json') {
       setFile(uploaded);
-    } else {
-      alert('Please upload a valid .json file');
+    } 
+    else {
+      setSubmissionError('Please upload a fine-tuning .json file.');
     }
   };
 
