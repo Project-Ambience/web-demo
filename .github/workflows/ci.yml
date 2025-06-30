@@ -9,7 +9,6 @@ jobs:
   lint:
     name: RuboCop Lint
     runs-on: ubuntu-latest
-    needs: pr_title_check
 
     steps:
       - name: Checkout code
@@ -30,7 +29,6 @@ jobs:
   test:
     name: RSpec Test
     runs-on: ubuntu-latest
-    needs: pr_title_check
 
     services:
       postgres:
