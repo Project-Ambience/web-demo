@@ -24,10 +24,10 @@ class AiModel < ApplicationRecord
   end
 
   def self.ransackable_associations(auth_object = nil)
-    ["base_model", "clinician_type"]
+    [ "base_model", "clinician_type" ]
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    ["allow_fine_tune", "base_model_id", "clinician_type_id", "created_at", "description", "fine_tune_data_format", "id", "id_value", "keywords", "name", "updated_at"]
+    [ "allow_fine_tune", "base_model_id", "clinician_type_id", "created_at", "description", "fine_tune_data_format", "id", "id_value", "keywords", "name", "updated_at" ]
   end
 end

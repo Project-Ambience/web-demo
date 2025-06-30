@@ -15,11 +15,11 @@ class ModelInstallRequest < ApplicationRecord
   after_create :notify_model_installer_service
 
   def self.ransackable_associations(auth_object = nil)
-    ["clinician_type"]
+    [ "clinician_type" ]
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    ["clinician_type_id", "id", "name", "path", "status"]
+    [ "clinician_type_id", "id", "name", "path", "status" ]
   end
 
   private

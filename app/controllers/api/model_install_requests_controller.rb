@@ -33,8 +33,7 @@ class Api::ModelInstallRequestsController < Api::ApplicationController
       name: model_install_request.name,
       description: model_install_request.description,
       clinician_type_id: model_install_request.clinician_type_id,
-      keywords: [model_install_request.keyword]
+      keywords: [ model_install_request.keyword ]
     )
   end
 end
-
