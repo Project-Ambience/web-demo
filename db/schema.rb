@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_06_30_114929) do
+ActiveRecord::Schema[8.0].define(version: 2025_06_30_222740) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -104,6 +104,9 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_30_114929) do
     t.integer "status"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "fine_tune_data", default: {}
+    t.string "task"
+    t.bigint "new_ai_model_id"
     t.index ["ai_model_id"], name: "index_model_fine_tune_requests_on_ai_model_id"
     t.index ["clinician_type_id"], name: "index_model_fine_tune_requests_on_clinician_type_id"
   end
@@ -128,15 +131,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_30_114929) do
     t.index ["ai_model_id"], name: "index_ratings_on_ai_model_id"
   end
 
-  create_table "tasks", force: :cascade do |t|
-    t.string "title"
-    t.json "parameters"
-    t.bigint "ai_model_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["ai_model_id"], name: "index_tasks_on_ai_model_id"
-  end
-
   add_foreign_key "ai_models", "ai_models", column: "base_model_id"
   add_foreign_key "ai_models", "clinician_types"
   add_foreign_key "comments", "ai_models"
@@ -147,5 +141,4 @@ ActiveRecord::Schema[8.0].define(version: 2025_06_30_114929) do
   add_foreign_key "model_fine_tune_requests", "clinician_types"
   add_foreign_key "model_install_requests", "clinician_types"
   add_foreign_key "ratings", "ai_models"
-  add_foreign_key "tasks", "ai_models"
 end

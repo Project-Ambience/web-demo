@@ -7,7 +7,7 @@ class Api::MessagesController < Api::ApplicationController
       MessagePublisher.publish({
         conversation_id: @conversation.id,
         prompt: @message.content
-      }, "user_prompts")
+      }, ENV["USER_PROMPT_QUEUE_NAME"])
       render json: @message, status: :created
     else
       render json: @message.errors, status: :unprocessable_entity

@@ -12,7 +12,7 @@ class ModelFineTuneRequest < ApplicationRecord
   }
 
   after_initialize :set_default_status, if: :new_record?
-  after_create :publish_fine_tune_request_to_rabbit_mq
+  # after_create :publish_fine_tune_request_to_rabbit_mq
 
   private
 
@@ -40,7 +40,7 @@ class ModelFineTuneRequest < ApplicationRecord
 
   def ai_model_must_allow_fine_tune
     if ai_model && !ai_model.allow_fine_tune
-      errors.add(:ai_model, "must allow fine-tuning")
+      errors.add(:ai_model, "not allow fine-tuning")
     end
   end
 end

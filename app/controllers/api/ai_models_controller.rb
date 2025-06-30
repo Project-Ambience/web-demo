@@ -6,7 +6,8 @@ class Api::AiModelsController < Api::ApplicationController
       include: {
         comments: { only: [ :id, :comment, :created_at ] },
         ratings: { only: [ :id, :rating ] },
-        fine_tune_tasks: { only: [ :title, :parameters ] }
+        fine_tune_tasks: { only: [ :id, :title ] },
+        model_fine_tune_requests: { only: [ :id, :name, :status, :created_at, :task, :new_ai_model_id ] }
       },
       methods: :average_rating,
       add_clinician_type_name: true
