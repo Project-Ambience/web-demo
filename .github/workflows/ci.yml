@@ -2,16 +2,42 @@ name: CI
 
 on:
   pull_request:
-    branches:
-      - main
-      - develop
   push:
-    branches:
-      - main
+    branches: [ main ]
 
 jobs:
-  ci:
-    name: Lint and Test
+  lint:
+    name: RuboCop Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check PR title format
+        if: github.event_name == 'pull_request'
+        run: |
+          TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
+          echo "PR Title: $TITLE"
+          if ! echo "$TITLE" | grep -Eq '^PA[0-9]+: .+'; then
+            echo "❌ Pull request title must follow format: 'PA<Jira ticket number>: Description'"
+            exit 1
+          fi
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.4"
+          bundler-cache: true
+
+      - name: Install dependencies
+        run: bundle install --jobs 4 --retry 3
+
+      - name: Run RuboCop
+        run: bundle exec rubocop --parallel
+
+  test:
+    name: RSpec Test
     runs-on: ubuntu-latest
 
     services:
@@ -33,16 +59,6 @@ jobs:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/test
 
     steps:
-      - name: Check PR title format
-        if: github.event_name == "pull_request"
-        run: |
-          TITLE=$(jq -r .pull_request.title "$GITHUB_EVENT_PATH")
-          echo "PR Title: $TITLE"
-          if ! echo "$TITLE" | grep -Eq '^PA[0-9]+: .+'; then
-            echo "Pull request title must follow format: 'PA<JIRA TICKET NUMBER>: Description'"
-            exit 1
-          fi
-
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -59,9 +75,6 @@ jobs:
         run: |
           bin/rails db:create
           bin/rails db:schema:load
-
-      - name: Run RuboCop
-        run: bundle exec rubocop --parallel
 
       - name: Run RSpec
         run: bundle exec rspec
