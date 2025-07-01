@@ -35,19 +35,20 @@ services:
       context: ./client
       dockerfile: Dockerfile.dev
     ports:
-      - "5090:3000"
+      - "5090:5090"
     volumes:
       - ./client:/app
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - PORT=5090
     networks:
       - app-net-dev
     depends_on:
       - api
 
   rabbitmq:
-    image: rabbitmq:3.12-management
+    image: rabbitmq:4-management
     ports:
       - "5672:5672"
       - "15672:15672"

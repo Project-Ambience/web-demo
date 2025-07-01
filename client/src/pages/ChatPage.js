@@ -362,7 +362,6 @@ const ChatPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuRef]);
 
-  // --- NEW: ACTION CABLE USE EFFECT ---
   useEffect(() => {
     if (activeConversationId) {
       // Create the consumer only once
@@ -402,8 +401,6 @@ const ChatPage = () => {
       };
     }
   }, [activeConversationId, dispatch]);
-  // --- END OF ACTION CABLE USE EFFECT ---
-
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
