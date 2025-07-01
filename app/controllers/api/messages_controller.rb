@@ -12,7 +12,7 @@ class Api::MessagesController < Api::ApplicationController
         conversation_id: @conversation.id,
         input: [
           { "prompt": @message.content },
-          (@message.file.attached? ? { "file": rails_blob_url(@message.file, host: ENV["DOMAIN"], protocol: "http", port: ENV["PORT"]) } : nil)
+          { "file_url": @message.file_url }
         ].compact,
         model_path: @conversation.ai_model.path
       }, ENV["USER_PROMPT_QUEUE_NAME"])

@@ -421,6 +421,9 @@ const ChatPage = () => {
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
   
@@ -520,7 +523,21 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 {isFetchingMessages ? <Spinner /> : (
                   activeConversation?.messages.map(msg => (
-                    <Message key={msg.id} data-role={msg.role}>{msg.content}</Message>
+                    <Message key={msg.id} data-role={msg.role}>
+                      {msg.content && <div>{msg.content}</div>}
+                      {msg.file_url && (
+                        <div style={{ marginTop: '0.5rem' }}>
+                          📎 <a 
+                            href={msg.file_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            style={{ color: '#005eb8' }}
+                          >
+                            {msg.file_name || 'View file'}
+                          </a>
+                        </div>
+                      )}
+                    </Message>
                   ))
                 )}
                 {isSendingMessage && <Spinner />}
