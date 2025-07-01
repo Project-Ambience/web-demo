@@ -202,7 +202,7 @@ const AiModelPage = () => {
       
       dispatch(conversationSelected(newConversation.id));
       
-      navigate('/chat');
+      navigate(`/chat/${newConversation.id}`);
     } catch (err) {
       console.error('Failed to start conversation:', err);
     }
