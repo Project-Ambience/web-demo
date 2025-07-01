@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import styled from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
+// NEW: Import hooks from react-router-dom
+import { useParams, useNavigate } from 'react-router-dom';
 import { createConsumer } from '@rails/actioncable';
 import { conversationSelected } from '../features/ui/uiSlice';
 import { 
@@ -12,6 +14,8 @@ import {
   useDeleteConversationMutation
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
+
+// --- (Icons and most styled-components are unchanged) ---
 
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -317,6 +321,10 @@ const SendButton = styled.button`
 
 const ChatPage = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate(); // NEW: Hook for programmatic navigation
+  const { conversationId } = useParams(); // NEW: Get conversationId from URL
+  
+  // UPDATED: The activeConversationId from Redux is now a reflection of the URL state
   const { activeConversationId } = useSelector((state) => state.ui);
 
   const [editingConversationId, setEditingConversationId] = useState(null);
@@ -328,8 +336,9 @@ const ChatPage = () => {
   const cable = useRef();
 
   const { data: conversations, isLoading: isLoadingConversations } = useGetConversationsQuery();
-  const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(activeConversationId, {
-    skip: !activeConversationId,
+  // UPDATED: Query now uses `conversationId` from the URL
+  const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(conversationId, {
+    skip: !conversationId,
   });
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
@@ -338,6 +347,15 @@ const ChatPage = () => {
   const [input, setInput] = useState('');
   const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
+
+  // NEW: Effect to synchronize Redux state with the URL parameter
+  useEffect(() => {
+    if (conversationId) {
+      // Dispatch the action to update Redux state when the URL changes.
+      // This handles page reloads and direct navigation.
+      dispatch(conversationSelected(conversationId));
+    }
+  }, [conversationId, dispatch]);
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -364,9 +382,7 @@ const ChatPage = () => {
 
   useEffect(() => {
     if (activeConversationId) {
-      // Create the consumer only once
       if (!cable.current) {
-        // Connect to the public-facing port of your 'api' service (5090)
         cable.current = createConsumer('ws://localhost:5090/cable');
       }
       
@@ -378,8 +394,6 @@ const ChatPage = () => {
       const channelHandlers = {
         received(data) {
           console.log('Received new message via Action Cable:', data.message);
-          // Invalidate the RTK Query cache for this conversation.
-          // This will automatically trigger a refetch and update the UI.
           dispatch(
             apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
           );
@@ -394,7 +408,6 @@ const ChatPage = () => {
 
       const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
 
-      // Cleanup: Unsubscribe when component unmounts or activeConversationId changes
       return () => {
         console.log(`Unsubscribing from ConversationChannel ${activeConversationId}`);
         subscription.unsubscribe();
@@ -404,14 +417,13 @@ const ChatPage = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (input.trim() && activeConversationId && !isSendingMessage) {
+    if (input.trim() && conversationId && !isSendingMessage) {
       const messageContent = input;
       setInput('');
       if(textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
-      // No change needed here, this still triggers the initial user message display
-      await addMessage({ conversation_id: activeConversationId, message: { content: messageContent } });
+      await addMessage({ conversation_id: conversationId, message: { content: messageContent } });
     }
   };
 
@@ -442,8 +454,9 @@ const ChatPage = () => {
       try {
         await deleteConversation(convoId).unwrap();
         setMenuOpenFor(null);
-        if (activeConversationId === convoId) {
-          dispatch(conversationSelected(null));
+        if (conversationId === convoId) {
+          // If the active chat is deleted, navigate to the base chat page
+          navigate('/chat');
         }
       } catch (err) {
         console.error('Failed to delete conversation:', err);
@@ -474,8 +487,14 @@ const ChatPage = () => {
               {filteredConversations?.map(convo => (
                 <ConversationItem 
                   key={convo.id}
-                  isActive={convo.id === activeConversationId}
-                  onClick={() => editingConversationId !== convo.id && dispatch(conversationSelected(convo.id))}
+                  // UPDATED: Active state is now determined by the URL parameter
+                  isActive={convo.id.toString() === conversationId}
+                  // UPDATED: Clicking now navigates to the URL for that chat
+                  onClick={() => {
+                      if (editingConversationId !== convo.id) {
+                          navigate(`/chat/${convo.id}`);
+                      }
+                  }}
                 >
                   {editingConversationId === convo.id ? (
                      <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
@@ -506,7 +525,8 @@ const ChatPage = () => {
           )}
         </Sidebar>
         <ChatWindow>
-          {activeConversationId ? (
+          {/* UPDATED: We check for conversationId in the URL to decide what to render */}
+          {conversationId ? (
             <>
               <MessageArea ref={messageAreaRef}>
                 {isFetchingMessages ? <Spinner /> : (
@@ -524,7 +544,7 @@ const ChatPage = () => {
                     onInput={handleTextareaInput}
                     placeholder="Enter a prompt here"
                     rows="1"
-                    disabled={!activeConversationId}
+                    disabled={!conversationId}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -532,7 +552,7 @@ const ChatPage = () => {
                         }
                     }}
                   />
-                  <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isSendingMessage}>
+                  <SendButton type="submit" disabled={!input.trim() || !conversationId || isSendingMessage}>
                       <SendIcon />
                   </SendButton>
                 </MessageInputForm>
@@ -551,4 +571,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
