@@ -1,6 +1,7 @@
 class ModelFineTuneRequest < ApplicationRecord
   belongs_to :ai_model
   belongs_to :clinician_type
+
   validates :name, :description, :parameters, presence: true
   validate :ai_model_must_allow_fine_tune
 
@@ -30,12 +31,13 @@ class ModelFineTuneRequest < ApplicationRecord
     }
 
     # TODO: Add this to a job
-    MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
-    self.in_progress!
-
-    # TODO: check how this success or fail?
-    # if success -> self.in_progress!
-    # if fail -> self.failed!
+    # Add reason for failure
+    begin
+      MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
+      self.in_progress!
+    rescue => e
+      self.failed!
+    end
   end
 
   def ai_model_must_allow_fine_tune

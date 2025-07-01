@@ -21,7 +21,6 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     end
 
     ai_model = AiModel.find_by(id: params[:ai_model_id])
-
     if ai_model.nil?
       render json: { error: "AI model not found" }, status: :not_found
       return

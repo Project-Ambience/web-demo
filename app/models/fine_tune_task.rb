@@ -2,6 +2,7 @@ class FineTuneTask < ApplicationRecord
   belongs_to :ai_model
 
   validates :title, presence: true
+  validates :parameters, presence: true
 
   def self.ransackable_associations(auth_object = nil)
     [ "ai_model" ]
