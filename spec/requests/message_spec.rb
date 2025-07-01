@@ -14,6 +14,7 @@ RSpec.describe "MessageRequests", type: :request do
 
     before do
       allow(MessagePublisher).to receive(:publish)
+      ENV["USER_PROMPT_QUEUE_NAME"] = "user_prompts"
     end
 
     it "creates a new message with valid data" do
