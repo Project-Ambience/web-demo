@@ -6,7 +6,8 @@ class Api::MessagesController < Api::ApplicationController
     if @message.persisted?
       MessagePublisher.publish({
         conversation_id: @conversation.id,
-        prompt: @message.content
+        prompt: @message.content,
+        path: @conversation.ai_model.path
       }, ENV["USER_PROMPT_QUEUE_NAME"])
       render json: @message, status: :created
     else
