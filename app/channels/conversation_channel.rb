@@ -16,3 +16,4 @@ class ConversationChannel < ApplicationCable::Channel
     puts "Client unsubscribed from ConversationChannel for conversation_id: #{params[:conversation_id]}"
   end
 end
+

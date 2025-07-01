@@ -10,7 +10,7 @@ class InferenceResultSubscriber
     connection = Bunny.new(hostname: "rabbitmq") # Docker service name
     connection.start
     channel = connection.create_channel
-    
+
     input_queue_name = "inference_results"
     queue = channel.queue(input_queue_name, durable: true)
 
@@ -19,7 +19,7 @@ class InferenceResultSubscriber
     begin
       queue.subscribe(manual_ack: true, block: true) do |delivery_info, properties, body|
         puts " [x] Received #{body}"
-        
+
         data = JSON.parse(body)
         conversation_id = data["conversation_id"]
         result = data["result"]
@@ -35,10 +35,11 @@ class InferenceResultSubscriber
 
           if message.persisted?
             puts " [✔] Saved assistant message to conversation #{conversation_id}"
-            
-            # Broadcast the new message via Action Cable
+
+            # Broadcast the new message via Action Cable.
+            # Rails will now correctly autoload ConversationChannel.
             ConversationChannel.broadcast_to(
-              conversation, 
+              conversation,
               { message: message.as_json }
             )
             puts " [✔] Broadcasted message to ConversationChannel"
