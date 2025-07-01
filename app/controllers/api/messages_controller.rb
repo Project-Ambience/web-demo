@@ -4,10 +4,10 @@ class Api::MessagesController < Api::ApplicationController
     @message = @conversation.messages.create(content: params[:message][:content], role: "user")
 
     if @message.persisted?
-      UserPromptPublisher.publish({
+      MessagePublisher.publish({
         conversation_id: @conversation.id,
         prompt: @message.content
-      })
+      }, ENV["USER_PROMPT_QUEUE_NAME"])
       render json: @message, status: :created
     else
       render json: @message.errors, status: :unprocessable_entity

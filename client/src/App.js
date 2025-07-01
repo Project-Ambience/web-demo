@@ -5,6 +5,7 @@ import Header from './components/layout/Header';
 import GlobalStyles from './components/layout/GlobalStyles';
 import ModelCataloguePage from './pages/ModelCataloguePage';
 import AiModelPage from './pages/AiModelPage';
+import FineTunePage from './pages/FineTunePage';
 import ChatPage from './pages/ChatPage';
 
 const AppContainer = styled.div`
@@ -35,6 +36,7 @@ function App() {
           {/* Using a generic /chat route for now, can be adapted */}
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:conversationId" element={<ChatPage />} />
+          <Route path="/fine-tune/:id" element={<FineTunePage />} />
         </Routes>
       </MainContent>
     </AppContainer>

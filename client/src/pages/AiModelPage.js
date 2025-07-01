@@ -208,6 +208,10 @@ const AiModelPage = () => {
     }
   };
 
+  const handleFineTune = async () => {
+    navigate(`/fine-tune/${model.id}`);
+  };
+
   const handleRateSubmit = async () => {
     if (newRating > 0) {
       try {
@@ -297,7 +301,9 @@ const AiModelPage = () => {
               </PrimaryButton>
               <ButtonGroup>
                  <SecondaryButton>Download</SecondaryButton>
-                 <SecondaryButton>Fine-tune</SecondaryButton>
+                 <SecondaryButton onClick={handleFineTune} disabled={!model.allow_fine_tune}>
+                   Fine-tune
+                 </SecondaryButton>
               </ButtonGroup>
               <TertiaryButton>Share</TertiaryButton>
             </Section>

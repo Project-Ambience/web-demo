@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message'], // Add new tags
+  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message'],
   endpoints: builder => ({
     getClinicianTypes: builder.query({
       query: () => '/clinician_types',
@@ -35,7 +35,6 @@ export const apiSlice = createApi({
         'ClinicianType',
       ],
     }),
-
     getConversations: builder.query({
       query: () => '/conversations',
       providesTags: (result = []) => [
@@ -83,6 +82,14 @@ export const apiSlice = createApi({
         { type: 'Conversation', id: arg.conversation_id }
       ],
     }),
+
+    createFineTuneRequest: builder.mutation({
+      query: (formData) => ({
+        url: '/model_fine_tune_requests',
+        method: 'POST',
+        body: formData,
+      }),
+    }),
   }),
 });
 
@@ -97,4 +104,5 @@ export const {
   useUpdateConversationMutation,
   useDeleteConversationMutation,
   useAddMessageMutation,
+  useCreateFineTuneRequestMutation,
 } = apiSlice;

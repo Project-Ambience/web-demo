@@ -1,9 +1,9 @@
 class Api::ConversationsController < Api::ApplicationController
-  before_action :set_conversation, only: [:show, :update, :destroy]
+  before_action :set_conversation, only: [ :show, :update, :destroy ]
 
   def index
     @conversations = Conversation.includes(:ai_model).order(updated_at: :desc)
-    
+
     response_data = @conversations.map do |convo|
       {
         id: convo.id,

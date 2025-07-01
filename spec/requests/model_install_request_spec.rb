@@ -5,6 +5,8 @@ RSpec.describe "ModelInstallRequests", type: :request do
 
   describe "POST api/model_install_requests/:id/update_status" do
     before do
+      ENV["MODEL_INSTALLER_SERVICE_PATH"] = "http://example.com/models/install"
+      ENV["MODEL_INSTALL_REQUEST_CALLBACK_PATH"] = "http://example.com/api/model_install_requests/update_status"
       stub_request(:post, ENV["MODEL_INSTALLER_SERVICE_PATH"] || "https://dummy-json.mock.beeceptor.com/posts")
         .with(
           body: hash_including("model_path" => "http://example.com/model"),
@@ -37,7 +39,7 @@ RSpec.describe "ModelInstallRequests", type: :request do
         name: request.name,
         description: request.description,
         clinician_type_id: request.clinician_type_id,
-        keywords: ["example_keyword"]
+        keywords: [ "example_keyword" ]
       )
 
       expect(response).to have_http_status(:ok)
@@ -55,7 +57,6 @@ RSpec.describe "ModelInstallRequests", type: :request do
     it "returns 422 for invalid status param" do
       request = create(:model_install_request, clinician_type: clinician_type)
       post "/api/model_install_requests/update_status", params: { id: request.id, status: "invalid" }
-
     end
   end
 end

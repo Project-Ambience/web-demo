@@ -10,7 +10,7 @@ class Api::CommentsController < Api::ApplicationController
       render json: @comment.errors, status: :unprocessable_entity
     end
   end
-  
+
   private
 
   def set_ai_model
