@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components'; // Added keyframes for animation
 import { useSelector, useDispatch } from 'react-redux';
-// NEW: Import hooks from react-router-dom
 import { useParams, useNavigate } from 'react-router-dom';
 import { createConsumer } from '@rails/actioncable';
 import { conversationSelected } from '../features/ui/uiSlice';
@@ -240,21 +239,55 @@ const Message = styled.div`
   margin-bottom: 1rem;
   line-height: 1.5;
   font-size: 1rem;
+  display: flex; // Added for loader alignment
+  align-items: center; // Added for loader alignment
 
   &[data-role="user"] {
-    background-color: #f0f4f8;
+    background-color: #e8f0fe; // A light blue for user prompts
     color: #1f1f1f;
     margin-left: auto;
     border-top-right-radius: 5px;
   }
 
   &[data-role="assistant"] {
-    background-color: #fff;
+    background-color: #f0f4f5; // A light grey for assistant responses
     color: #1f1f1f;
     margin-right: auto;
     border-bottom-left-radius: 5px;
   }
 `;
+
+// NEW: Animation for the typing indicator dots
+const bounce = keyframes`
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1.0);
+  }
+`;
+
+// NEW: Styled component for the typing indicator
+const TypingIndicator = styled.div`
+  span {
+    display: inline-block;
+    background-color: #5f6368;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin: 0 2px;
+    animation: ${bounce} 1.4s infinite ease-in-out both;
+  }
+
+  span:nth-of-type(1) {
+    animation-delay: -0.32s;
+  }
+
+  span:nth-of-type(2) {
+    animation-delay: -0.16s;
+  }
+`;
+
 
 const MessageInputContainer = styled.div`
   padding: 0 1rem;
@@ -321,11 +354,13 @@ const SendButton = styled.button`
 
 const ChatPage = () => {
   const dispatch = useDispatch();
-  const navigate = useNavigate(); // NEW: Hook for programmatic navigation
-  const { conversationId } = useParams(); // NEW: Get conversationId from URL
+  const navigate = useNavigate();
+  const { conversationId } = useParams();
   
-  // UPDATED: The activeConversationId from Redux is now a reflection of the URL state
   const { activeConversationId } = useSelector((state) => state.ui);
+
+  // NEW: Local state to track if we are waiting for the model's response
+  const [isAwaitingResponse, setIsAwaitingResponse] = useState(false);
 
   const [editingConversationId, setEditingConversationId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
@@ -336,7 +371,6 @@ const ChatPage = () => {
   const cable = useRef();
 
   const { data: conversations, isLoading: isLoadingConversations } = useGetConversationsQuery();
-  // UPDATED: Query now uses `conversationId` from the URL
   const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(conversationId, {
     skip: !conversationId,
   });
@@ -348,11 +382,8 @@ const ChatPage = () => {
   const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
 
-  // NEW: Effect to synchronize Redux state with the URL parameter
   useEffect(() => {
     if (conversationId) {
-      // Dispatch the action to update Redux state when the URL changes.
-      // This handles page reloads and direct navigation.
       dispatch(conversationSelected(conversationId));
     }
   }, [conversationId, dispatch]);
@@ -368,7 +399,7 @@ const ChatPage = () => {
     if (messageAreaRef.current) {
       messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
     }
-  }, [activeConversation, isSendingMessage]);
+  }, [activeConversation, isAwaitingResponse]); // NEW: Also scroll when loader appears
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -415,6 +446,17 @@ const ChatPage = () => {
     }
   }, [activeConversationId, dispatch]);
 
+  // NEW: Effect to turn off the loading indicator when an assistant message arrives
+  useEffect(() => {
+    if (activeConversation && activeConversation.messages.length > 0) {
+      const lastMessage = activeConversation.messages[activeConversation.messages.length - 1];
+      // If the last message is from the assistant, we are no longer waiting.
+      if (lastMessage.role === 'assistant') {
+        setIsAwaitingResponse(false);
+      }
+    }
+  }, [activeConversation]);
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (input.trim() && conversationId && !isSendingMessage) {
@@ -423,7 +465,15 @@ const ChatPage = () => {
       if(textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
-      await addMessage({ conversation_id: conversationId, message: { content: messageContent } });
+      try {
+        await addMessage({ conversation_id: conversationId, message: { content: messageContent } }).unwrap();
+        // NEW: After successfully sending the user's message, turn on the loading indicator.
+        setIsAwaitingResponse(true);
+      } catch (err) {
+        console.error("Failed to send message:", err);
+        // Turn off loader on error
+        setIsAwaitingResponse(false);
+      }
     }
   };
 
@@ -454,8 +504,7 @@ const ChatPage = () => {
       try {
         await deleteConversation(convoId).unwrap();
         setMenuOpenFor(null);
-        if (conversationId === convoId) {
-          // If the active chat is deleted, navigate to the base chat page
+        if (conversationId === convoId.toString()) {
           navigate('/chat');
         }
       } catch (err) {
@@ -487,9 +536,7 @@ const ChatPage = () => {
               {filteredConversations?.map(convo => (
                 <ConversationItem 
                   key={convo.id}
-                  // UPDATED: Active state is now determined by the URL parameter
                   isActive={convo.id.toString() === conversationId}
-                  // UPDATED: Clicking now navigates to the URL for that chat
                   onClick={() => {
                       if (editingConversationId !== convo.id) {
                           navigate(`/chat/${convo.id}`);
@@ -525,16 +572,22 @@ const ChatPage = () => {
           )}
         </Sidebar>
         <ChatWindow>
-          {/* UPDATED: We check for conversationId in the URL to decide what to render */}
           {conversationId ? (
             <>
               <MessageArea ref={messageAreaRef}>
-                {isFetchingMessages ? <Spinner /> : (
+                {isFetchingMessages && !activeConversation ? <Spinner /> : (
                   activeConversation?.messages.map(msg => (
                     <Message key={msg.id} data-role={msg.role}>{msg.content}</Message>
                   ))
                 )}
-                {isSendingMessage && <Spinner />}
+                {/* NEW: Display the typing indicator when waiting for a response */}
+                {isAwaitingResponse && (
+                  <Message data-role="assistant">
+                    <TypingIndicator>
+                      <span /><span /><span />
+                    </TypingIndicator>
+                  </Message>
+                )}
               </MessageArea>
               <MessageInputContainer>
                 <MessageInputForm onSubmit={handleSendMessage}>
@@ -544,7 +597,7 @@ const ChatPage = () => {
                     onInput={handleTextareaInput}
                     placeholder="Enter a prompt here"
                     rows="1"
-                    disabled={!conversationId}
+                    disabled={!conversationId || isAwaitingResponse} // Also disable while waiting
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -552,7 +605,7 @@ const ChatPage = () => {
                         }
                     }}
                   />
-                  <SendButton type="submit" disabled={!input.trim() || !conversationId || isSendingMessage}>
+                  <SendButton type="submit" disabled={!input.trim() || !conversationId || isAwaitingResponse}>
                       <SendIcon />
                   </SendButton>
                 </MessageInputForm>
