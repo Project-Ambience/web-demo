@@ -315,6 +315,58 @@ const SendButton = styled.button`
   }
 `;
 
+const HiddenFileInput = styled.input`
+  display: none;
+`;
+
+const FileButton = styled.button`
+  background-color:rgb(226, 231, 238);
+  color:rgb(148, 147, 147);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #BCC8D8;
+  }
+`;
+
+const SelectedFileWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #333;
+  background: #e4e9f0;
+  border-radius: 16px;
+  padding: 0.4rem 0.75rem;
+  margin: 0.5rem auto 0;
+  width: fit-content;
+  max-width: 90%;
+  margin-bottom: 0.5rem;
+`;
+
+const RemoveFileButton = styled.button`
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0;
+  margin-left: 0.5rem;
+
+  &:hover {
+    color: #e53935;
+  }
+`;
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const { activeConversationId } = useSelector((state) => state.ui);
@@ -327,6 +379,7 @@ const ChatPage = () => {
   
   const menuRef = useRef(null);
   const cable = useRef();
+  const fileInputRef = useRef(null);
 
   const { data: conversations, isLoading: isLoadingConversations } = useGetConversationsQuery();
   const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(activeConversationId, {
@@ -543,6 +596,17 @@ const ChatPage = () => {
                 {isSendingMessage && <Spinner />}
               </MessageArea>
               <MessageInputContainer>
+                {selectedFile && (
+                  <SelectedFileWrapper>
+                    📎 {selectedFile.name}
+                    <RemoveFileButton type="button" onClick={() => {
+                      setSelectedFile(null);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }}>
+                      ✕
+                    </RemoveFileButton>
+                  </SelectedFileWrapper>
+                )}
                 <MessageInputForm onSubmit={handleSendMessage}>
                   <MessageTextarea 
                     ref={textareaRef}
@@ -558,11 +622,16 @@ const ChatPage = () => {
                         }
                     }}
                   />
-                  <input 
+                  <HiddenFileInput 
+                    ref={fileInputRef}
                     type="file"
-                    accept="image/*"
+                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
                     onChange={(e) => setSelectedFile(e.target.files[0])}
                   />
+
+                  <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                    +
+                  </FileButton>
                   <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isSendingMessage}>
                       <SendIcon />
                   </SendButton>
