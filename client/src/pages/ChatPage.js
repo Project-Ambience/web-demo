@@ -323,6 +323,7 @@ const ChatPage = () => {
   const [newTitle, setNewTitle] = useState('');
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
   
   const menuRef = useRef(null);
   const cable = useRef();
@@ -408,16 +409,21 @@ const ChatPage = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (input.trim() && activeConversationId && !isSendingMessage) {
-      const messageContent = input;
+      await addMessage({
+        conversation_id: activeConversationId,
+        message: {
+          content: input,
+          file: selectedFile,
+        },
+      });
       setInput('');
-      if(textareaRef.current) {
+      setSelectedFile(null);
+      if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
-      // No change needed here, this still triggers the initial user message display
-      await addMessage({ conversation_id: activeConversationId, message: { content: messageContent } });
     }
   };
-
+  
   const handleStartEditing = (convo) => {
     setEditingConversationId(convo.id);
     setNewTitle(convo.title);
@@ -534,6 +540,11 @@ const ChatPage = () => {
                             handleSendMessage(e);
                         }
                     }}
+                  />
+                  <input 
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => setSelectedFile(e.target.files[0])}
                   />
                   <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isSendingMessage}>
                       <SendIcon />
