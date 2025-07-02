@@ -18,8 +18,12 @@ class Api::ConversationsController < Api::ApplicationController
   end
 
   def show
-    # UPDATED: Include the ai_model and its name in the JSON response.
-    render json: @conversation.as_json(include: [:messages, ai_model: { only: [:id, :name] }])
+    render json: @conversation.as_json(include: {
+      ai_model: { only: [:id, :name] },
+      messages: {
+        methods: [ :file_url, :file_name ]
+      }
+    })
   end
 
   def create
