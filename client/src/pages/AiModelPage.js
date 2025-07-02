@@ -122,15 +122,6 @@ const SecondaryButton = styled(ButtonBase)`
   }
 `;
 
-const TertiaryButton = styled(ButtonBase)`
-  background-color: transparent;
-  color: #005eb8;
-  padding: 0.5rem;
-  width: auto;
-  margin: 0 auto;
-  font-size: 0.9rem;
-`;
-
 const TextArea = styled.textarea`
   width: 100%;
   padding: 0.5rem;
@@ -146,13 +137,6 @@ const TextArea = styled.textarea`
     outline: 2px solid #005eb8;
     border-color: #005eb8;
   }
-`;
-
-const ButtonGroup = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
-  align-items: center;
 `;
 
 const BackLink = styled(Link)`
@@ -299,13 +283,9 @@ const AiModelPage = () => {
               <PrimaryButton onClick={handleUseModel} disabled={isCreatingConversation}>
                 {isCreatingConversation ? 'Starting...' : 'Use the model'}
               </PrimaryButton>
-              <ButtonGroup>
-                 <SecondaryButton>Download</SecondaryButton>
-                 <SecondaryButton onClick={handleFineTune} disabled={!model.allow_fine_tune}>
-                   Fine-tune
-                 </SecondaryButton>
-              </ButtonGroup>
-              <TertiaryButton>Share</TertiaryButton>
+              <SecondaryButton onClick={handleFineTune} disabled={!model.allow_fine_tune}>
+                Fine-tune
+              </SecondaryButton>
             </Section>
           </Sidebar>
         </PageWrapper>
