@@ -73,16 +73,24 @@ export const apiSlice = createApi({
       invalidatesTags: [{ type: 'Conversation', id: 'LIST' }],
     }),
     addMessage: builder.mutation({
-      query: ({ conversation_id, message }) => ({
-        url: `/conversations/${conversation_id}/messages`,
-        method: 'POST',
-        body: { message },
-      }),
+      query: ({ conversation_id, message }) => {
+        const formData = new FormData();
+        formData.append('message[content]', message.content);
+        
+        if (message.file) {
+          formData.append('message[file]', message.file);
+        }
+    
+        return {
+          url: `/conversations/${conversation_id}/messages`,
+          method: 'POST',
+          body: formData,
+        };
+      },
       invalidatesTags: (result, error, arg) => [
         { type: 'Conversation', id: arg.conversation_id }
       ],
     }),
-
     createFineTuneRequest: builder.mutation({
       query: (formData) => ({
         url: '/model_fine_tune_requests',

@@ -35,7 +35,7 @@ RSpec.describe "MessageRequests", type: :request do
 
     it "publishes the message to the queue" do
       post "/api/conversations/#{conversation.id}/messages", params: valid_params
-      expect(MessagePublisher).to have_received(:publish).with({ conversation_id: conversation.id, path: "some path", prompt: "Hello, this is a test message." }, "user_prompts")
+      expect(MessagePublisher).to have_received(:publish).with({ conversation_id: conversation.id, model_path: "some path", input: [ { prompt: "Hello, this is a test message." }, { file_url: nil } ] }, "user_prompts")
     end
   end
 end
