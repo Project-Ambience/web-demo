@@ -1,9 +1,9 @@
 class Api::ConversationsController < Api::ApplicationController
-  before_action :set_conversation, only: [ :show, :update, :destroy ]
+  before_action :set_conversation, only: [:show, :update, :destroy]
 
   def index
     @conversations = Conversation.includes(:ai_model).order(updated_at: :desc)
-
+    
     response_data = @conversations.map do |convo|
       {
         id: convo.id,
@@ -18,7 +18,8 @@ class Api::ConversationsController < Api::ApplicationController
   end
 
   def show
-    render json: @conversation.as_json(include: :messages)
+    # UPDATED: Include the ai_model and its name in the JSON response.
+    render json: @conversation.as_json(include: [:messages, ai_model: { only: [:id, :name] }])
   end
 
   def create

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import styled, { keyframes } from 'styled-components'; // Added keyframes for animation
+import styled, { keyframes } from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
 import { useParams, useNavigate } from 'react-router-dom';
 import { createConsumer } from '@rails/actioncable';
@@ -14,7 +14,6 @@ import {
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
-// --- (Icons and most styled-components are unchanged) ---
 
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -27,6 +26,7 @@ const SendIcon = () => (
         <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
     </svg>
 );
+
 
 const ChatPageWrapper = styled.div`
     position: fixed;
@@ -51,6 +51,7 @@ const Sidebar = styled.aside`
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0;
+  height: 100%; 
 `;
 
 const SidebarTitle = styled.h2`
@@ -59,6 +60,7 @@ const SidebarTitle = styled.h2`
   padding: 0 1.5rem 1rem 1.5rem;
   margin: 0;
   border-bottom: 1px solid #e8edee;
+  flex-shrink: 0;
 `;
 
 const SearchContainer = styled.div`
@@ -92,8 +94,8 @@ const ConversationList = styled.ul`
   list-style-type: none;
   padding: 0;
   margin: 0;
+  flex-grow: 1;
   overflow-y: auto;
-  flex: 1;
 `;
 
 const MenuButton = styled.button`
@@ -200,6 +202,7 @@ const ChatWindow = styled.main`
   flex-direction: column;
   height: 100%;
   position: relative;
+  overflow: hidden;
 `;
 
 const EmptyStateWrapper = styled.div`
@@ -223,10 +226,31 @@ const EmptyStateWrapper = styled.div`
   }
 `;
 
+const ChatInfoWindow = styled.div`
+  text-align: center;
+  padding: 4rem 2rem;
+  margin: auto;
+  color: #5f6368;
+
+  h2 {
+    font-size: 1.75rem;
+    color: #1f1f1f;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    font-size: 1rem;
+  }
+`;
+
 const MessageArea = styled.div`
   flex: 1;
   overflow-y: auto;
-  padding: 1rem 0;
+  width: 100%;
+`;
+
+const MessageList = styled.div`
+  padding: 1rem 1rem 0 1rem; /* Added horizontal padding */
   width: 100%;
   max-width: 900px;
   margin: 0 auto;
@@ -239,25 +263,25 @@ const Message = styled.div`
   margin-bottom: 1rem;
   line-height: 1.5;
   font-size: 1rem;
-  display: flex; // Added for loader alignment
-  align-items: center; // Added for loader alignment
+  display: flex;
+  align-items: center;
+  word-wrap: break-word; /* Ensure long words break */
 
   &[data-role="user"] {
-    background-color: #e8f0fe; // A light blue for user prompts
+    background-color: #e8f0fe;
     color: #1f1f1f;
     margin-left: auto;
     border-top-right-radius: 5px;
   }
 
   &[data-role="assistant"] {
-    background-color: #f0f4f5; // A light grey for assistant responses
+    background-color: #f0f4f5;
     color: #1f1f1f;
     margin-right: auto;
     border-bottom-left-radius: 5px;
   }
 `;
 
-// NEW: Animation for the typing indicator dots
 const bounce = keyframes`
   0%, 80%, 100% {
     transform: scale(0);
@@ -267,7 +291,6 @@ const bounce = keyframes`
   }
 `;
 
-// NEW: Styled component for the typing indicator
 const TypingIndicator = styled.div`
   span {
     display: inline-block;
@@ -294,6 +317,7 @@ const MessageInputContainer = styled.div`
   width: 100%;
   max-width: 900px;
   margin: 1rem auto;
+  flex-shrink: 0;
 `;
 
 const MessageInputForm = styled.form`
@@ -359,7 +383,6 @@ const ChatPage = () => {
   
   const { activeConversationId } = useSelector((state) => state.ui);
 
-  // NEW: Local state to track if we are waiting for the model's response
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false);
 
   const [editingConversationId, setEditingConversationId] = useState(null);
@@ -399,7 +422,7 @@ const ChatPage = () => {
     if (messageAreaRef.current) {
       messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
     }
-  }, [activeConversation, isAwaitingResponse]); // NEW: Also scroll when loader appears
+  }, [activeConversation, isAwaitingResponse]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -446,11 +469,9 @@ const ChatPage = () => {
     }
   }, [activeConversationId, dispatch]);
 
-  // NEW: Effect to turn off the loading indicator when an assistant message arrives
   useEffect(() => {
     if (activeConversation && activeConversation.messages.length > 0) {
       const lastMessage = activeConversation.messages[activeConversation.messages.length - 1];
-      // If the last message is from the assistant, we are no longer waiting.
       if (lastMessage.role === 'assistant') {
         setIsAwaitingResponse(false);
       }
@@ -467,11 +488,9 @@ const ChatPage = () => {
       }
       try {
         await addMessage({ conversation_id: conversationId, message: { content: messageContent } }).unwrap();
-        // NEW: After successfully sending the user's message, turn on the loading indicator.
         setIsAwaitingResponse(true);
       } catch (err) {
         console.error("Failed to send message:", err);
-        // Turn off loader on error
         setIsAwaitingResponse(false);
       }
     }
@@ -517,6 +536,8 @@ const ChatPage = () => {
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const isNewChat = activeConversation && activeConversation.messages.length === 0 && !isFetchingMessages;
+
   return (
     <ChatPageWrapper>
       <ChatLayout>
@@ -531,9 +552,9 @@ const ChatPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </SearchContainer>
-          {isLoadingConversations ? <Spinner /> : (
-            <ConversationList>
-              {filteredConversations?.map(convo => (
+          <ConversationList>
+            {isLoadingConversations ? <Spinner /> : (
+              filteredConversations?.map(convo => (
                 <ConversationItem 
                   key={convo.id}
                   isActive={convo.id.toString() === conversationId}
@@ -567,28 +588,37 @@ const ChatPage = () => {
                     </>
                   )}
                 </ConversationItem>
-              ))}
-            </ConversationList>
-          )}
+              ))
+            )}
+          </ConversationList>
         </Sidebar>
         <ChatWindow>
           {conversationId ? (
             <>
-              <MessageArea ref={messageAreaRef}>
-                {isFetchingMessages && !activeConversation ? <Spinner /> : (
-                  activeConversation?.messages.map(msg => (
-                    <Message key={msg.id} data-role={msg.role}>{msg.content}</Message>
-                  ))
-                )}
-                {/* NEW: Display the typing indicator when waiting for a response */}
-                {isAwaitingResponse && (
-                  <Message data-role="assistant">
-                    <TypingIndicator>
-                      <span /><span /><span />
-                    </TypingIndicator>
-                  </Message>
-                )}
-              </MessageArea>
+              {isNewChat ? (
+                <ChatInfoWindow>
+                  <h2>Now chatting with {activeConversation?.ai_model?.name}</h2>
+                  <p>Send your first message to begin the conversation.</p>
+                </ChatInfoWindow>
+              ) : (
+                <MessageArea ref={messageAreaRef}>
+                  <MessageList>
+                    {isFetchingMessages && !activeConversation ? <Spinner /> : (
+                      activeConversation?.messages.map(msg => (
+                        <Message key={msg.id} data-role={msg.role}>{msg.content}</Message>
+                      ))
+                    )}
+                    {isAwaitingResponse && (
+                      <Message data-role="assistant">
+                        <TypingIndicator>
+                          <span /><span /><span />
+                        </TypingIndicator>
+                      </Message>
+                    )}
+                  </MessageList>
+                </MessageArea>
+              )}
+
               <MessageInputContainer>
                 <MessageInputForm onSubmit={handleSendMessage}>
                   <MessageTextarea 
@@ -597,7 +627,7 @@ const ChatPage = () => {
                     onInput={handleTextareaInput}
                     placeholder="Enter a prompt here"
                     rows="1"
-                    disabled={!conversationId || isAwaitingResponse} // Also disable while waiting
+                    disabled={!conversationId || isAwaitingResponse}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
