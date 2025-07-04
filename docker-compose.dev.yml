@@ -20,7 +20,7 @@ services:
       - "5091:3000"
     volumes:
       - .:/rails
-      - bundle-cache:/usr/local/bundle
+      - bundle-cache-dev:/usr/local/bundle
     environment:
       RAILS_ENV: development
       DATABASE_URL: "postgresql://postgres:password@db:5432/project_ambience_development"
@@ -48,7 +48,7 @@ services:
 
 volumes:
   db-data-dev:
-  bundle-cache:
+  bundle-cache-dev:
 
 networks:
   app-net-dev:
