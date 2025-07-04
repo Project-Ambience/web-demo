@@ -5,34 +5,50 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: project_ambience_production
+    ports:
+      - "6433:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
     networks:
       - app-net
 
-  web:
+  api:
     build:
       context: .
-      dockerfile: Dockerfile
-    depends_on:
-      - db
+      dockerfile: Dockerfile.dev
     ports:
-      - "5090:5090"
-    env_file:
-      - .env
-    environment:
-      RAILS_ENV: production
-      DATABASE_URL: "postgresql://postgres:password@db:5432/project_ambience_production"
-      RAILS_SERVE_STATIC_FILES: true
+      - "7091:3000"
     volumes:
-      - ./storage:/rails/storage
+      - .:/rails
+      - bundle-cache:/usr/local/bundle
+    environment:
+      RAILS_ENV: development
+      DATABASE_URL: "postgresql://postgres:password@db:5432/project_ambience_production"
     networks:
       - app-net
-    restart: unless-stopped
-    command: ["./bin/rails", "server", "-b", "0.0.0.0", "-p", "5090"]
+    depends_on:
+      - db
+    command: ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile.dev
+    ports:
+      - "7090:3000"
+    volumes:
+      - ./client:/app
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+    networks:
+      - app-net
+    depends_on:
+      - api
 
 volumes:
   db-data:
+  bundle-cache:
 
 networks:
   app-net:
