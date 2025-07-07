@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  useGetAiModelByIdQuery, 
-  useAddRatingMutation, 
+import {
+  useGetAiModelByIdQuery,
+  useAddRatingMutation,
   useAddCommentMutation,
   useCreateConversationMutation
 } from '../app/apiSlice';
@@ -16,13 +16,33 @@ const PageWrapper = styled.div`
   display: grid;
   grid-template-columns: 1fr;
   gap: 2rem;
+  
+  /* Define grid areas for mobile-first layout */
+  grid-template-areas:
+    "main"
+    "sidebar"
+    "comments";
 
   @media (min-width: 960px) {
     grid-template-columns: 2fr 1fr;
+    /* Redefine grid areas for desktop layout */
+    grid-template-areas:
+      "main     sidebar"
+      "comments sidebar";
+    grid-template-rows: auto 1fr; /* First row fits content, second takes remaining space */
   }
 `;
 
 const MainContent = styled.div`
+  grid-area: main; /* Assign to the 'main' grid area */
+  background-color: #fff;
+  padding: 2rem;
+  border: 1px solid #e8edee;
+  border-radius: 4px;
+`;
+
+const CommentsContainer = styled.div`
+  grid-area: comments; /* Assign to the 'comments' grid area */
   background-color: #fff;
   padding: 2rem;
   border: 1px solid #e8edee;
@@ -30,6 +50,7 @@ const MainContent = styled.div`
 `;
 
 const Sidebar = styled.div`
+  grid-area: sidebar; /* Assign to the 'sidebar' grid area */
   background-color: #f0f4f5;
   padding: 1.5rem;
   border-radius: 4px;
@@ -94,7 +115,7 @@ const ButtonBase = styled.button`
   width: 100%;
   margin-bottom: 0.5rem;
   text-align: center;
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -305,12 +326,13 @@ const AiModelPage = () => {
               </CommentList>
             </Section>
           </MainContent>
+
           <Sidebar>
             <h3>Actions</h3>
             <Section>
               <h4>Add a Comment</h4>
               <form onSubmit={handleCommentSubmit}>
-                <TextArea 
+                <TextArea
                   placeholder="Enter your comment..."
                   value={commentText}
                   onChange={(e) => setCommentText(e.target.value)}
@@ -322,8 +344,8 @@ const AiModelPage = () => {
             </Section>
             <Section>
               <InteractiveStarRating onRate={setNewRating} />
-              <PrimaryButton 
-                onClick={handleRateSubmit} 
+              <PrimaryButton
+                onClick={handleRateSubmit}
                 disabled={newRating === 0 || isRatingLoading}
               >
                 {isRatingLoading ? 'Submitting...' : 'Submit Rating'}
@@ -348,6 +370,24 @@ const AiModelPage = () => {
               </PrimaryButton>
             </Section>
           </Sidebar>
+
+          <CommentsContainer>
+            <Section>
+              <h3>Comments</h3>
+              <CommentList>
+                {model.comments.length > 0 ? (
+                  model.comments.map(comment => (
+                    <CommentItem key={comment.id}>
+                      <p>"{comment.comment}"</p>
+                      <small>Posted on: {new Date(comment.created_at).toLocaleDateString()}</small>
+                    </CommentItem>
+                  ))
+                ) : (
+                  <p>No comments yet.</p>
+                )}
+              </CommentList>
+            </Section>
+          </CommentsContainer>
         </PageWrapper>
       </div>
     );
