@@ -17,7 +17,6 @@ const PageWrapper = styled.div`
   grid-template-columns: 1fr;
   gap: 2rem;
   
-  /* Define grid areas for mobile-first layout */
   grid-template-areas:
     "main"
     "sidebar"
@@ -25,16 +24,15 @@ const PageWrapper = styled.div`
 
   @media (min-width: 960px) {
     grid-template-columns: 2fr 1fr;
-    /* Redefine grid areas for desktop layout */
     grid-template-areas:
       "main     sidebar"
       "comments sidebar";
-    grid-template-rows: auto 1fr; /* First row fits content, second takes remaining space */
+    grid-template-rows: auto 1fr; 
   }
 `;
 
 const MainContent = styled.div`
-  grid-area: main; /* Assign to the 'main' grid area */
+  grid-area: main; 
   background-color: #fff;
   padding: 2rem;
   border: 1px solid #e8edee;
@@ -42,7 +40,7 @@ const MainContent = styled.div`
 `;
 
 const CommentsContainer = styled.div`
-  grid-area: comments; /* Assign to the 'comments' grid area */
+  grid-area: comments; 
   background-color: #fff;
   padding: 2rem;
   border: 1px solid #e8edee;
@@ -50,7 +48,7 @@ const CommentsContainer = styled.div`
 `;
 
 const Sidebar = styled.div`
-  grid-area: sidebar; /* Assign to the 'sidebar' grid area */
+  grid-area: sidebar; 
   background-color: #f0f4f5;
   padding: 1.5rem;
   border-radius: 4px;
