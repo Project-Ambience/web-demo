@@ -405,7 +405,7 @@ const FileButtonWrapper = styled.div`
 
 const FileButtonTooltip = styled.div`
   position: absolute;
-  bottom: 110%; /* show above the button */
+  bottom: 110%;
   left: 50%;
   transform: translateX(-50%);
   background-color: #e53935;
