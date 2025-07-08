@@ -196,6 +196,45 @@ const ModalButton = styled(ButtonBase)`
   padding: 0.5rem 1.25rem;
 `;
 
+const FileInputWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+  width: 100%;
+`;
+
+const Tooltip = styled.div`
+  position: absolute;
+  bottom: 110%;
+  left: 0;
+  background-color: #333;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  
+  ${FileInputWrapper}:hover & {
+    opacity: 1;
+  }
+`;
+
+const ErrorTooltip = styled.div`
+  position: absolute;
+  bottom: 110%;
+  left: 0;
+  background-color: #e53935;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+`;
+
+
 const FineTunePage = () => {
   const { id } = useParams();
   const { data: model, isLoading, isError } = useGetAiModelByIdQuery(id);
@@ -218,6 +257,7 @@ const FineTunePage = () => {
   const [submitParams, setSubmitParams] = useState(null);
   const [submissionError, setSubmissionError] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
+  const [fileError, setFileError] = useState('');
 
 
   const handleFileChange = (e) => {
@@ -427,14 +467,39 @@ const FineTunePage = () => {
           <Section>
             <h3>Fine-Tuning Data</h3>
             <label htmlFor="file">Upload JSON file</label>
-            <input
-              id="file"
-              type="file"
-              accept=".json"
-              onChange={handleFileChange}
-              required
-            />
-  
+            <FileInputWrapper>
+              <input
+                id="file"
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  const uploaded = e.target.files[0];
+                  const maxSizeMB = 100;
+                  const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+                  if (uploaded) {
+                    if (uploaded.size > maxSizeBytes) {
+                      setFile(null);
+                      setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                      e.target.value = '';
+                      setTimeout(() => setFileError(''), 4000);
+                    } else if (uploaded.type !== 'application/json') {
+                      setFile(null);
+                      setFileError('Please upload a .json file');
+                      e.target.value = '';
+                      setTimeout(() => setFileError(''), 4000);
+                    } else {
+                      setFile(uploaded);
+                      setFileError('');
+                    }
+                  }
+                }}
+                required
+              />
+              <Tooltip>Max 1 file, 50MB</Tooltip>
+              {fileError && <ErrorTooltip>{fileError}</ErrorTooltip>}
+            </FileInputWrapper>
+
             {file && (
               <p>
                 <strong>Selected file:</strong> {file.name}
