@@ -258,11 +258,45 @@ const HiddenFileInput = styled.input`
 `;
 
 const FileButton = styled.button`
-  background-color:rgb(226, 231, 238); color:rgb(148, 147, 147); border: none;
-  border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center;
-  justify-content: center; font-size: 1.5rem; cursor: pointer; transition: background-color 0.2s;
-  padding-bottom: 4px;
-  &:hover { background-color: #BCC8D8; }
+  position: relative;
+  background-color: rgb(226, 231, 238);
+  color: rgb(148, 147, 147);
+  border: none;
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  z-index: 1;
+
+  &:hover {
+    background-color: #BCC8D8;
+  }
+
+  &::after {
+    content: 'Max 1 file, 100MB';
+    position: absolute;
+    bottom: 125%; /* Move above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
 `;
 
 const SelectedFileWrapper = styled.div`
@@ -278,7 +312,27 @@ const RemoveFileButton = styled.button`
   &:hover { color: #e53935; }
 `;
 
-// --- The Merged Component ---
+const FileButtonWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const FileButtonTooltip = styled.div`
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #e53935;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+`;
 
 const ChatPage = () => {
   const dispatch = useDispatch();
@@ -288,11 +342,12 @@ const ChatPage = () => {
   const { activeConversationId } = useSelector((state) => state.ui);
 
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [editingConversationId, setEditingConversationId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [fileError, setFileError] = useState('');
 
   const menuRef = useRef(null);
   const cable = useRef();
@@ -342,10 +397,8 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeConversationId) {
       if (!cable.current) {
-        // !!! IMPORTANT !!!
-        // Verify this port is correct for your local Rails server.
         // It's best to use an environment variable here, e.g., process.env.REACT_APP_WEBSOCKET_URL
-        cable.current = createConsumer('ws://localhost:5090/cable');
+        cable.current = createConsumer(process.env.REACT_APP_WEBSOCKET_URL || 'ws://localhost:5090/cable');
       }
 
       const channelParams = { channel: 'ConversationChannel', conversation_id: activeConversationId };
@@ -383,7 +436,7 @@ const ChatPage = () => {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if ((!input.trim() && !selectedFile) || !conversationId || isSendingMessage) {
+    if ((!input.trim() && !selectedFile) || !conversationId || isSendingMessage || isAwaitingResponse) {
       return;
     }
 
@@ -403,6 +456,7 @@ const ChatPage = () => {
 
     setInput('');
     setSelectedFile(null);
+    setFileError('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -534,7 +588,7 @@ const ChatPage = () => {
                 </MessageArea>
               )}
               <MessageInputContainer>
-                {selectedFile && (
+                {selectedFile && !fileError && (
                   <SelectedFileWrapper>
                     📎 {selectedFile.name}
                     <RemoveFileButton type="button" onClick={() => {
@@ -544,19 +598,39 @@ const ChatPage = () => {
                   </SelectedFileWrapper>
                 )}
                 <MessageInputForm onSubmit={handleSendMessage}>
-                   <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                    +
-                  </FileButton>
+                  <HiddenFileInput
+                    ref={fileInputRef} type="file"
+                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      const maxSizeMB = 100;
+                      const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+                      if (file && file.size > maxSizeBytes) {
+                        setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                        setSelectedFile(null); // Clear any previously selected valid file
+                        e.target.value = '';
+                        setTimeout(() => setFileError(''), 4000); // Hide error after 4s
+                        return;
+                      }
+
+                      setSelectedFile(file);
+                      setFileError('');
+                    }}
+                  />
+                  <FileButtonWrapper>
+                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                      +
+                    </FileButton>
+                    <FileButtonTooltip visible={!!fileError}>
+                      {fileError}
+                    </FileButtonTooltip>
+                  </FileButtonWrapper>
                   <MessageTextarea
                     ref={textareaRef} value={input} onInput={handleTextareaInput}
                     placeholder="Enter a prompt here" rows="1"
                     disabled={!conversationId || isAwaitingResponse}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); }}}
-                  />
-                  <HiddenFileInput
-                    ref={fileInputRef} type="file"
-                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
                   />
                   <SendButton type="submit" disabled={(!input.trim() && !selectedFile) || !conversationId || isAwaitingResponse}>
                       <SendIcon />
