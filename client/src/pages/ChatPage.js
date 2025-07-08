@@ -328,8 +328,9 @@ const HiddenFileInput = styled.input`
 `;
 
 const FileButton = styled.button`
-  background-color:rgb(226, 231, 238);
-  color:rgb(148, 147, 147);
+  position: relative;
+  background-color: rgb(226, 231, 238);
+  color: rgb(148, 147, 147);
   border: none;
   border-radius: 50%;
   width: 44px;
@@ -340,9 +341,31 @@ const FileButton = styled.button`
   font-size: 2rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  z-index: 1;
 
   &:hover {
     background-color: #BCC8D8;
+  }
+
+  &::after {
+    content: 'Max 1 file, 100MB';
+    position: absolute;
+    bottom: 125%; /* Move above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  &:hover::after {
+    opacity: 1;
   }
 `;
 
@@ -629,7 +652,19 @@ const ChatPage = () => {
                     ref={fileInputRef}
                     type="file"
                     accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      const maxSizeMB = 100;
+                      const maxSizeBytes = maxSizeMB * 1024 * 1024;
+                    
+                      if (file && file.size > maxSizeBytes) {
+                        alert(`File exceeds ${maxSizeMB}MB limit.`);
+                        e.target.value = '';
+                        return;
+                      }
+                    
+                      setSelectedFile(file);
+                    }}
                   />
 
                   <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
