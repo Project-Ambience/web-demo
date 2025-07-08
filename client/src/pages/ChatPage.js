@@ -398,6 +398,29 @@ const RemoveFileButton = styled.button`
   }
 `;
 
+const FileButtonWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const FileButtonTooltip = styled.div`
+  position: absolute;
+  bottom: 110%; /* show above the button */
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #e53935;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+`;
+
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const { activeConversationId } = useSelector((state) => state.ui);
@@ -407,6 +430,7 @@ const ChatPage = () => {
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileError, setFileError] = useState('');
   
   const menuRef = useRef(null);
   const cable = useRef();
@@ -658,18 +682,25 @@ const ChatPage = () => {
                       const maxSizeBytes = maxSizeMB * 1024 * 1024;
                     
                       if (file && file.size > maxSizeBytes) {
-                        alert(`File exceeds ${maxSizeMB}MB limit.`);
+                        setFileError(`Max file size is ${maxSizeMB}MB`);
                         e.target.value = '';
+                        setTimeout(() => setFileError(''), 4000); // Hide after 4 seconds
                         return;
                       }
                     
                       setSelectedFile(file);
+                      setFileError('');
                     }}
                   />
 
-                  <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                    +
-                  </FileButton>
+                  <FileButtonWrapper>
+                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                      +
+                    </FileButton>
+                    <FileButtonTooltip visible={!!fileError}>
+                      {fileError}
+                    </FileButtonTooltip>
+                  </FileButtonWrapper>
                   <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isSendingMessage}>
                       <SendIcon />
                   </SendButton>
