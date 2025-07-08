@@ -474,7 +474,7 @@ const FineTunePage = () => {
                 accept=".json"
                 onChange={(e) => {
                   const uploaded = e.target.files[0];
-                  const maxSizeMB = 50;
+                  const maxSizeMB = 100;
                   const maxSizeBytes = maxSizeMB * 1024 * 1024;
 
                   if (uploaded) {
