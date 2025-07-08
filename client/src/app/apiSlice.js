@@ -74,18 +74,21 @@ export const apiSlice = createApi({
     }),
     addMessage: builder.mutation({
       query: ({ conversation_id, message }) => {
-        const formData = new FormData();
-        formData.append('message[content]', message.content);
-        
-        if (message.file) {
-          formData.append('message[file]', message.file);
-        }
-    
-        return {
-          url: `/conversations/${conversation_id}/messages`,
-          method: 'POST',
-          body: formData,
-        };
+    	const formData = new FormData();
+	
+    	if (message.content) {
+      	  formData.append('message[content]', message.content);
+    	}
+
+    	if (message.file) {
+      	  formData.append('message[file]', message.file);
+    	}
+
+    	return {
+      	  url: `/conversations/${conversation_id}/messages`,
+      	  method: 'POST',
+      	  body: formData,
+    	};
       },
       invalidatesTags: (result, error, arg) => [
         { type: 'Conversation', id: arg.conversation_id }

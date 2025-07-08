@@ -439,21 +439,20 @@ const ChatPage = () => {
     if ((!input.trim() && !selectedFile) || !conversationId || isSendingMessage || isAwaitingResponse) {
       return;
     }
-
-    const formData = new FormData();
-    formData.append('message[content]', input);
-    if (selectedFile) {
-        formData.append('message[file]', selectedFile, selectedFile.name);
-    }
-
+  
+    const messagePayload = {
+      content: input,
+      file: selectedFile,
+    };
+  
     try {
-        await addMessage({ conversation_id: conversationId, message: formData }).unwrap();
-        setIsAwaitingResponse(true);
+      await addMessage({ conversation_id: conversationId, message: messagePayload }).unwrap();
+      setIsAwaitingResponse(true);
     } catch (err) {
-        console.error("Failed to send message:", err);
-        setIsAwaitingResponse(false);
+      console.error("Failed to send message:", err);
+      setIsAwaitingResponse(false);
     }
-
+  
     setInput('');
     setSelectedFile(null);
     setFileError('');
