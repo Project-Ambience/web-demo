@@ -682,9 +682,9 @@ const ChatPage = () => {
                       const maxSizeBytes = maxSizeMB * 1024 * 1024;
                     
                       if (file && file.size > maxSizeBytes) {
-                        setFileError(`Max file size is ${maxSizeMB}MB`);
+                        setFileError(`File size should not exceed ${maxSizeMB}MB`);
                         e.target.value = '';
-                        setTimeout(() => setFileError(''), 4000); // Hide after 4 seconds
+                        setTimeout(() => setFileError(''), 4000);
                         return;
                       }
                     
