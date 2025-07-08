@@ -1,13 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
-// Import hooks for URL-driven state
 import { useParams, useNavigate } from 'react-router-dom';
 import { createConsumer } from '@rails/actioncable';
 import { conversationSelected } from '../features/ui/uiSlice';
-import { 
+import {
   apiSlice,
-  useGetConversationsQuery, 
+  useGetConversationsQuery,
   useGetConversationQuery,
   useAddMessageMutation,
   useUpdateConversationMutation,
@@ -54,7 +53,7 @@ const Sidebar = styled.aside`
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0;
-  height: 100%;
+  overflow: hidden;
 `;
 
 const SidebarTitle = styled.h2`
@@ -125,7 +124,7 @@ const ConversationTitle = styled.div`
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  padding-right: 2rem; 
+  padding-right: 2rem;
 `;
 
 const ConversationItem = styled.li`
@@ -138,7 +137,7 @@ const ConversationItem = styled.li`
   border-right: ${({ isActive }) => (isActive ? '3px solid #005eb8' : 'none')};
   color: ${({ isActive }) => (isActive ? '#005eb8' : '#4c6272')};
   transition: background-color 0.2s;
-  &:hover { 
+  &:hover {
     background-color: #e8edee;
     ${MenuButton} { visibility: visible; opacity: 1; }
   }
@@ -169,7 +168,7 @@ const ChatWindow = styled.main`
   flex-direction: column;
   height: 100%;
   position: relative;
-  overflow: hidden; /* This is the fix for the main chat area scrolling */
+  overflow: hidden;
 `;
 
 const EmptyStateWrapper = styled.div`
@@ -189,22 +188,28 @@ const MessageArea = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 1rem 0;
-  width: 100%;
+  min-height: 0;
+`;
+
+const MessagesContentWrapper = styled.div`
   max-width: 900px;
   margin: 0 auto;
+  width: 100%;
+  padding: 0 1rem;
+  box-sizing: border-box;
 `;
 
 const Message = styled.div`
   max-width: 80%; padding: 0.75rem 1.25rem; border-radius: 20px;
   margin-bottom: 1rem; line-height: 1.5; font-size: 1rem;
-  display: flex; align-items: center;
+  display: flex; flex-direction: column; align-items: flex-start;
   &[data-role="user"] {
     background-color: #e8f0fe; color: #1f1f1f;
-    margin-left: auto; border-top-right-radius: 5px;
+    margin-left: auto; border-top-right-radius: 5px; align-self: flex-end;
   }
   &[data-role="assistant"] {
     background-color: #f0f4f5; color: #1f1f1f;
-    margin-right: auto; border-bottom-left-radius: 5px;
+    margin-right: auto; border-bottom-left-radius: 5px; align-self: flex-start;
   }
 `;
 
@@ -213,6 +218,7 @@ const bounce = keyframes`
 `;
 
 const TypingIndicator = styled.div`
+  display: flex; align-items: center; height: 24px; /* Matches line-height */
   span {
     display: inline-block; background-color: #5f6368; width: 8px; height: 8px;
     border-radius: 50%; margin: 0 2px; animation: ${bounce} 1.4s infinite ease-in-out both;
@@ -224,7 +230,7 @@ const TypingIndicator = styled.div`
 const MessageInputContainer = styled.div`
   padding: 0 1rem; width: 100%; max-width: 900px;
   margin: 1rem auto;
-  flex-shrink: 0; /* This is the other part of the scrolling fix */
+  flex-shrink: 0;
 `;
 
 const MessageInputForm = styled.form`
@@ -278,16 +284,16 @@ const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { conversationId } = useParams();
-  
+
   const { activeConversationId } = useSelector((state) => state.ui);
-  
+
   const [isAwaitingResponse, setIsAwaitingResponse] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [editingConversationId, setEditingConversationId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   const menuRef = useRef(null);
   const cable = useRef();
   const fileInputRef = useRef(null);
@@ -316,7 +322,7 @@ const ChatPage = () => {
     textarea.style.height = `${textarea.scrollHeight}px`;
     setInput(textarea.value);
   };
-  
+
   useEffect(() => {
     if (messageAreaRef.current) {
       messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
@@ -336,19 +342,29 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeConversationId) {
       if (!cable.current) {
-        cable.current = createConsumer('ws://localhost:6090/cable');
+        // !!! IMPORTANT !!!
+        // Verify this port is correct for your local Rails server.
+        // It's best to use an environment variable here, e.g., process.env.REACT_APP_WEBSOCKET_URL
+        cable.current = createConsumer('ws://localhost:5090/cable');
       }
-      
+
       const channelParams = { channel: 'ConversationChannel', conversation_id: activeConversationId };
       const channelHandlers = {
         received(data) {
           console.log('Received new message via Action Cable:', data.message);
-          dispatch(apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }]));
+          dispatch(
+            apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
+          );
         },
-        connected() { console.log(`Connected to ConversationChannel ${activeConversationId}`); },
-        disconnected() { console.log(`Disconnected from ConversationChannel ${activeConversationId}`); },
+        connected() {
+          console.log(`Connected to ConversationChannel ${activeConversationId}`);
+        },
+        disconnected() {
+          console.log(`Disconnected from ConversationChannel ${activeConversationId}`);
+        },
       };
       const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
+
       return () => {
         console.log(`Unsubscribing from ConversationChannel ${activeConversationId}`);
         subscription.unsubscribe();
@@ -376,7 +392,7 @@ const ChatPage = () => {
     if (selectedFile) {
         formData.append('message[file]', selectedFile, selectedFile.name);
     }
-    
+
     try {
         await addMessage({ conversation_id: conversationId, message: formData }).unwrap();
         setIsAwaitingResponse(true);
@@ -390,13 +406,13 @@ const ChatPage = () => {
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
-  
+
   const handleStartEditing = (convo) => {
     setEditingConversationId(convo.id);
     setNewTitle(convo.title);
     setMenuOpenFor(null);
   };
-  
+
   const handleCancelEditing = () => {
     setEditingConversationId(null);
     setNewTitle('');
@@ -427,7 +443,7 @@ const ChatPage = () => {
     }
   };
 
-  const filteredConversations = conversations?.filter(convo => 
+  const filteredConversations = conversations?.filter(convo =>
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -440,7 +456,7 @@ const ChatPage = () => {
           <SidebarTitle>Prompt History</SidebarTitle>
           <SearchContainer>
             <SearchIcon />
-            <SearchInput 
+            <SearchInput
               type="text"
               placeholder="Search history"
               value={searchTerm}
@@ -450,14 +466,14 @@ const ChatPage = () => {
           <ConversationList>
             {isLoadingConversations ? <Spinner /> : (
               filteredConversations?.map(convo => (
-                <ConversationItem 
+                <ConversationItem
                   key={convo.id}
                   isActive={convo.id.toString() === conversationId}
                   onClick={() => { if (editingConversationId !== convo.id) navigate(`/chat/${convo.id}`); }}
                 >
                   {editingConversationId === convo.id ? (
                      <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
-                        <EditInput 
+                        <EditInput
                           type="text" value={newTitle} onChange={e => setNewTitle(e.target.value)}
                           onClick={e => e.stopPropagation()} onBlur={handleCancelEditing} autoFocus
                         />
@@ -489,25 +505,32 @@ const ChatPage = () => {
                 </ChatInfoWindow>
               ) : (
                 <MessageArea ref={messageAreaRef}>
-                  {isFetchingMessages && !activeConversation ? <Spinner /> : (
-                    activeConversation?.messages.map(msg => (
-                      <Message key={msg.id} data-role={msg.role}>
-                        {msg.content}
-                        {msg.file_url && (
+                  <MessagesContentWrapper>
+                    {(isFetchingMessages && !activeConversation) ? <Spinner /> : (
+                      activeConversation?.messages.map(msg => (
+                        <Message key={msg.id} data-role={msg.role}>
+                          {msg.content && <div>{msg.content}</div>}
+                          {msg.file_url && (
                             <div style={{ marginTop: '0.5rem' }}>
-                            📎 <a href={msg.file_url} target="_blank" rel="noopener noreferrer" style={{ color: '#005eb8' }}>
+                              📎 <a
+                                href={msg.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{ color: '#005eb8' }}
+                              >
                                 {msg.file_name || 'View attached file'}
-                            </a>
+                              </a>
                             </div>
-                        )}
+                          )}
+                        </Message>
+                      ))
+                    )}
+                    {isAwaitingResponse && (
+                      <Message data-role="assistant">
+                        <TypingIndicator><span /><span /><span /></TypingIndicator>
                       </Message>
-                    ))
-                  )}
-                  {isAwaitingResponse && (
-                    <Message data-role="assistant">
-                      <TypingIndicator><span /><span /><span /></TypingIndicator>
-                    </Message>
-                  )}
+                    )}
+                  </MessagesContentWrapper>
                 </MessageArea>
               )}
               <MessageInputContainer>
@@ -524,13 +547,13 @@ const ChatPage = () => {
                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
                     +
                   </FileButton>
-                  <MessageTextarea 
+                  <MessageTextarea
                     ref={textareaRef} value={input} onInput={handleTextareaInput}
                     placeholder="Enter a prompt here" rows="1"
                     disabled={!conversationId || isAwaitingResponse}
                     onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendMessage(e); }}}
                   />
-                  <HiddenFileInput 
+                  <HiddenFileInput
                     ref={fileInputRef} type="file"
                     accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
                     onChange={(e) => setSelectedFile(e.target.files[0])}
