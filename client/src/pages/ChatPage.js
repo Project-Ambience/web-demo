@@ -9,8 +9,7 @@ import {
   useGetConversationQuery,
   useAddMessageMutation,
   useUpdateConversationMutation,
-  useDeleteConversationMutation,
-  useGetAiModelByIdQuery
+  useDeleteConversationMutation
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
