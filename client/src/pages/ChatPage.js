@@ -474,7 +474,7 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeConversationId) {
       if (!cable.current) {
-        cable.current = createConsumer('ws://localhost:5090/cable');
+        cable.current = createConsumer(process.env.CABLE_URL);
       }
       
       const channelParams = {
@@ -624,7 +624,7 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages ? <Spinner /> : (
-                    activeConversation?.messages.map(msg => (
+                    messages.map(msg => (
                       <Message key={msg.id} data-role={msg.role}>
                         {msg.content && <div>{msg.content}</div>}
                         {msg.file_url && (
