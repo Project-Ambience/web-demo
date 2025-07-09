@@ -253,10 +253,11 @@ const Message = styled.div`
   }
 
   &[data-role="assistant"] {
-    background-color: #fff;
+    background-color: #eaf1f8;
     color: #1f1f1f;
     margin-right: auto;
-    border-bottom-left-radius: 5px;
+    border-top-left-radius: 5px;
+    border-bottom-right-radius: 20px;
   }
 `;
 
@@ -474,7 +475,7 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeConversationId) {
       if (!cable.current) {
-        cable.current = createConsumer('ws://localhost:5090/cable');
+        cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
       }
       
       const channelParams = {
