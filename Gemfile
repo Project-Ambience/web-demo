@@ -16,6 +16,7 @@ gem "pry"
 gem "rack-cors"
 gem "bunny"
 gem "sneakers"
+gem "redis"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"

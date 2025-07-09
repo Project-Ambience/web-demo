@@ -13,6 +13,16 @@ class ResponseWorker
     result = message[:result]
     conversation = Conversation.find(conversation_id)
     message = Message.create!(conversation: conversation, role: "assistant", content: result)
+
+    ActionCable.server.broadcast(
+      "conversation_#{message.conversation_id}",
+      message: {
+        id: message.id,
+        role: message.role,
+        content: message.content
+      }
+    )
+
     ack!
   rescue => e
     reject!
