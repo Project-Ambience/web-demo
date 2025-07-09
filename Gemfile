@@ -15,6 +15,7 @@ gem "dotenv-rails"
 gem "pry"
 gem "rack-cors"
 gem "bunny"
+gem "sneakers"
 
 # Use the Puma web server [https://github.com/puma/puma]
 gem "puma", ">= 5.0"

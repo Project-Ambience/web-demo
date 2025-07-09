@@ -411,9 +411,18 @@ GEM
       rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 3.0)
       websocket (~> 1.0)
+    serverengine (2.0.7)
+      sigdump (~> 0.2.2)
     set (1.1.2)
     shoulda-matchers (6.5.0)
       activesupport (>= 5.2.0)
+    sigdump (0.2.5)
+    sneakers (2.11.0)
+      bunny (~> 2.12)
+      concurrent-ruby (~> 1.0)
+      rake
+      serverengine (~> 2.0.5)
+      thor
     solid_cable (3.0.8)
       actioncable (>= 7.2)
       activejob (>= 7.2)
@@ -525,6 +534,7 @@ DEPENDENCIES
   sassc-rails
   selenium-webdriver
   shoulda-matchers
+  sneakers
   solid_cable
   solid_cache
   solid_queue
