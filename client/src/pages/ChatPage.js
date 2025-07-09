@@ -474,7 +474,7 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeConversationId) {
       if (!cable.current) {
-        cable.current = createConsumer(process.env.CABLE_URL);
+        cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
       }
       
       const channelParams = {
