@@ -624,7 +624,7 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages ? <Spinner /> : (
-                    messages.map(msg => (
+                    activeConversation?.messages.map(msg => (
                       <Message key={msg.id} data-role={msg.role}>
                         {msg.content && <div>{msg.content}</div>}
                         {msg.file_url && (
