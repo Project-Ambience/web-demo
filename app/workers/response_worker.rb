@@ -16,11 +16,7 @@ class ResponseWorker
 
     ActionCable.server.broadcast(
       "conversation_#{message.conversation_id}",
-      message: {
-        id: message.id,
-        role: message.role,
-        content: message.content
-      }
+      { message: { id: message.id, role: message.role, content: message.content } }
     )
 
     ack!
