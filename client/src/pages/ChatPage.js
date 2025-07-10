@@ -9,7 +9,8 @@ import {
   useGetConversationQuery,
   useAddMessageMutation,
   useUpdateConversationMutation,
-  useDeleteConversationMutation
+  useDeleteConversationMutation,
+  useGetAiModelByIdQuery,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -24,6 +25,19 @@ const SendIcon = () => (
         <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
     </svg>
 );
+
+const SendSuggestionIcon = () => (
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 12.0001H15M15 12.0001L10.4 7.50006M15 12.0001L10.4 16.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const EmptySuggestionIcon = () => (
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#a0a0a0">
+    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 
 const ChatPageWrapper = styled.div`
     position: fixed;
@@ -421,6 +435,66 @@ const FileButtonTooltip = styled.div`
   pointer-events: none;
 `;
 
+const SuggestionsHeader = styled.h4`
+  text-align: center;
+  color: #5f6368;
+  font-weight: 500;
+  margin: 2rem 0 1rem;
+`;
+
+const SuggestionsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+`;
+
+const SuggestionCard = styled.div`
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    border-color: #dee2e6;
+  }
+`;
+
+const SuggestionText = styled.p`
+  margin: 0;
+  font-size: 0.9rem;
+  color: #343a40;
+  flex: 1;
+`;
+
+const EmptySuggestionState = styled.div`
+  text-align: center;
+  padding: 2.5rem;
+  margin: 1rem auto;
+  max-width: 900px;
+  background: #fbfbfc;
+  border: 1px dashed #e0e0e0;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+
+  p {
+    margin: 0;
+    color: #888;
+  }
+`;
+
 
 const ChatPage = () => {
   const dispatch = useDispatch();
@@ -441,6 +515,12 @@ const ChatPage = () => {
   const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(activeConversationId, {
     skip: !activeConversationId,
   });
+  const { data: modelDetails, isFetching: isFetchingModelDetails } = useGetAiModelByIdQuery(
+    activeConversation?.ai_model_id,
+    {
+      skip: !activeConversation?.ai_model_id,
+    }
+  );
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
   const [deleteConversation] = useDeleteConversationMutation();
@@ -565,6 +645,18 @@ const ChatPage = () => {
     }
   };
 
+  const handlePromptClick = (prompt) => {
+    setInput(prompt);
+    textareaRef.current?.focus();
+    // Auto-adjust textarea height after setting content
+    setTimeout(() => {
+        if (textareaRef.current) {
+            textareaRef.current.style.height = 'auto';
+            textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+        }
+    }, 0);
+  };
+
   const filteredConversations = conversations?.filter(convo => 
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -643,6 +735,32 @@ const ChatPage = () => {
                       </Message>
                     ))
                   )}
+
+                  {activeConversation?.messages.length === 0 && !isFetchingMessages && (
+                    <>
+                      {isFetchingModelDetails ? (
+                        <Spinner />
+                      ) : modelDetails?.suggested_prompts?.length > 0 ? (
+                        <div>
+                          <SuggestionsHeader>Here are some suggestions to get you started:</SuggestionsHeader>
+                          <SuggestionsGrid>
+                            {modelDetails.suggested_prompts.map((p, i) => (
+                              <SuggestionCard key={i} onClick={() => handlePromptClick(p.prompt)}>
+                                <SuggestionText>{p.prompt}</SuggestionText>
+                                <SendSuggestionIcon />
+                              </SuggestionCard>
+                            ))}
+                          </SuggestionsGrid>
+                        </div>
+                      ) : (
+                        <EmptySuggestionState>
+                           <EmptySuggestionIcon />
+                           <p>No suggestions available for this model right now.</p>
+                        </EmptySuggestionState>
+                      )}
+                    </>
+                  )}
+                  
                   {isSendingMessage && <Spinner />}
                 </MessagesContentWrapper>
               </MessageArea>
@@ -721,3 +839,4 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
+
