@@ -48,6 +48,7 @@ const Sidebar = styled.aside`
   display: flex;
   flex-direction: column;
   padding: 1.5rem 0;
+  overflow: hidden;
 `;
 
 const SidebarTitle = styled.h2`
@@ -197,6 +198,7 @@ const ChatWindow = styled.main`
   flex-direction: column;
   height: 100%;
   position: relative;
+  overflow: hidden;
 `;
 
 const EmptyStateWrapper = styled.div`
@@ -224,9 +226,15 @@ const MessageArea = styled.div`
   flex: 1;
   overflow-y: auto;
   padding: 1rem 0;
-  width: 100%;
+  min-height: 0;
+`;
+
+const MessagesContentWrapper = styled.div`
   max-width: 900px;
   margin: 0 auto;
+  width: 100%;
+  padding: 0 1rem;
+  box-sizing: border-box;
 `;
 
 const Message = styled.div`
@@ -245,10 +253,11 @@ const Message = styled.div`
   }
 
   &[data-role="assistant"] {
-    background-color: #fff;
+    background-color: #eaf1f8;
     color: #1f1f1f;
     margin-right: auto;
-    border-bottom-left-radius: 5px;
+    border-top-left-radius: 5px;
+    border-bottom-right-radius: 20px;
   }
 `;
 
@@ -320,8 +329,9 @@ const HiddenFileInput = styled.input`
 `;
 
 const FileButton = styled.button`
-  background-color:rgb(226, 231, 238);
-  color:rgb(148, 147, 147);
+  position: relative;
+  background-color: rgb(226, 231, 238);
+  color: rgb(148, 147, 147);
   border: none;
   border-radius: 50%;
   width: 44px;
@@ -332,9 +342,31 @@ const FileButton = styled.button`
   font-size: 2rem;
   cursor: pointer;
   transition: background-color 0.2s;
+  z-index: 1;
 
   &:hover {
     background-color: #BCC8D8;
+  }
+
+  &::after {
+    content: 'Max 1 file, 100MB';
+    position: absolute;
+    bottom: 125%; /* Move above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-in-out;
+  }
+
+  &:hover::after {
+    opacity: 1;
   }
 `;
 
@@ -367,6 +399,29 @@ const RemoveFileButton = styled.button`
   }
 `;
 
+const FileButtonWrapper = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+const FileButtonTooltip = styled.div`
+  position: absolute;
+  bottom: 110%;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #e53935;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 10;
+  opacity: ${({ visible }) => (visible ? 1 : 0)};
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+`;
+
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const { activeConversationId } = useSelector((state) => state.ui);
@@ -376,6 +431,7 @@ const ChatPage = () => {
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
+  const [fileError, setFileError] = useState('');
   
   const menuRef = useRef(null);
   const cable = useRef();
@@ -416,13 +472,10 @@ const ChatPage = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [menuRef]);
 
-  // --- NEW: ACTION CABLE USE EFFECT ---
   useEffect(() => {
     if (activeConversationId) {
-      // Create the consumer only once
       if (!cable.current) {
-        // Connect to the public-facing port of your 'api' service (5090)
-        cable.current = createConsumer('ws://localhost:5090/cable');
+        cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
       }
       
       const channelParams = {
@@ -433,8 +486,6 @@ const ChatPage = () => {
       const channelHandlers = {
         received(data) {
           console.log('Received new message via Action Cable:', data.message);
-          // Invalidate the RTK Query cache for this conversation.
-          // This will automatically trigger a refetch and update the UI.
           dispatch(
             apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
           );
@@ -449,14 +500,12 @@ const ChatPage = () => {
 
       const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
 
-      // Cleanup: Unsubscribe when component unmounts or activeConversationId changes
       return () => {
         console.log(`Unsubscribing from ConversationChannel ${activeConversationId}`);
         subscription.unsubscribe();
       };
     }
   }, [activeConversationId, dispatch]);
-  // --- END OF ACTION CABLE USE EFFECT ---
 
 
   const handleSendMessage = async (e) => {
@@ -574,26 +623,28 @@ const ChatPage = () => {
           {activeConversationId ? (
             <>
               <MessageArea ref={messageAreaRef}>
-                {isFetchingMessages ? <Spinner /> : (
-                  activeConversation?.messages.map(msg => (
-                    <Message key={msg.id} data-role={msg.role}>
-                      {msg.content && <div>{msg.content}</div>}
-                      {msg.file_url && (
-                        <div style={{ marginTop: '0.5rem' }}>
-                          📎 <a 
-                            href={msg.file_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            style={{ color: '#005eb8' }}
-                          >
-                            {msg.file_name || 'View file'}
-                          </a>
-                        </div>
-                      )}
-                    </Message>
-                  ))
-                )}
-                {isSendingMessage && <Spinner />}
+                <MessagesContentWrapper>
+                  {isFetchingMessages ? <Spinner /> : (
+                    activeConversation?.messages.map(msg => (
+                      <Message key={msg.id} data-role={msg.role}>
+                        {msg.content && <div>{msg.content}</div>}
+                        {msg.file_url && (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            📎 <a
+                              href={msg.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#005eb8' }}
+                            >
+                              {msg.file_name || 'View file'}
+                            </a>
+                          </div>
+                        )}
+                      </Message>
+                    ))
+                  )}
+                  {isSendingMessage && <Spinner />}
+                </MessagesContentWrapper>
               </MessageArea>
               <MessageInputContainer>
                 {selectedFile && (
@@ -626,12 +677,31 @@ const ChatPage = () => {
                     ref={fileInputRef}
                     type="file"
                     accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
-                    onChange={(e) => setSelectedFile(e.target.files[0])}
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      const maxSizeMB = 100;
+                      const maxSizeBytes = maxSizeMB * 1024 * 1024;
+                    
+                      if (file && file.size > maxSizeBytes) {
+                        setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                        e.target.value = '';
+                        setTimeout(() => setFileError(''), 4000);
+                        return;
+                      }
+                    
+                      setSelectedFile(file);
+                      setFileError('');
+                    }}
                   />
 
-                  <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                    +
-                  </FileButton>
+                  <FileButtonWrapper>
+                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                      +
+                    </FileButton>
+                    <FileButtonTooltip visible={!!fileError}>
+                      {fileError}
+                    </FileButtonTooltip>
+                  </FileButtonWrapper>
                   <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isSendingMessage}>
                       <SendIcon />
                   </SendButton>
