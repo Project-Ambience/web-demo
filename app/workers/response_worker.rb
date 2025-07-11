@@ -9,7 +9,7 @@ class ResponseWorker
 
   def work(raw_message)
     message = JSON.parse(raw_message, symbolize_names: true)
-    conversation_id = message[:request_id]
+    conversation_id = message[:conversation_id]
     result = message[:result]
     conversation = Conversation.find(conversation_id)
     message = Message.create!(conversation: conversation, role: "assistant", content: result)
