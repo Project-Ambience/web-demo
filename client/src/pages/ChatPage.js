@@ -717,7 +717,7 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages ? <Spinner /> : (
-                    activeConversation?.messages.map(msg => (
+                    [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(msg => (
                       <Message key={msg.id} data-role={msg.role}>
                         {msg.content && <div>{msg.content}</div>}
                         {msg.file_url && (
