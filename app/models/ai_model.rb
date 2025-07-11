@@ -3,6 +3,7 @@ class AiModel < ApplicationRecord
   has_many :comments, dependent: :destroy
   has_many :fine_tune_tasks, dependent: :destroy
   has_many :model_fine_tune_requests, dependent: :destroy
+  has_many :suggested_prompts, dependent: :destroy
   belongs_to :base_model, class_name: "AiModel", optional: true
 
   belongs_to :clinician_type

@@ -7,7 +7,8 @@ class Api::AiModelsController < Api::ApplicationController
         comments: { only: [ :id, :comment, :created_at ] },
         ratings: { only: [ :id, :rating ] },
         fine_tune_tasks: { only: [ :id, :title ] },
-        model_fine_tune_requests: { only: [ :id, :name, :status, :created_at, :task, :new_ai_model_id ] }
+        model_fine_tune_requests: { only: [ :id, :name, :status, :created_at, :task, :new_ai_model_id ] },
+        suggested_prompts: { only: [ :prompt ] }
       },
       methods: :average_rating,
       add_clinician_type_name: true
