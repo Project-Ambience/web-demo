@@ -69,7 +69,7 @@ services:
       - /app/node_modules
     environment:
       - CHOKIDAR_USEPOLLING=true
-      - REACT_APP_CABLE_URL=ws://localhost:7091/cable
+      - REACT_APP_CABLE_URL=ws://api:7091/cable
     networks:
       - app-net
     depends_on:
