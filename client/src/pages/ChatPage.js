@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useRef } from 'react';
-import styled from 'styled-components';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import styled, { keyframes } from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
 import { conversationSelected } from '../features/ui/uiSlice';
@@ -38,6 +38,30 @@ const EmptySuggestionIcon = () => (
   </svg>
 );
 
+const bounce = keyframes`
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1.0);
+  }
+`;
+
+const LoadingDot = styled.div`
+  background-color: #5f6368;
+  border-radius: 50%;
+  width: 8px;
+  height: 8px;
+  margin: 0 3px;
+  animation: ${bounce} 1.4s infinite ease-in-out both;
+
+  &:nth-child(1) {
+    animation-delay: -0.32s;
+  }
+  &:nth-child(2) {
+    animation-delay: -0.16s;
+  }
+`;
 
 const ChatPageWrapper = styled.div`
     position: fixed;
@@ -274,6 +298,27 @@ const Message = styled.div`
     border-bottom-right-radius: 20px;
   }
 `;
+
+const LoadingMessageBubble = styled(Message)`
+  width: fit-content;
+  max-width: fit-content;
+`;
+
+const LoadingDotContainer = styled.div`
+  display: flex;
+  align-items: center;
+  height: 1.5em;
+`;
+
+const AssistantLoadingIndicator = () => (
+  <LoadingMessageBubble data-role="assistant">
+    <LoadingDotContainer>
+      <LoadingDot />
+      <LoadingDot />
+      <LoadingDot />
+    </LoadingDotContainer>
+  </LoadingMessageBubble>
+);
 
 const MessageInputContainer = styled.div`
   padding: 0 1rem;
@@ -529,6 +574,15 @@ const ChatPage = () => {
   const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
 
+  const sortedMessages = useMemo(() =>
+    [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
+    [activeConversation?.messages]
+  );
+
+  const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
+  const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
+
+
   const handleTextareaInput = (e) => {
     const textarea = e.target;
     textarea.style.height = 'auto';
@@ -540,7 +594,7 @@ const ChatPage = () => {
     if (messageAreaRef.current) {
       messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
     }
-  }, [activeConversation, isSendingMessage]);
+  }, [sortedMessages, isWaiting]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -591,7 +645,7 @@ const ChatPage = () => {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (input.trim() && activeConversationId && !isSendingMessage) {
-      await addMessage({
+      addMessage({
         conversation_id: activeConversationId,
         message: {
           content: input,
@@ -715,8 +769,8 @@ const ChatPage = () => {
             <>
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
-                  {isFetchingMessages ? <Spinner /> : (
-                    [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)).map(msg => (
+                  {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
+                    sortedMessages.map(msg => (
                       <Message key={msg.id} data-role={msg.role}>
                         {msg.content && <div>{msg.content}</div>}
                         {msg.file_url && (
@@ -735,7 +789,7 @@ const ChatPage = () => {
                     ))
                   )}
 
-                  {activeConversation?.messages.length === 0 && !isFetchingMessages && (
+                  {sortedMessages.length === 0 && !isFetchingMessages && !isWaiting && (
                     <>
                       {isFetchingModelDetails ? (
                         <Spinner />
@@ -759,8 +813,7 @@ const ChatPage = () => {
                       )}
                     </>
                   )}
-                  
-                  {isSendingMessage && <Spinner />}
+                  {isWaiting && <AssistantLoadingIndicator />}
                 </MessagesContentWrapper>
               </MessageArea>
               <MessageInputContainer>
@@ -782,7 +835,7 @@ const ChatPage = () => {
                     onInput={handleTextareaInput}
                     placeholder="Enter a prompt here"
                     rows="1"
-                    disabled={!activeConversationId}
+                    disabled={!activeConversationId || isWaiting}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
                             e.preventDefault();
@@ -819,7 +872,7 @@ const ChatPage = () => {
                       {fileError}
                     </FileButtonTooltip>
                   </FileButtonWrapper>
-                  <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isSendingMessage}>
+                  <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
                       <SendIcon />
                   </SendButton>
                 </MessageInputForm>
@@ -838,4 +891,3 @@ const ChatPage = () => {
 };
 
 export default ChatPage;
-
