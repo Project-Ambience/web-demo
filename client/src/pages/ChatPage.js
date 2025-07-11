@@ -648,7 +648,6 @@ const ChatPage = () => {
   const handlePromptClick = (prompt) => {
     setInput(prompt);
     textareaRef.current?.focus();
-    // Auto-adjust textarea height after setting content
     setTimeout(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
