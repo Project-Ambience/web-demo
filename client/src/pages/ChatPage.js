@@ -11,6 +11,8 @@ import {
   useUpdateConversationMutation,
   useDeleteConversationMutation,
   useGetAiModelByIdQuery,
+  useAcceptFeedbackMutation,
+  useRejectFeedbackMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -540,6 +542,45 @@ const EmptySuggestionState = styled.div`
   }
 `;
 
+const FeedbackContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+`;
+
+const FeedbackButton = styled.button`
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: 1px solid #005eb8;
+
+    &.accept {
+        background-color: #005eb8;
+        color: white;
+        &:hover { background-color: #003087; }
+    }
+
+    &.reject {
+        background-color: #fff;
+        color: #005eb8;
+        &:hover { background-color: #f0f4f5; }
+    }
+`;
+
+const CompletedMessage = styled.div`
+  text-align: center;
+  padding: 1.5rem;
+  color: #5f6368;
+  font-style: italic;
+  max-width: 900px;
+  margin: 0 auto;
+`;
 
 const ChatPage = () => {
   const dispatch = useDispatch();
@@ -569,6 +610,9 @@ const ChatPage = () => {
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
   const [deleteConversation] = useDeleteConversationMutation();
+  const [acceptFeedback, { isLoading: isAccepting }] = useAcceptFeedbackMutation();
+  const [rejectFeedback, { isLoading: isRejecting }] = useRejectFeedbackMutation();
+
 
   const [input, setInput] = useState('');
   const messageAreaRef = useRef(null);
@@ -581,7 +625,6 @@ const ChatPage = () => {
 
   const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
-
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -619,7 +662,7 @@ const ChatPage = () => {
 
       const channelHandlers = {
         received(data) {
-          console.log('Received new message via Action Cable:', data.message);
+          console.log('Received new message via Action Cable:', data);
           dispatch(
             apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
           );
@@ -709,6 +752,103 @@ const ChatPage = () => {
         }
     }, 0);
   };
+
+  const renderInputArea = () => {
+    if (!activeConversation) return null;
+
+    switch(activeConversation.status) {
+        case 'awaiting_feedback':
+            return (
+                <FeedbackContainer>
+                    <FeedbackButton 
+                      className="accept"
+                      onClick={() => acceptFeedback(activeConversation.id)}
+                      disabled={isAccepting || isRejecting}
+                    >
+                        Accept
+                    </FeedbackButton>
+                    <FeedbackButton 
+                      className="reject"
+                      onClick={() => rejectFeedback(activeConversation.id)}
+                      disabled={isAccepting || isRejecting}
+                    >
+                        Reject
+                    </FeedbackButton>
+                </FeedbackContainer>
+            );
+
+        case 'awaiting_rejection_comment':
+        case 'awaiting_prompt':
+            return (
+                <MessageInputContainer>
+                    {selectedFile && (
+                    <SelectedFileWrapper>
+                        📎 {selectedFile.name}
+                        <RemoveFileButton type="button" onClick={() => {
+                        setSelectedFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}>
+                        ✕
+                        </RemoveFileButton>
+                    </SelectedFileWrapper>
+                    )}
+                    <MessageInputForm onSubmit={handleSendMessage}>
+                        <MessageTextarea 
+                            ref={textareaRef}
+                            value={input}
+                            onInput={handleTextareaInput}
+                            placeholder={activeConversation.status === 'awaiting_rejection_comment' ? "Please provide feedback for the rejection..." : "Enter a prompt here"}
+                            rows="1"
+                            disabled={!activeConversationId || isWaiting}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage(e);
+                                }
+                            }}
+                        />
+                        <HiddenFileInput 
+                            ref={fileInputRef}
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
+                            onChange={(e) => {
+                            const file = e.target.files[0];
+                            const maxSizeMB = 100;
+                            const maxSizeBytes = maxSizeMB * 1024 * 1024;
+                        
+                            if (file && file.size > maxSizeBytes) {
+                                setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                                e.target.value = '';
+                                setTimeout(() => setFileError(''), 4000);
+                                return;
+                            }
+                        
+                            setSelectedFile(file);
+                            setFileError('');
+                            }}
+                        />
+                        <FileButtonWrapper>
+                            <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                            +
+                            </FileButton>
+                            <FileButtonTooltip visible={!!fileError}>
+                            {fileError}
+                            </FileButtonTooltip>
+                        </FileButtonWrapper>
+                        <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
+                            <SendIcon />
+                        </SendButton>
+                    </MessageInputForm>
+                </MessageInputContainer>
+            );
+
+        case 'completed':
+            return <CompletedMessage>This conversation has been completed.</CompletedMessage>;
+        
+        default:
+            return null;
+    }
+  }
 
   const filteredConversations = conversations?.filter(convo => 
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -816,67 +956,7 @@ const ChatPage = () => {
                   {isWaiting && <AssistantLoadingIndicator />}
                 </MessagesContentWrapper>
               </MessageArea>
-              <MessageInputContainer>
-                {selectedFile && (
-                  <SelectedFileWrapper>
-                    📎 {selectedFile.name}
-                    <RemoveFileButton type="button" onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}>
-                      ✕
-                    </RemoveFileButton>
-                  </SelectedFileWrapper>
-                )}
-                <MessageInputForm onSubmit={handleSendMessage}>
-                  <MessageTextarea 
-                    ref={textareaRef}
-                    value={input}
-                    onInput={handleTextareaInput}
-                    placeholder="Enter a prompt here"
-                    rows="1"
-                    disabled={!activeConversationId || isWaiting}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage(e);
-                        }
-                    }}
-                  />
-                  <HiddenFileInput 
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      const maxSizeMB = 100;
-                      const maxSizeBytes = maxSizeMB * 1024 * 1024;
-                    
-                      if (file && file.size > maxSizeBytes) {
-                        setFileError(`File size should not exceed ${maxSizeMB}MB`);
-                        e.target.value = '';
-                        setTimeout(() => setFileError(''), 4000);
-                        return;
-                      }
-                    
-                      setSelectedFile(file);
-                      setFileError('');
-                    }}
-                  />
-
-                  <FileButtonWrapper>
-                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                      +
-                    </FileButton>
-                    <FileButtonTooltip visible={!!fileError}>
-                      {fileError}
-                    </FileButtonTooltip>
-                  </FileButtonWrapper>
-                  <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
-                      <SendIcon />
-                  </SendButton>
-                </MessageInputForm>
-              </MessageInputContainer>
+              {renderInputArea()}
             </>
           ) : (
             <EmptyStateWrapper>

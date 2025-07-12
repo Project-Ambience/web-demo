@@ -98,6 +98,20 @@ export const apiSlice = createApi({
         body: formData,
       }),
     }),
+    acceptFeedback: builder.mutation({
+      query: (id) => ({
+        url: `/conversations/${id}/accept_feedback`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
+    }),
+    rejectFeedback: builder.mutation({
+      query: (id) => ({
+        url: `/conversations/${id}/reject_feedback`,
+        method: 'POST',
+      }),
+      invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
+    }),
   }),
 });
 
@@ -113,4 +127,6 @@ export const {
   useDeleteConversationMutation,
   useAddMessageMutation,
   useCreateFineTuneRequestMutation,
+  useAcceptFeedbackMutation,
+  useRejectFeedbackMutation,
 } = apiSlice;
