@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
-import { conversationSelected } from '../features/ui/uiSlice';
+import { useNavigate, useParams } from 'react-router-dom';
 import { 
   apiSlice,
   useGetConversationsQuery, 
@@ -543,7 +543,8 @@ const EmptySuggestionState = styled.div`
 
 const ChatPage = () => {
   const dispatch = useDispatch();
-  const { activeConversationId } = useSelector((state) => state.ui);
+  const navigate = useNavigate();
+  const { conversationId: activeConversationId } = useParams();
 
   const [editingConversationId, setEditingConversationId] = useState(null);
   const [newTitle, setNewTitle] = useState('');
@@ -690,8 +691,8 @@ const ChatPage = () => {
       try {
         await deleteConversation(convoId).unwrap();
         setMenuOpenFor(null);
-        if (activeConversationId === convoId) {
-          dispatch(conversationSelected(null));
+        if (activeConversationId === String(convoId)) {
+          navigate('/chat');
         }
       } catch (err) {
         console.error('Failed to delete conversation:', err);
@@ -733,8 +734,8 @@ const ChatPage = () => {
               {filteredConversations?.map(convo => (
                 <ConversationItem 
                   key={convo.id}
-                  isActive={convo.id === activeConversationId}
-                  onClick={() => editingConversationId !== convo.id && dispatch(conversationSelected(convo.id))}
+                  isActive={String(convo.id) === activeConversationId}
+                  onClick={() => editingConversationId !== convo.id && navigate(`/chat/${convo.id}`)}
                 >
                   {editingConversationId === convo.id ? (
                      <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
