@@ -22,7 +22,8 @@ class Api::MessagesController < Api::ApplicationController
       MessagePublisher.publish({
         conversation_id: @conversation.id,
         input: input_history,
-        model_path: @conversation.ai_model.path
+        base_model_path: @conversation.ai_model.path,
+        adapter_path: @conversation.ai_model.adapter_path
       }, ENV["USER_PROMPT_QUEUE_NAME"])
 
       @conversation.awaiting_feedback!

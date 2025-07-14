@@ -64,7 +64,8 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
     let(:update_params) do
       {
         id: model_fine_tune_request.id,
-        status: "success"
+        status: "success",
+        adapter_path: "path/to/adapter"
       }
     end
 
@@ -88,6 +89,20 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
       post "/api/model_fine_tune_requests/update_status", params: update_params
       expect(model_fine_tune_request.reload.new_ai_model_id).to eq(AiModel.last.id)
     end
+
+    it "create new ai model with correct attributes" do
+      model_fine_tune_request.in_progress!
+      post "/api/model_fine_tune_requests/update_status", params: update_params
+      new_ai_model = AiModel.last
+      expect(new_ai_model.name).to eq(model_fine_tune_request.name)
+      expect(new_ai_model.description).to eq(model_fine_tune_request.description)
+      expect(new_ai_model.clinician_type_id).to eq(model_fine_tune_request.clinician_type_id)
+      expect(new_ai_model.base_model_id).to eq(model_fine_tune_request.ai_model_id)
+      expect(new_ai_model.adapter_path).to eq("path/to/adapter")
+      expect(new_ai_model.path).to eq(model_fine_tune_request.ai_model.path)
+      expect(new_ai_model.keywords).to eq(model_fine_tune_request.ai_model.keywords)
+    end
+
 
     context "when status is fail" do
       let(:update_params) do
