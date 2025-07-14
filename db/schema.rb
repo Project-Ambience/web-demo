@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_04_150112) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_14_130815) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -79,6 +79,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_04_150112) do
     t.boolean "allow_fine_tune", default: false
     t.bigint "base_model_id"
     t.string "path"
+    t.string "adapter_path"
     t.index ["base_model_id"], name: "index_ai_models_on_base_model_id"
     t.index ["clinician_type_id"], name: "index_ai_models_on_clinician_type_id"
   end
@@ -167,6 +168,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_04_150112) do
     t.index ["ai_model_id"], name: "index_suggested_prompts_on_ai_model_id"
   end
 
+  create_table "tasks", force: :cascade do |t|
+    t.string "title"
+    t.json "parameters"
+    t.bigint "ai_model_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_tasks_on_ai_model_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_models", "ai_models", column: "base_model_id"
@@ -180,4 +190,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_04_150112) do
   add_foreign_key "model_install_requests", "clinician_types"
   add_foreign_key "ratings", "ai_models"
   add_foreign_key "suggested_prompts", "ai_models"
+  add_foreign_key "tasks", "ai_models"
 end
