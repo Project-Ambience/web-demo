@@ -85,14 +85,14 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
 
   private
 
-  def create_ai_model(model_fine_tune_request)
+  def create_ai_model(model_fine_tune_request, adapter_path)
     ai_model = AiModel.create!(
       name: model_fine_tune_request.name,
       description: model_fine_tune_request.description,
       clinician_type_id: model_fine_tune_request.clinician_type_id,
       base_model_id: model_fine_tune_request.ai_model_id,
       path: model_fine_tune_request.ai_model.path,
-      adapter_path: model_fine_tune_request.adapter_path,
+      adapter_path: adapter_path,
       keywords: model_fine_tune_request.ai_model.keywords
     )
 

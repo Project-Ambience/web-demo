@@ -1,7 +1,7 @@
 require "rails_helper"
 
 RSpec.describe "MessageRequests", type: :request do
-  let!(:ai_model) { create(:ai_model, path: "some path") }
+  let!(:ai_model) { create(:ai_model, path: "some path", adapter_path: "some adapter path") }
   let!(:conversation) { create(:conversation, ai_model: ai_model) }
 
   describe "POST /api/conversations/:conversation_id/messages" do
@@ -35,7 +35,7 @@ RSpec.describe "MessageRequests", type: :request do
 
     it "publishes the message to the queue" do
       post "/api/conversations/#{conversation.id}/messages", params: valid_params
-      expect(MessagePublisher).to have_received(:publish).with({ conversation_id: conversation.id, model_path: "some path", input: [ { prompt: "Hello, this is a test message." }, { file_url: nil } ] }, "user_prompts")
+      expect(MessagePublisher).to have_received(:publish).with({ conversation_id: conversation.id, base_model_path: "some path", adapter_path: "some adapter path", input: [ { prompt: "Hello, this is a test message." }, { file_url: nil } ] }, "user_prompts")
     end
   end
 end
