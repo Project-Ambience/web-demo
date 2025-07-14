@@ -103,6 +103,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_14_130815) do
     t.bigint "ai_model_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "status", default: 0, null: false
     t.index ["ai_model_id"], name: "index_conversations_on_ai_model_id"
   end
 
