@@ -781,16 +781,16 @@ const ChatPage = () => {
         case 'awaiting_prompt':
             return (
                 <MessageInputContainer>
-                    {selectedFile && (
-                    <SelectedFileWrapper>
-                        📎 {selectedFile.name}
-                        <RemoveFileButton type="button" onClick={() => {
-                        setSelectedFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = '';
-                        }}>
-                        ✕
-                        </RemoveFileButton>
-                    </SelectedFileWrapper>
+                    {activeConversation.status === 'awaiting_prompt' && selectedFile && (
+                        <SelectedFileWrapper>
+                            📎 {selectedFile.name}
+                            <RemoveFileButton type="button" onClick={() => {
+                                setSelectedFile(null);
+                                if (fileInputRef.current) fileInputRef.current.value = '';
+                            }}>
+                                ✕
+                            </RemoveFileButton>
+                        </SelectedFileWrapper>
                     )}
                     <MessageInputForm onSubmit={handleSendMessage}>
                         <MessageTextarea 
@@ -807,34 +807,38 @@ const ChatPage = () => {
                                 }
                             }}
                         />
-                        <HiddenFileInput 
-                            ref={fileInputRef}
-                            type="file"
-                            accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
-                            onChange={(e) => {
-                            const file = e.target.files[0];
-                            const maxSizeMB = 100;
-                            const maxSizeBytes = maxSizeMB * 1024 * 1024;
-                        
-                            if (file && file.size > maxSizeBytes) {
-                                setFileError(`File size should not exceed ${maxSizeMB}MB`);
-                                e.target.value = '';
-                                setTimeout(() => setFileError(''), 4000);
-                                return;
-                            }
-                        
-                            setSelectedFile(file);
-                            setFileError('');
-                            }}
-                        />
-                        <FileButtonWrapper>
-                            <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                            +
-                            </FileButton>
-                            <FileButtonTooltip visible={!!fileError}>
-                            {fileError}
-                            </FileButtonTooltip>
-                        </FileButtonWrapper>
+                        {activeConversation.status === 'awaiting_prompt' && (
+                            <>
+                                <HiddenFileInput 
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        const maxSizeMB = 100;
+                                        const maxSizeBytes = maxSizeMB * 1024 * 1024;
+                                    
+                                        if (file && file.size > maxSizeBytes) {
+                                            setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                                            e.target.value = '';
+                                            setTimeout(() => setFileError(''), 4000);
+                                            return;
+                                        }
+                                    
+                                        setSelectedFile(file);
+                                        setFileError('');
+                                    }}
+                                />
+                                <FileButtonWrapper>
+                                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                                    +
+                                    </FileButton>
+                                    <FileButtonTooltip visible={!!fileError}>
+                                    {fileError}
+                                    </FileButtonTooltip>
+                                </FileButtonWrapper>
+                            </>
+                        )}
                         <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
                             <SendIcon />
                         </SendButton>

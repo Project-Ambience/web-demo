@@ -8,7 +8,7 @@ class Api::MessagesController < Api::ApplicationController
 
     @message = @conversation.messages.create(content: params[:message][:content], role: "user")
 
-    if params[:message][:file].present?
+    if params[:message][:file].present? && @conversation.awaiting_prompt?
       @message.file.attach(params[:message][:file])
     end
 
