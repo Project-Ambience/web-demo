@@ -7,8 +7,6 @@ import {
   useAddCommentMutation,
   useCreateConversationMutation
 } from '../app/apiSlice';
-import { useDispatch } from 'react-redux';
-import { conversationSelected } from '../features/ui/uiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import StarRating from '../components/common/StarRating';
@@ -159,7 +157,6 @@ const BackLink = styled(Link)`
 const AiModelPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const dispatch = useDispatch();
   const [newRating, setNewRating] = useState(0);
   const [commentText, setCommentText] = useState('');
 
@@ -184,9 +181,7 @@ const AiModelPage = () => {
         },
       }).unwrap();
       
-      dispatch(conversationSelected(newConversation.id));
-      
-      navigate('/chat');
+      navigate(`/chat/${newConversation.id}`);
     } catch (err) {
       console.error('Failed to start conversation:', err);
     }
