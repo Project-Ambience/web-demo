@@ -56,6 +56,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
   def update_status
     request_id = params[:id]
     status = params[:status]
+    adapter_path = params[:adapter_path]
 
     model_fine_tune_request = ModelFineTuneRequest.find_by(id: request_id)
 
@@ -70,7 +71,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     case status
     when "success"
       model_fine_tune_request.done!
-      ai_model = create_ai_model(model_fine_tune_request)
+      ai_model = create_ai_model(model_fine_tune_request, adapter_path)
       model_fine_tune_request.update(new_ai_model_id: ai_model.id)
       model_fine_tune_request.save!
     when "fail"
@@ -89,7 +90,10 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       name: model_fine_tune_request.name,
       description: model_fine_tune_request.description,
       clinician_type_id: model_fine_tune_request.clinician_type_id,
-      base_model_id: model_fine_tune_request.ai_model_id
+      base_model_id: model_fine_tune_request.ai_model_id,
+      path: model_fine_tune_request.ai_model.path,
+      adapter_path: model_fine_tune_request.adapter_path,
+      keywords: model_fine_tune_request.ai_model.keywords
     )
 
     ai_model

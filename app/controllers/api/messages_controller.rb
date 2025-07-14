@@ -14,7 +14,8 @@ class Api::MessagesController < Api::ApplicationController
           { "prompt": @message.content },
           { "file_url": @message.file_url }
         ].compact,
-        model_path: @conversation.ai_model.path
+        base_model_path: @conversation.ai_model.path,
+        adapter_path: @conversation.ai_model.adapter_path
       }, ENV["USER_PROMPT_QUEUE_NAME"])
       render json: @message, status: :created
     else
