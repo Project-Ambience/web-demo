@@ -7,7 +7,6 @@ RSpec.describe MessagePublisher do
     let(:mock_connection) { instance_double(Bunny::Session) }
     let(:mock_channel) { instance_double(Bunny::Channel) }
     let(:mock_queue) { instance_double(Bunny::Queue) }
-    let(:hmac_secret) { "supersecretkey" }
 
     before do
       allow(ENV).to receive(:[]).with("DOMAIN").and_return("localhost")
@@ -22,8 +21,6 @@ RSpec.describe MessagePublisher do
 
       allow(mock_channel).to receive(:queue).with(queue_name, durable: true).and_return(mock_queue)
       allow(mock_queue).to receive(:publish)
-
-      allow(Rails.application).to receive_message_chain(:credentials, :hmac_secret).and_return(hmac_secret)
     end
 
     it "connects to RabbitMQ with correct connection parameters" do
@@ -37,10 +34,8 @@ RSpec.describe MessagePublisher do
       described_class.publish(payload, queue_name)
     end
 
-    it "connects, signs, and publishes the message" do
-      json_payload = payload.to_json
-      expected_signature = OpenSSL::HMAC.hexdigest("SHA256", hmac_secret, json_payload)
-      expected_payload = payload.merge(signature: expected_signature).to_json
+    it "connects and publishes the message payload as JSON" do
+      expected_payload = payload.to_json
 
       described_class.publish(payload, queue_name)
 
