@@ -12,6 +12,7 @@ class ResponseWorker
     conversation_id = message[:conversation_id]
     result = message[:result]
     conversation = Conversation.find(conversation_id)
+    conversation.awaiting_feedback!
     message = Message.create!(conversation: conversation, role: "assistant", content: result)
 
     ActionCable.server.broadcast(

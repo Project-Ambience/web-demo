@@ -6,6 +6,7 @@ class Conversation < ApplicationRecord
     awaiting_prompt: 0,
     awaiting_feedback: 1,
     awaiting_rejection_comment: 2,
-    completed: 3
+    completed: 3,
+    processing: 4
   }
 end

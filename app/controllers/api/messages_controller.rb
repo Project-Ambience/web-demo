@@ -26,7 +26,7 @@ class Api::MessagesController < Api::ApplicationController
         adapter_path: @conversation.ai_model.adapter_path
       }, ENV["USER_PROMPT_QUEUE_NAME"])
 
-      @conversation.awaiting_feedback!
+      @conversation.processing!
       render json: @message, status: :created
     else
       render json: @message.errors, status: :unprocessable_entity

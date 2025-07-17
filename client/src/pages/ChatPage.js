@@ -412,7 +412,7 @@ const FileButton = styled.button`
   &::after {
     content: 'Max 1 file, 100MB';
     position: absolute;
-    bottom: 125%; /* Move above the button */
+    bottom: 125%;
     left: 50%;
     transform: translateX(-50%);
     background-color: #333;
@@ -624,8 +624,7 @@ const ChatPage = () => {
     [activeConversation?.messages]
   );
 
-  const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
-  const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
+  const isWaiting = activeConversation?.status === 'processing';
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -758,6 +757,21 @@ const ChatPage = () => {
     if (!activeConversation) return null;
 
     switch(activeConversation.status) {
+        case 'processing':
+            return (
+                <MessageInputContainer>
+                    <MessageInputForm>
+                        <MessageTextarea 
+                            value="Generating response, please wait..."
+                            rows="1"
+                            disabled={true}
+                        />
+                         <SendButton type="submit" disabled={true}>
+                            <SendIcon />
+                        </SendButton>
+                    </MessageInputForm>
+                </MessageInputContainer>
+            );
         case 'awaiting_feedback':
             return (
                 <FeedbackContainer>
@@ -800,7 +814,7 @@ const ChatPage = () => {
                             onInput={handleTextareaInput}
                             placeholder={activeConversation.status === 'awaiting_rejection_comment' ? "Please provide feedback for the rejection..." : "Enter a prompt here"}
                             rows="1"
-                            disabled={!activeConversationId || isWaiting}
+                            disabled={!activeConversationId || isWaiting || isSendingMessage}
                             onKeyDown={(e) => {
                                 if (e.key === 'Enter' && !e.shiftKey) {
                                     e.preventDefault();
@@ -840,7 +854,7 @@ const ChatPage = () => {
                                 </FileButtonWrapper>
                             </>
                         )}
-                        <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
+                        <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting || isSendingMessage}>
                             <SendIcon />
                         </SendButton>
                     </MessageInputForm>
