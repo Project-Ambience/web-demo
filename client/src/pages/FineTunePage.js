@@ -259,6 +259,7 @@ const FineTunePage = () => {
   const [submissionError, setSubmissionError] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
   const [fileError, setFileError] = useState('');
+  const [showQueueWarning, setShowQueueWarning] = useState(false);
 
   const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery();
 
@@ -291,7 +292,11 @@ const FineTunePage = () => {
       fileName: file.name,
     });
   
-    setShowConfirmModal(true);
+    if (rabbitTraffic?.messages_ready > 5) {
+      setShowQueueWarning(true);
+    } else {
+      setShowConfirmModal(true);
+    }
   };
 
   const handleConfirmedSubmit = async () => {
@@ -577,6 +582,29 @@ const FineTunePage = () => {
             <ModalButtonGroup>
               <ModalButton onClick={() => setShowConfirmModal(false)}>Cancel</ModalButton>
               <PrimaryButton onClick={handleConfirmedSubmit}>Submit</PrimaryButton>
+            </ModalButtonGroup>
+          </ModalBox>
+        </ModalOverlay>
+      )}
+      {showQueueWarning && submitParams && (
+        <ModalOverlay>
+          <ModalBox>
+            <ModalTitle>High Queue Notice</ModalTitle>
+            <p>
+              There are currently <strong>{rabbitTraffic.messages_ready}</strong> fine-tune requests waiting to be processed.
+              Your request will be added to the queue and may take longer than usual.
+            </p>
+            <p>Do you still want to continue?</p>
+            <ModalButtonGroup>
+              <ModalButton onClick={() => setShowQueueWarning(false)}>Cancel</ModalButton>
+              <PrimaryButton
+                onClick={() => {
+                  setShowQueueWarning(false);
+                  setShowConfirmModal(true);
+                }}
+              >
+                Continue
+              </PrimaryButton>
             </ModalButtonGroup>
           </ModalBox>
         </ModalOverlay>
