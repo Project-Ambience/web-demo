@@ -19,14 +19,11 @@ class Api::MessagesController < Api::ApplicationController
 
       payload = {
         conversation_id: @conversation.id,
+        file_url: @message.file.attached? ? @message.file_url : nil
         input: input_history,
         base_model_path: @conversation.ai_model.path,
         adapter_path: @conversation.ai_model.adapter_path
       }
-
-      if @message.file.attached?
-        payload[:file_url] = @message.file_url
-      end
 
       MessagePublisher.publish(payload, ENV["USER_PROMPT_QUEUE_NAME"])
 
