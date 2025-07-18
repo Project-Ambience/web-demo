@@ -112,6 +112,9 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
     }),
+    getRabbitMQTraffic: builder.query({
+      query: () => '/rabbitmq/traffic',
+    }),
   }),
 });
 
@@ -129,4 +132,5 @@ export const {
   useCreateFineTuneRequestMutation,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
+  useGetRabbitMQTrafficQuery,
 } = apiSlice;

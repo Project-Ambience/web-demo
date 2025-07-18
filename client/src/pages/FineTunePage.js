@@ -4,7 +4,8 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   useGetAiModelByIdQuery, 
   useGetClinicianTypesQuery, 
-  useCreateFineTuneRequestMutation 
+  useCreateFineTuneRequestMutation,
+  useGetRabbitMQTrafficQuery
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -259,6 +260,7 @@ const FineTunePage = () => {
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
   const [fileError, setFileError] = useState('');
 
+  const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery();
 
   const handleFileChange = (e) => {
     const uploaded = e.target.files[0];
@@ -521,6 +523,27 @@ const FineTunePage = () => {
                   }
                 })()}
               </FormatBox>
+            )}
+          </Section>
+          <Section>
+            <h3>Queue Status</h3>
+            {isTrafficLoading && <p>Loading traffic...</p>}
+            {isTrafficError && <p style={{ color: 'red' }}>Error loading traffic.</p>}
+            {rabbitTraffic && (
+              <div style={{
+                background: '#fff',
+                border: '1px solid #cdd4d8',
+                borderRadius: '4px',
+                padding: '1rem',
+                fontSize: '0.95rem',
+              }}>
+                <p>
+                  <strong>Waiting to Start:</strong> {rabbitTraffic.messages_ready}
+                </p>
+                <p>
+                  <strong>Currently Running:</strong> {rabbitTraffic.messages_unacknowledged}
+                </p>
+              </div>
             )}
           </Section>
         </Sidebar>
