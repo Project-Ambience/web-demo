@@ -14,17 +14,21 @@ class Api::MessagesController < Api::ApplicationController
 
     if @message.persisted?
       input_history = @conversation.messages.map do |msg|
-        { role: msg.role, content: msg.content }.tap do |hash|
-          hash[:file_url] = msg.file_url if msg.file.attached?
-        end
+        { role: msg.role, content: msg.content }
       end
 
-      MessagePublisher.publish({
+      payload = {
         conversation_id: @conversation.id,
         input: input_history,
         base_model_path: @conversation.ai_model.path,
         adapter_path: @conversation.ai_model.adapter_path
-      }, ENV["USER_PROMPT_QUEUE_NAME"])
+      }
+
+      if @message.file.attached?
+        payload[:file_url] = @message.file_url
+      end
+
+      MessagePublisher.publish(payload, ENV["USER_PROMPT_QUEUE_NAME"])
 
       @conversation.processing!
       render json: @message, status: :created
