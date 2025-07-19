@@ -4,6 +4,7 @@ Rails.application.routes.draw do
 
   namespace :api do
     resources :clinician_types, only: [ :index ]
+    resources :few_shot_templates, only: [:index, :show, :create, :update, :destroy]
     resources :model_fine_tune_requests, only: [ :create ]
     resources :ai_models, only: [ :index, :show ] do
       resources :comments, only: [ :create ]
