@@ -23,7 +23,7 @@ class Api::ConversationsController < Api::ApplicationController
       messages: {
         methods: [ :file_url, :file_name ]
       }
-    })
+    }, methods: :file_url)
   end
 
   def create

@@ -6,20 +6,25 @@ class Api::MessagesController < Api::ApplicationController
       return render json: { error: "This conversation is not accepting new messages." }, status: :unprocessable_entity
     end
 
-    @message = @conversation.messages.create(content: params[:message][:content], role: "user")
+    @message = @conversation.messages.new(content: params[:message][:content], role: "user")
 
-    if params[:message][:file].present? && @conversation.awaiting_prompt?
-      @message.file.attach(params[:message][:file])
+    uploaded_file = params[:message][:file]
+    if uploaded_file.present? && @conversation.file_url.blank?
+      @message.file.attach(uploaded_file)
     end
 
-    if @message.persisted?
-      input_history = @conversation.messages.map do |msg|
+    if @message.save
+      if @message.file.attached? && @conversation.file_url.blank?
+        @conversation.update(file_url: @message.file_url)
+      end
+
+      input_history = @conversation.reload.messages.map do |msg|
         { role: msg.role, content: msg.content }
       end
 
       MessagePublisher.publish({
         conversation_id: @conversation.id,
-        file_url: @message.file_url,
+        file_url: @conversation.file_url,
         input: input_history,
         base_model_path: @conversation.ai_model.path,
         adapter_path: @conversation.ai_model.adapter_path
