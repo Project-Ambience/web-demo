@@ -39,13 +39,12 @@ RSpec.describe "MessageRequests", type: :request do
       conversation.reload
 
       expected_input_history = conversation.messages.order(created_at: :asc).map do |msg|
-        payload = { role: msg.role, content: msg.content }
-        payload[:file_url] = msg.file_url if msg.file.attached?
-        payload
+        { role: msg.role, content: msg.content }
       end
 
       expected_payload = {
         conversation_id: conversation.id,
+        file_url: conversation.file_url,
         input: expected_input_history,
         base_model_path: "some path",
         adapter_path: "some adapter path"
