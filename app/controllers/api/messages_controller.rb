@@ -19,7 +19,7 @@ class Api::MessagesController < Api::ApplicationController
 
       payload = {
         conversation_id: @conversation.id,
-        file_url: @message.file.attached? ? @message.file_url : nil,
+        file_url: @message.file_url,
         input: input_history,
         base_model_path: @conversation.ai_model.path,
         adapter_path: @conversation.ai_model.adapter_path
