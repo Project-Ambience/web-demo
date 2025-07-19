@@ -80,7 +80,11 @@ export const apiSlice = createApi({
         if (message.file) {
           formData.append('message[file]', message.file);
         }
-    
+        
+        if (message.few_shot_template_id) {
+            formData.append('message[few_shot_template_id]', message.few_shot_template_id);
+        }
+
         return {
           url: `/conversations/${conversation_id}/messages`,
           method: 'POST',
