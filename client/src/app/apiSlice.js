@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message'],
+  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate'],
   endpoints: builder => ({
     getClinicianTypes: builder.query({
       query: () => '/clinician_types',
@@ -112,6 +112,43 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
     }),
+    getFewShotTemplates: builder.query({
+      query: () => '/few_shot_templates',
+      providesTags: (result = []) => [
+        ...result.map(({ id }) => ({ type: 'FewShotTemplate', id })),
+        { type: 'FewShotTemplate', id: 'LIST' },
+      ],
+    }),
+    getFewShotTemplate: builder.query({
+      query: (id) => `/few_shot_templates/${id}`,
+      providesTags: (result, error, id) => [{ type: 'FewShotTemplate', id }],
+    }),
+    createFewShotTemplate: builder.mutation({
+      query: (template) => ({
+        url: '/few_shot_templates',
+        method: 'POST',
+        body: template,
+      }),
+      invalidatesTags: [{ type: 'FewShotTemplate', id: 'LIST' }],
+    }),
+    updateFewShotTemplate: builder.mutation({
+      query: ({ id, ...patch }) => ({
+        url: `/few_shot_templates/${id}`,
+        method: 'PATCH',
+        body: patch,
+      }),
+      invalidatesTags: (result, error, arg) => [
+        { type: 'FewShotTemplate', id: 'LIST' },
+        { type: 'FewShotTemplate', id: arg.id },
+      ],
+    }),
+    deleteFewShotTemplate: builder.mutation({
+      query: (id) => ({
+        url: `/few_shot_templates/${id}`,
+        method: 'DELETE',
+      }),
+      invalidatesTags: [{ type: 'FewShotTemplate', id: 'LIST' }],
+    }),
   }),
 });
 
@@ -129,4 +166,9 @@ export const {
   useCreateFineTuneRequestMutation,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
+  useGetFewShotTemplatesQuery,
+  useGetFewShotTemplateQuery,
+  useCreateFewShotTemplateMutation,
+  useUpdateFewShotTemplateMutation,
+  useDeleteFewShotTemplateMutation,
 } = apiSlice;
