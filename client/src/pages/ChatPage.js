@@ -412,7 +412,7 @@ const FileButton = styled.button`
   &::after {
     content: 'Max 1 file, 100MB';
     position: absolute;
-    bottom: 125%; /* Move above the button */
+    bottom: 125%;
     left: 50%;
     transform: translateX(-50%);
     background-color: #333;
@@ -759,24 +759,27 @@ const ChatPage = () => {
 
     switch(activeConversation.status) {
         case 'awaiting_feedback':
-            return (
-                <FeedbackContainer>
-                    <FeedbackButton 
-                      className="accept"
-                      onClick={() => acceptFeedback(activeConversation.id)}
-                      disabled={isAccepting || isRejecting}
-                    >
-                        Accept
-                    </FeedbackButton>
-                    <FeedbackButton 
-                      className="reject"
-                      onClick={() => rejectFeedback(activeConversation.id)}
-                      disabled={isAccepting || isRejecting}
-                    >
-                        Reject
-                    </FeedbackButton>
-                </FeedbackContainer>
-            );
+            if (lastMessage?.role === 'assistant') {
+                return (
+                    <FeedbackContainer>
+                        <FeedbackButton
+                          className="accept"
+                          onClick={() => acceptFeedback(activeConversation.id)}
+                          disabled={isAccepting || isRejecting}
+                        >
+                            Accept
+                        </FeedbackButton>
+                        <FeedbackButton
+                          className="reject"
+                          onClick={() => rejectFeedback(activeConversation.id)}
+                          disabled={isAccepting || isRejecting}
+                        >
+                            Reject
+                        </FeedbackButton>
+                    </FeedbackContainer>
+                );
+            }
+            return null;
 
         case 'awaiting_rejection_comment':
         case 'awaiting_prompt':
