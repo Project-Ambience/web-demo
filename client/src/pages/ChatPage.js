@@ -664,6 +664,7 @@ const ChatPage = () => {
 
   const [viewMode, setViewMode] = useState('chat');
   const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [viewingTemplateData, setViewingTemplateData] = useState(null);
   const [isTemplateViewReadOnly, setIsTemplateViewReadOnly] = useState(false);
   const [showAddContentPanel, setShowAddContentPanel] = useState(false);
   
@@ -886,7 +887,7 @@ const ChatPage = () => {
                           <SelectedItemWrapper>
                               ✨ {selectedTemplate.name}
                               <ItemActionButton type="button" onClick={() => {
-                                setEditingTemplateId(selectedTemplateId);
+                                setViewingTemplateData(selectedTemplate);
                                 setIsTemplateViewReadOnly(true);
                                 setViewMode('templateDetail');
                               }}>
@@ -993,6 +994,7 @@ const ChatPage = () => {
         return <FewShotTemplateDetail
           templateId={editingTemplateId}
           isReadOnly={isTemplateViewReadOnly}
+          templateData={viewingTemplateData}
           onSaveComplete={(newId) => {
             if (newId) {
               setEditingTemplateId(newId);
@@ -1001,6 +1003,7 @@ const ChatPage = () => {
             setViewMode('templateDetail');
           }}
           onBack={() => {
+            setViewingTemplateData(null);
             isTemplateViewReadOnly ? setViewMode('chat') : setViewMode('templateList');
           }}
           onDeleteComplete={() => setViewMode('templateList')}
@@ -1079,20 +1082,17 @@ const ChatPage = () => {
                               <AttachmentBubble>
                                 ✨
                                 <AttachmentButton onClick={() => {
-                                  const usedTemplate = templates?.find(t => t.name === activeConversation.few_shot_template.name);
-                                  if (usedTemplate) {
-                                    setEditingTemplateId(usedTemplate.id);
-                                    setIsTemplateViewReadOnly(true);
-                                    setViewMode('templateDetail');
-                                  }
+                                  setViewingTemplateData(activeConversation.few_shot_template);
+                                  setIsTemplateViewReadOnly(true);
+                                  setViewMode('templateDetail');
                                 }}>
                                   {activeConversation.few_shot_template.name}
                                 </AttachmentButton>
                               </AttachmentBubble>
                             )}
-                            {activeConversation.file_url && (
+                            {msg.file_url && (
                                <AttachmentBubble>
-                                 📎 <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_url.split('/').pop()}</AttachmentLink>
+                                 📎 <AttachmentLink href={msg.file_url} target="_blank" rel="noopener noreferrer">{msg.file_name || "Attached File"}</AttachmentLink>
                                </AttachmentBubble>
                             )}
                           </MessageAttachmentContainer>

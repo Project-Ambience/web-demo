@@ -161,11 +161,11 @@ const WarningText = styled.div`
   border-radius: 4px;
 `;
 
-const FewShotTemplateDetail = ({ templateId, isReadOnly, onSaveComplete, onBack, onSelectTemplate, onDeleteComplete }) => {
-  const [isEditing, setIsEditing] = useState(!templateId);
+const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveComplete, onBack, onSelectTemplate, onDeleteComplete }) => {
+  const [isEditing, setIsEditing] = useState(!templateId && !templateData);
 
   const { data: existingTemplate, isLoading, refetch } = useGetFewShotTemplateQuery(templateId, {
-    skip: !templateId,
+    skip: !templateId || !!templateData,
   });
 
   const [updateTemplate, { isLoading: isUpdating }] = useUpdateFewShotTemplateMutation();
@@ -177,6 +177,8 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, onSaveComplete, onBack,
   const [examples, setExamples] = useState([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
+  const activeTemplateData = templateData || existingTemplate;
+
   const resetState = (template) => {
     setName(template ? template.name : '');
     setDescription(template ? template.description || '' : '');
@@ -185,11 +187,11 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, onSaveComplete, onBack,
   };
 
   useEffect(() => {
-    resetState(existingTemplate);
-    if (!templateId) {
+    resetState(activeTemplateData);
+    if (!templateId && !templateData) {
       setIsEditing(true);
     }
-  }, [existingTemplate, templateId]);
+  }, [activeTemplateData, templateId, templateData]);
 
   const handleFieldChange = (setter) => (e) => {
     setter(e.target.value);
@@ -272,7 +274,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, onSaveComplete, onBack,
   return (
     <DetailContainer>
       <Header>
-        <Title>{templateId ? existingTemplate?.name : 'Create New Template'}</Title>
+        <Title>{activeTemplateData ? activeTemplateData.name : 'Create New Template'}</Title>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           {finalIsEditing ? (
             <>
@@ -334,7 +336,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, onSaveComplete, onBack,
         <>
           <ContentGroup>
             <h3 style={{ marginTop: 0, marginBottom: '1.5rem', borderBottom: '1px solid #e9ecef', paddingBottom: '1rem' }}>Description</h3>
-            <ReadOnlyText>{existingTemplate?.description || <em>No description provided.</em>}</ReadOnlyText>
+            <ReadOnlyText>{activeTemplateData?.description || <em>No description provided.</em>}</ReadOnlyText>
           </ContentGroup>
           <ContentGroup>
             <h3 style={{ marginTop: 0 }}>Examples</h3>
