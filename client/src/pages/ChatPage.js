@@ -614,6 +614,42 @@ const CloseButton = styled.button`
   &:hover { background-color: #dee2e6; }
 `;
 
+const MessageAttachmentContainer = styled.div`
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+`;
+
+const AttachmentBubble = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #e9ecef;
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.9rem;
+`;
+
+const AttachmentLink = styled.a`
+  color: #005eb8;
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+`;
+
+const AttachmentButton = styled.button`
+  background: none;
+  border: none;
+  color: #005eb8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  &:hover { text-decoration: underline; }
+`;
+
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -662,6 +698,11 @@ const ChatPage = () => {
     [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
     [activeConversation?.messages]
   );
+  
+  const firstUserMessageId = useMemo(() => {
+    const firstUserMsg = sortedMessages.find(msg => msg.role === 'user');
+    return firstUserMsg ? firstUserMsg.id : null;
+  }, [sortedMessages]);
 
   const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
@@ -1029,20 +1070,32 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
-                    sortedMessages.map(msg => (
+                    sortedMessages.map((msg) => (
                       <Message key={msg.id} data-role={msg.role}>
-                        {msg.content && <div>{msg.content}</div>}
-                        {msg.file_url && (
-                          <div style={{ marginTop: '0.5rem' }}>
-                            📎 <a
-                              href={msg.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#005eb8' }}
-                            >
-                              {msg.file_name || 'View file'}
-                            </a>
-                          </div>
+                        <div>{msg.content}</div>
+                        {(msg.role === 'user' && msg.id === firstUserMessageId) && (
+                          <MessageAttachmentContainer>
+                            {activeConversation.few_shot_template?.name && (
+                              <AttachmentBubble>
+                                ✨
+                                <AttachmentButton onClick={() => {
+                                  const usedTemplate = templates?.find(t => t.name === activeConversation.few_shot_template.name);
+                                  if (usedTemplate) {
+                                    setEditingTemplateId(usedTemplate.id);
+                                    setIsTemplateViewReadOnly(true);
+                                    setViewMode('templateDetail');
+                                  }
+                                }}>
+                                  {activeConversation.few_shot_template.name}
+                                </AttachmentButton>
+                              </AttachmentBubble>
+                            )}
+                            {activeConversation.file_url && (
+                               <AttachmentBubble>
+                                 📎 <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_url.split('/').pop()}</AttachmentLink>
+                               </AttachmentBubble>
+                            )}
+                          </MessageAttachmentContainer>
                         )}
                       </Message>
                     ))
