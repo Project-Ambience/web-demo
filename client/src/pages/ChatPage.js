@@ -666,6 +666,16 @@ const ChatPage = () => {
   const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
   const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
+  const [tempFileUrl, setTempFileUrl] = useState(null);
+
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setTempFileUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setTempFileUrl(null);
+  }, [selectedFile]);
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -849,6 +859,9 @@ const ChatPage = () => {
                       {activeConversation.status === 'awaiting_prompt' && selectedFile && (
                           <SelectedItemWrapper>
                               📎 {selectedFile.name}
+                              <ItemActionButton as="a" href={tempFileUrl} target="_blank" rel="noopener noreferrer">
+                                <ViewIcon />
+                              </ItemActionButton>
                               <RemoveItemButton type="button" onClick={() => {
                                   setSelectedFile(null);
                                   if (fileInputRef.current) fileInputRef.current.value = '';
