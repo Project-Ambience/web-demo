@@ -3,9 +3,9 @@ import styled, { keyframes } from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
+import {
   apiSlice,
-  useGetConversationsQuery, 
+  useGetConversationsQuery,
   useGetConversationQuery,
   useAddMessageMutation,
   useUpdateConversationMutation,
@@ -13,10 +13,11 @@ import {
   useGetAiModelByIdQuery,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
+  useGetFewShotTemplatesQuery,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import FewShotTemplateList from '../features/fewshot/FewShotTemplateList';
-import FewShotTemplateEditor from '../features/fewshot/FewShotTemplateEditor';
+import FewShotTemplateDetail from '../features/fewshot/FewShotTemplateDetail';
 import AddContentPanel from '../features/fewshot/AddContentPanel';
 
 
@@ -30,6 +31,13 @@ const SendIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
     </svg>
+);
+
+const ViewIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
 );
 
 const SendSuggestionIcon = () => (
@@ -414,7 +422,15 @@ const AddContentButton = styled.button`
   }
 `;
 
-const SelectedFileWrapper = styled.div`
+const SelectionBubblesContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+`;
+
+const SelectedItemWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -423,21 +439,27 @@ const SelectedFileWrapper = styled.div`
   background: #e4e9f0;
   border-radius: 16px;
   padding: 0.4rem 0.75rem;
-  margin: 0.5rem auto 0;
-  width: fit-content;
-  max-width: 90%;
-  margin-bottom: 0.5rem;
 `;
 
-const RemoveFileButton = styled.button`
+const ItemActionButton = styled.button`
   background: none;
   border: none;
   color: #888;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
   padding: 0;
   margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
+  &:hover {
+    color: #333;
+  }
+`;
+
+const RemoveItemButton = styled(ItemActionButton)`
+  font-size: 1rem;
   &:hover {
     color: #e53935;
   }
@@ -548,6 +570,50 @@ const CompletedMessage = styled.div`
   margin: 0 auto;
 `;
 
+const OverlayContainer = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+`;
+
+const OverlayContent = styled.div`
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  width: 90%;
+  height: 90%;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #e9ecef;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  &:hover { background-color: #dee2e6; }
+`;
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -562,6 +628,7 @@ const ChatPage = () => {
 
   const [viewMode, setViewMode] = useState('chat');
   const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [isTemplateViewReadOnly, setIsTemplateViewReadOnly] = useState(false);
   const [showAddContentPanel, setShowAddContentPanel] = useState(false);
   
   const menuRef = useRef(null);
@@ -579,6 +646,7 @@ const ChatPage = () => {
       skip: !activeConversation?.ai_model_id,
     }
   );
+  const { data: templates } = useGetFewShotTemplatesQuery();
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
   const [deleteConversation] = useDeleteConversationMutation();
@@ -597,6 +665,7 @@ const ChatPage = () => {
 
   const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
+  const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -761,19 +830,36 @@ const ChatPage = () => {
         case 'awaiting_prompt':
             return (
                 <MessageInputContainer>
-                    {activeConversation.status === 'awaiting_prompt' && selectedFile && (
-                        <SelectedFileWrapper>
-                            📎 {selectedFile.name}
-                            <RemoveFileButton type="button" onClick={() => {
-                                setSelectedFile(null);
-                                if (fileInputRef.current) fileInputRef.current.value = '';
-                            }}>
-                                ✕
-                            </RemoveFileButton>
-                        </SelectedFileWrapper>
-                    )}
+                    <SelectionBubblesContainer>
+                      {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
+                          <SelectedItemWrapper>
+                              ✨ {selectedTemplate.name}
+                              <ItemActionButton type="button" onClick={() => {
+                                setEditingTemplateId(selectedTemplateId);
+                                setIsTemplateViewReadOnly(true);
+                                setViewMode('templateDetail');
+                              }}>
+                                <ViewIcon />
+                              </ItemActionButton>
+                              <RemoveItemButton type="button" onClick={() => setSelectedTemplateId(null)}>
+                                  ✕
+                              </RemoveItemButton>
+                          </SelectedItemWrapper>
+                      )}
+                      {activeConversation.status === 'awaiting_prompt' && selectedFile && (
+                          <SelectedItemWrapper>
+                              📎 {selectedFile.name}
+                              <RemoveItemButton type="button" onClick={() => {
+                                  setSelectedFile(null);
+                                  if (fileInputRef.current) fileInputRef.current.value = '';
+                              }}>
+                                  ✕
+                              </RemoveItemButton>
+                          </SelectedItemWrapper>
+                      )}
+                    </SelectionBubblesContainer>
                     <MessageInputForm onSubmit={handleSendMessage}>
-                        <MessageTextarea 
+                        <MessageTextarea
                             ref={textareaRef}
                             value={input}
                             onInput={handleTextareaInput}
@@ -834,87 +920,43 @@ const ChatPage = () => {
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const renderMainContent = () => {
+  const renderOverlayContent = () => {
     switch(viewMode) {
       case 'templateList':
         return <FewShotTemplateList
-          onSelectTemplate={(id) => {
-            setSelectedTemplateId(id);
-            setViewMode('chat');
-            alert('Template selected! It will be used with your next prompt.');
-          }}
-          onEditTemplate={(id) => {
+          onViewTemplate={(id) => {
             setEditingTemplateId(id);
-            setViewMode('templateEditor');
+            setIsTemplateViewReadOnly(false);
+            setViewMode('templateDetail');
           }}
           onCreateNew={() => {
             setEditingTemplateId(null);
-            setViewMode('templateEditor');
+            setIsTemplateViewReadOnly(false);
+            setViewMode('templateDetail');
           }}
-          onBackToChat={() => setViewMode('chat')}
         />
-      case 'templateEditor':
-        return <FewShotTemplateEditor
+      case 'templateDetail':
+        return <FewShotTemplateDetail
           templateId={editingTemplateId}
-          onSaveComplete={() => setViewMode('templateList')}
-          onCancel={() => setViewMode('templateList')}
+          isReadOnly={isTemplateViewReadOnly}
+          onSaveComplete={(newId) => {
+            if (newId) {
+              setEditingTemplateId(newId);
+            }
+            setIsTemplateViewReadOnly(false);
+            setViewMode('templateDetail');
+          }}
+          onBack={() => {
+            isTemplateViewReadOnly ? setViewMode('chat') : setViewMode('templateList');
+          }}
+          onDeleteComplete={() => setViewMode('templateList')}
+          onSelectTemplate={(id) => {
+            setSelectedTemplateId(id);
+            setViewMode('chat');
+          }}
         />
-      case 'chat':
       default:
-        return (
-          <>
-            <MessageArea ref={messageAreaRef}>
-              <MessagesContentWrapper>
-                {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
-                  sortedMessages.map(msg => (
-                    <Message key={msg.id} data-role={msg.role}>
-                      {msg.content && <div>{msg.content}</div>}
-                      {msg.file_url && (
-                        <div style={{ marginTop: '0.5rem' }}>
-                          📎 <a
-                            href={msg.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{ color: '#005eb8' }}
-                          >
-                            {msg.file_name || 'View file'}
-                          </a>
-                        </div>
-                      )}
-                    </Message>
-                  ))
-                )}
-
-                {sortedMessages.length === 0 && !isFetchingMessages && !isWaiting && (
-                  <>
-                    {isFetchingModelDetails ? (
-                      <Spinner />
-                    ) : modelDetails?.suggested_prompts?.length > 0 ? (
-                      <div>
-                        <SuggestionsHeader>Here are some suggestions to get you started:</SuggestionsHeader>
-                        <SuggestionsGrid>
-                          {modelDetails.suggested_prompts.map((p, i) => (
-                            <SuggestionCard key={i} onClick={() => handlePromptClick(p.prompt)}>
-                              <SuggestionText>{p.prompt}</SuggestionText>
-                              <SendSuggestionIcon />
-                            </SuggestionCard>
-                          ))}
-                        </SuggestionsGrid>
-                      </div>
-                    ) : (
-                      <EmptySuggestionState>
-                         <EmptySuggestionIcon />
-                         <p>No suggestions available for this model right now.</p>
-                      </EmptySuggestionState>
-                    )}
-                  </>
-                )}
-                {isWaiting && <AssistantLoadingIndicator />}
-              </MessagesContentWrapper>
-            </MessageArea>
-            {renderInputArea()}
-          </>
-        )
+        return null;
     }
   }
 
@@ -969,7 +1011,60 @@ const ChatPage = () => {
           )}
         </Sidebar>
         <ChatWindow>
-          {activeConversationId ? renderMainContent() : (
+          {activeConversationId ? (
+            <>
+              <MessageArea ref={messageAreaRef}>
+                <MessagesContentWrapper>
+                  {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
+                    sortedMessages.map(msg => (
+                      <Message key={msg.id} data-role={msg.role}>
+                        {msg.content && <div>{msg.content}</div>}
+                        {msg.file_url && (
+                          <div style={{ marginTop: '0.5rem' }}>
+                            📎 <a
+                              href={msg.file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{ color: '#005eb8' }}
+                            >
+                              {msg.file_name || 'View file'}
+                            </a>
+                          </div>
+                        )}
+                      </Message>
+                    ))
+                  )}
+
+                  {sortedMessages.length === 0 && !isFetchingMessages && !isWaiting && (
+                    <>
+                      {isFetchingModelDetails ? (
+                        <Spinner />
+                      ) : modelDetails?.suggested_prompts?.length > 0 ? (
+                        <div>
+                          <SuggestionsHeader>Here are some suggestions to get you started:</SuggestionsHeader>
+                          <SuggestionsGrid>
+                            {modelDetails.suggested_prompts.map((p, i) => (
+                              <SuggestionCard key={i} onClick={() => handlePromptClick(p.prompt)}>
+                                <SuggestionText>{p.prompt}</SuggestionText>
+                                <SendSuggestionIcon />
+                              </SuggestionCard>
+                            ))}
+                          </SuggestionsGrid>
+                        </div>
+                      ) : (
+                        <EmptySuggestionState>
+                           <EmptySuggestionIcon />
+                           <p>No suggestions available for this model right now.</p>
+                        </EmptySuggestionState>
+                      )}
+                    </>
+                  )}
+                  {isWaiting && <AssistantLoadingIndicator />}
+                </MessagesContentWrapper>
+              </MessageArea>
+              {renderInputArea()}
+            </>
+          ) : (
             <EmptyStateWrapper>
               <h1>Project Ambience</h1>
               <p>Start a new conversation by selecting a model from the catalogue, or continue an existing chat from the history panel.</p>
@@ -977,6 +1072,16 @@ const ChatPage = () => {
           )}
         </ChatWindow>
       </ChatLayout>
+      
+      {(viewMode === 'templateList' || viewMode === 'templateDetail') && (
+        <OverlayContainer>
+          <OverlayContent>
+            <CloseButton onClick={() => setViewMode('chat')}>×</CloseButton>
+            {renderOverlayContent()}
+          </OverlayContent>
+        </OverlayContainer>
+      )}
+
     </ChatPageWrapper>
   );
 };
