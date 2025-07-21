@@ -1,5 +1,5 @@
 class Api::ConversationsController < Api::ApplicationController
-  before_action :set_conversation, only: [ :show, :update, :destroy ]
+  before_action :set_conversation, only: [ :show, :update, :destroy, :accept_feedback, :reject_feedback ]
 
   def index
     @conversations = Conversation.includes(:ai_model).order(updated_at: :desc)
@@ -8,6 +8,7 @@ class Api::ConversationsController < Api::ApplicationController
       {
         id: convo.id,
         title: convo.title,
+        status: convo.status,
         updated_at: convo.updated_at,
         ai_model: {
           name: convo.ai_model.name
@@ -18,11 +19,10 @@ class Api::ConversationsController < Api::ApplicationController
   end
 
   def show
-    render json: @conversation.as_json(include: {
-      messages: {
-        methods: [ :file_url, :file_name ]
-      }
-    })
+    render json: @conversation.as_json(
+      include: :messages,
+      methods: [ :file_url, :file_name ]
+    )
   end
 
   def create
@@ -45,6 +45,24 @@ class Api::ConversationsController < Api::ApplicationController
   def destroy
     @conversation.destroy
     head :no_content
+  end
+
+  def accept_feedback
+    if @conversation.awaiting_feedback?
+      @conversation.completed!
+      render json: @conversation
+    else
+      render json: { error: "Conversation not awaiting feedback" }, status: :unprocessable_entity
+    end
+  end
+
+  def reject_feedback
+    if @conversation.awaiting_feedback?
+      @conversation.awaiting_rejection_comment!
+      render json: @conversation
+    else
+      render json: { error: "Conversation not awaiting feedback" }, status: :unprocessable_entity
+    end
   end
 
   private

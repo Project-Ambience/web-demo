@@ -34,8 +34,22 @@ RSpec.describe "MessageRequests", type: :request do
     end
 
     it "publishes the message to the queue" do
+      create(:message, conversation: conversation, role: 'assistant', content: 'Hi there!', created_at: 1.minute.ago)
       post "/api/conversations/#{conversation.id}/messages", params: valid_params
-      expect(MessagePublisher).to have_received(:publish).with({ conversation_id: conversation.id, base_model_path: "some path", adapter_path: "some adapter path", input: [ { prompt: "Hello, this is a test message." }, { file_url: nil } ] }, "user_prompts")
+      conversation.reload
+
+      expected_input_history = conversation.messages.order(created_at: :asc).map do |msg|
+        { role: msg.role, content: msg.content }
+      end
+
+      expected_payload = {
+        conversation_id: conversation.id,
+        file_url: conversation.file_url,
+        input: expected_input_history,
+        base_model_path: "some path",
+        adapter_path: "some adapter path"
+      }
+      expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
     end
   end
 end

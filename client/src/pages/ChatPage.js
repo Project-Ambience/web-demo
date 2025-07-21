@@ -3,14 +3,16 @@ import styled, { keyframes } from 'styled-components';
 import { useSelector, useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
+import {
   apiSlice,
-  useGetConversationsQuery, 
+  useGetConversationsQuery,
   useGetConversationQuery,
   useAddMessageMutation,
   useUpdateConversationMutation,
   useDeleteConversationMutation,
   useGetAiModelByIdQuery,
+  useAcceptFeedbackMutation,
+  useRejectFeedbackMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -35,6 +37,12 @@ const SendSuggestionIcon = () => (
 const EmptySuggestionIcon = () => (
   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#a0a0a0">
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const PaperclipIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
   </svg>
 );
 
@@ -275,31 +283,61 @@ const MessagesContentWrapper = styled.div`
   box-sizing: border-box;
 `;
 
-const Message = styled.div`
+const MessageTurn = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+  
+  &[data-role="user"] {
+    align-items: flex-end;
+  }
+  
+  &[data-role="assistant"] {
+    align-items: flex-start;
+  }
+`;
+
+const MessageBubble = styled.div`
   max-width: 80%;
   padding: 0.75rem 1.25rem;
   border-radius: 20px;
-  margin-bottom: 1rem;
   line-height: 1.5;
   font-size: 1rem;
 
   &[data-role="user"] {
     background-color: #f0f4f8;
     color: #1f1f1f;
-    margin-left: auto;
     border-top-right-radius: 5px;
   }
 
   &[data-role="assistant"] {
     background-color: #eaf1f8;
     color: #1f1f1f;
-    margin-right: auto;
     border-top-left-radius: 5px;
-    border-bottom-right-radius: 20px;
   }
 `;
 
-const LoadingMessageBubble = styled(Message)`
+const FileAttachmentBubble = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #f0f4f5; 
+  border-radius: 16px; 
+  padding: 0.5rem 1rem;
+  margin-bottom: 0.5rem;
+  width: fit-content;
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: #005eb8;
+  border: 1px solid #e8edee;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: #e1e8ed;
+  }
+`;
+
+const LoadingMessageBubble = styled(MessageBubble)`
   width: fit-content;
   max-width: fit-content;
 `;
@@ -311,13 +349,15 @@ const LoadingDotContainer = styled.div`
 `;
 
 const AssistantLoadingIndicator = () => (
-  <LoadingMessageBubble data-role="assistant">
-    <LoadingDotContainer>
-      <LoadingDot />
-      <LoadingDot />
-      <LoadingDot />
-    </LoadingDotContainer>
-  </LoadingMessageBubble>
+  <MessageTurn data-role="assistant">
+    <LoadingMessageBubble data-role="assistant">
+      <LoadingDotContainer>
+        <LoadingDot />
+        <LoadingDot />
+        <LoadingDot />
+      </LoadingDotContainer>
+    </LoadingMessageBubble>
+  </MessageTurn>
 );
 
 const MessageInputContainer = styled.div`
@@ -410,7 +450,7 @@ const FileButton = styled.button`
   &::after {
     content: 'Max 1 file, 100MB';
     position: absolute;
-    bottom: 125%; /* Move above the button */
+    bottom: 125%;
     left: 50%;
     transform: translateX(-50%);
     background-color: #333;
@@ -540,6 +580,45 @@ const EmptySuggestionState = styled.div`
   }
 `;
 
+const FeedbackContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    padding: 1rem;
+    max-width: 900px;
+    margin: 0 auto;
+    width: 100%;
+`;
+
+const FeedbackButton = styled.button`
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    border: 1px solid #005eb8;
+
+    &.accept {
+        background-color: #005eb8;
+        color: white;
+        &:hover { background-color: #003087; }
+    }
+
+    &.reject {
+        background-color: #fff;
+        color: #005eb8;
+        &:hover { background-color: #f0f4f5; }
+    }
+`;
+
+const CompletedMessage = styled.div`
+  text-align: center;
+  padding: 1.5rem;
+  color: #5f6368;
+  font-style: italic;
+  max-width: 900px;
+  margin: 0 auto;
+`;
 
 const ChatPage = () => {
   const dispatch = useDispatch();
@@ -570,6 +649,9 @@ const ChatPage = () => {
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
   const [deleteConversation] = useDeleteConversationMutation();
+  const [acceptFeedback, { isLoading: isAccepting }] = useAcceptFeedbackMutation();
+  const [rejectFeedback, { isLoading: isRejecting }] = useRejectFeedbackMutation();
+
 
   const [input, setInput] = useState('');
   const messageAreaRef = useRef(null);
@@ -582,7 +664,6 @@ const ChatPage = () => {
 
   const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
-
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -620,7 +701,7 @@ const ChatPage = () => {
 
       const channelHandlers = {
         received(data) {
-          console.log('Received new message via Action Cable:', data.message);
+          console.log('Received new message via Action Cable:', data);
           dispatch(
             apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
           );
@@ -711,6 +792,110 @@ const ChatPage = () => {
     }, 0);
   };
 
+  const renderInputArea = () => {
+    if (!activeConversation) return null;
+
+    switch(activeConversation.status) {
+        case 'awaiting_feedback':
+            if (lastMessage?.role === 'assistant') {
+                return (
+                    <FeedbackContainer>
+                        <FeedbackButton
+                          className="accept"
+                          onClick={() => acceptFeedback(activeConversation.id)}
+                          disabled={isAccepting || isRejecting}
+                        >
+                            Accept
+                        </FeedbackButton>
+                        <FeedbackButton
+                          className="reject"
+                          onClick={() => rejectFeedback(activeConversation.id)}
+                          disabled={isAccepting || isRejecting}
+                        >
+                            Reject
+                        </FeedbackButton>
+                    </FeedbackContainer>
+                );
+            }
+            return null;
+
+        case 'awaiting_rejection_comment':
+        case 'awaiting_prompt':
+            return (
+                <MessageInputContainer>
+                    {activeConversation.status === 'awaiting_prompt' && selectedFile && (
+                        <SelectedFileWrapper>
+                            📎 {selectedFile.name}
+                            <RemoveFileButton type="button" onClick={() => {
+                                setSelectedFile(null);
+                                if (fileInputRef.current) fileInputRef.current.value = '';
+                            }}>
+                                ✕
+                            </RemoveFileButton>
+                        </SelectedFileWrapper>
+                    )}
+                    <MessageInputForm onSubmit={handleSendMessage}>
+                        <MessageTextarea
+                            ref={textareaRef}
+                            value={input}
+                            onInput={handleTextareaInput}
+                            placeholder={activeConversation.status === 'awaiting_rejection_comment' ? "Please provide feedback for the rejection..." : "Enter a prompt here"}
+                            rows="1"
+                            disabled={!activeConversationId || isWaiting || (activeConversation.file_url && selectedFile)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage(e);
+                                }
+                            }}
+                        />
+                        {activeConversation.status === 'awaiting_prompt' && !activeConversation.file_url && (
+                            <>
+                                <HiddenFileInput
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        const maxSizeMB = 100;
+                                        const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+                                        if (file && file.size > maxSizeBytes) {
+                                            setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                                            e.target.value = '';
+                                            setTimeout(() => setFileError(''), 4000);
+                                            return;
+                                        }
+
+                                        setSelectedFile(file);
+                                        setFileError('');
+                                    }}
+                                />
+                                <FileButtonWrapper>
+                                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
+                                    +
+                                    </FileButton>
+                                    <FileButtonTooltip visible={!!fileError}>
+                                    {fileError}
+                                    </FileButtonTooltip>
+                                </FileButtonWrapper>
+                            </>
+                        )}
+                        <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
+                            <SendIcon />
+                        </SendButton>
+                    </MessageInputForm>
+                </MessageInputContainer>
+            );
+
+        case 'completed':
+            return <CompletedMessage>This conversation has been completed.</CompletedMessage>;
+        
+        default:
+            return null;
+    }
+  }
+
   const filteredConversations = conversations?.filter(convo => 
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -722,7 +907,7 @@ const ChatPage = () => {
           <SidebarTitle>Prompt History</SidebarTitle>
           <SearchContainer>
             <SearchIcon />
-            <SearchInput 
+            <SearchInput
               type="text"
               placeholder="Search history"
               value={searchTerm}
@@ -732,14 +917,14 @@ const ChatPage = () => {
           {isLoadingConversations ? <Spinner /> : (
             <ConversationList>
               {filteredConversations?.map(convo => (
-                <ConversationItem 
+                <ConversationItem
                   key={convo.id}
                   isActive={String(convo.id) === activeConversationId}
                   onClick={() => editingConversationId !== convo.id && navigate(`/chat/${convo.id}`)}
                 >
                   {editingConversationId === convo.id ? (
                      <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
-                        <EditInput 
+                        <EditInput
                           type="text"
                           value={newTitle}
                           onChange={e => setNewTitle(e.target.value)}
@@ -771,22 +956,18 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
-                    sortedMessages.map(msg => (
-                      <Message key={msg.id} data-role={msg.role}>
-                        {msg.content && <div>{msg.content}</div>}
-                        {msg.file_url && (
-                          <div style={{ marginTop: '0.5rem' }}>
-                            📎 <a
-                              href={msg.file_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              style={{ color: '#005eb8' }}
-                            >
-                              {msg.file_name || 'View file'}
-                            </a>
-                          </div>
+                    sortedMessages.map((msg, index) => (
+                      <MessageTurn key={msg.id} data-role={msg.role}>
+                        {index === 0 && msg.role === 'user' && activeConversation?.file_url && (
+                           <FileAttachmentBubble href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">
+                             <PaperclipIcon />
+                             {activeConversation.file_name || 'Attached File'}
+                           </FileAttachmentBubble>
                         )}
-                      </Message>
+                        <MessageBubble data-role={msg.role}>
+                          {msg.content}
+                        </MessageBubble>
+                      </MessageTurn>
                     ))
                   )}
 
@@ -817,67 +998,7 @@ const ChatPage = () => {
                   {isWaiting && <AssistantLoadingIndicator />}
                 </MessagesContentWrapper>
               </MessageArea>
-              <MessageInputContainer>
-                {selectedFile && (
-                  <SelectedFileWrapper>
-                    📎 {selectedFile.name}
-                    <RemoveFileButton type="button" onClick={() => {
-                      setSelectedFile(null);
-                      if (fileInputRef.current) fileInputRef.current.value = '';
-                    }}>
-                      ✕
-                    </RemoveFileButton>
-                  </SelectedFileWrapper>
-                )}
-                <MessageInputForm onSubmit={handleSendMessage}>
-                  <MessageTextarea 
-                    ref={textareaRef}
-                    value={input}
-                    onInput={handleTextareaInput}
-                    placeholder="Enter a prompt here"
-                    rows="1"
-                    disabled={!activeConversationId || isWaiting}
-                    onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage(e);
-                        }
-                    }}
-                  />
-                  <HiddenFileInput 
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
-                    onChange={(e) => {
-                      const file = e.target.files[0];
-                      const maxSizeMB = 100;
-                      const maxSizeBytes = maxSizeMB * 1024 * 1024;
-                    
-                      if (file && file.size > maxSizeBytes) {
-                        setFileError(`File size should not exceed ${maxSizeMB}MB`);
-                        e.target.value = '';
-                        setTimeout(() => setFileError(''), 4000);
-                        return;
-                      }
-                    
-                      setSelectedFile(file);
-                      setFileError('');
-                    }}
-                  />
-
-                  <FileButtonWrapper>
-                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                      +
-                    </FileButton>
-                    <FileButtonTooltip visible={!!fileError}>
-                      {fileError}
-                    </FileButtonTooltip>
-                  </FileButtonWrapper>
-                  <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
-                      <SendIcon />
-                  </SendButton>
-                </MessageInputForm>
-              </MessageInputContainer>
+              {renderInputArea()}
             </>
           ) : (
             <EmptyStateWrapper>

@@ -1,22 +1,32 @@
 class Api::MessagesController < Api::ApplicationController
   def create
     @conversation = Conversation.find(params[:conversation_id])
-    @message = @conversation.messages.create(content: params[:message][:content], role: "user")
 
-    if params[:message][:file].present?
-      @message.file.attach(params[:message][:file])
+    unless @conversation.awaiting_prompt? || @conversation.awaiting_rejection_comment?
+      return render json: { error: "This conversation is not accepting new messages." }, status: :unprocessable_entity
     end
 
-    if @message.persisted?
+    @message = @conversation.messages.new(content: params[:message][:content], role: "user")
+
+    if @message.save
+      uploaded_file = params[:message][:file]
+      if uploaded_file.present? && !@conversation.file.attached?
+        @conversation.file.attach(uploaded_file)
+      end
+
+      input_history = @conversation.reload.messages.map do |msg|
+        { role: msg.role, content: msg.content }
+      end
+
       MessagePublisher.publish({
         conversation_id: @conversation.id,
-        input: [
-          { "prompt": @message.content },
-          { "file_url": @message.file_url }
-        ].compact,
+        file_url: @conversation.file_url,
+        input: input_history,
         base_model_path: @conversation.ai_model.path,
         adapter_path: @conversation.ai_model.adapter_path
       }, ENV["USER_PROMPT_QUEUE_NAME"])
+
+      @conversation.awaiting_feedback!
       render json: @message, status: :created
     else
       render json: @message.errors, status: :unprocessable_entity

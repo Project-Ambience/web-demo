@@ -11,6 +11,10 @@ Rails.application.routes.draw do
     end
 
     resources :conversations, only: [ :index, :show, :create, :update, :destroy ] do
+      member do
+        post :accept_feedback
+        post :reject_feedback
+      end
       resources :messages, only: [ :create ]
     end
 

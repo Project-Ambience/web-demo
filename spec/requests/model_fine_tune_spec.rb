@@ -21,6 +21,10 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
     }
   end
 
+  before do
+    allow(MessagePublisher).to receive(:publish)
+  end
+
   it "creates a new fine-tune request with valid data" do
     post "/api/model_fine_tune_requests", params: valid_params
     expect(response).to have_http_status(:created)
