@@ -48,6 +48,7 @@ class Api::MessagesController < Api::ApplicationController
 
     snapshot = {
       name: template.name,
+      description: template.description,
       examples: template.examples.map { |ex| { input: ex.input, output: ex.output } }
     }
     
