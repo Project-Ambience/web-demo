@@ -80,6 +80,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_19_191559) do
     t.bigint "base_model_id"
     t.string "path"
     t.string "adapter_path"
+    t.string "speciality"
     t.index ["base_model_id"], name: "index_ai_models_on_base_model_id"
     t.index ["clinician_type_id"], name: "index_ai_models_on_clinician_type_id"
   end
@@ -104,7 +105,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_19_191559) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "status", default: 0, null: false
-    t.string "file_url"
     t.jsonb "few_shot_template"
     t.index ["ai_model_id"], name: "index_conversations_on_ai_model_id"
   end

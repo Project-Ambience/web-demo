@@ -8,16 +8,12 @@ class Api::MessagesController < Api::ApplicationController
 
     @message = @conversation.messages.new(content: params[:message][:content], role: "user")
 
-    uploaded_file = params[:message][:file]
-    if uploaded_file.present? && @conversation.file_url.blank?
-      @message.file.attach(uploaded_file)
-    end
-
     if @message.save
-      if @message.file.attached? && @conversation.file_url.blank?
-        @conversation.update(file_url: @message.file_url)
+      uploaded_file = params[:message][:file]
+      if uploaded_file.present? && !@conversation.file.attached?
+        @conversation.file.attach(uploaded_file)
       end
-      
+
       handle_few_shot_template_selection
 
       input_history = @conversation.reload.messages.map do |msg|
@@ -30,7 +26,8 @@ class Api::MessagesController < Api::ApplicationController
         few_shot_template: @conversation.few_shot_template,
         input: input_history,
         base_model_path: @conversation.ai_model.path,
-        adapter_path: @conversation.ai_model.adapter_path
+        adapter_path: @conversation.ai_model.adapter_path,
+        speciality: @conversation.ai_model.speciality
       }, ENV["USER_PROMPT_QUEUE_NAME"])
 
       @conversation.awaiting_feedback!

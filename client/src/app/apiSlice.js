@@ -116,6 +116,9 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
     }),
+    getRabbitMQTraffic: builder.query({
+      query: () => '/rabbitmq/traffic',
+    }),
     getFewShotTemplates: builder.query({
       query: () => '/few_shot_templates',
       providesTags: (result = []) => [
@@ -170,6 +173,7 @@ export const {
   useCreateFineTuneRequestMutation,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
+  useGetRabbitMQTrafficQuery,
   useGetFewShotTemplatesQuery,
   useGetFewShotTemplateQuery,
   useCreateFewShotTemplateMutation,

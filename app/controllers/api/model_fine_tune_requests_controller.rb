@@ -93,7 +93,8 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       base_model_id: model_fine_tune_request.ai_model_id,
       path: model_fine_tune_request.ai_model.path,
       adapter_path: adapter_path,
-      keywords: model_fine_tune_request.ai_model.keywords
+      keywords: model_fine_tune_request.ai_model.keywords,
+      speciality: model_fine_tune_request.task
     )
 
     ai_model

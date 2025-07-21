@@ -4,7 +4,8 @@ import { useParams, Link } from 'react-router-dom';
 import { 
   useGetAiModelByIdQuery, 
   useGetClinicianTypesQuery, 
-  useCreateFineTuneRequestMutation 
+  useCreateFineTuneRequestMutation,
+  useGetRabbitMQTrafficQuery
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -258,7 +259,11 @@ const FineTunePage = () => {
   const [submissionError, setSubmissionError] = useState('');
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
   const [fileError, setFileError] = useState('');
+  const [showQueueWarning, setShowQueueWarning] = useState(false);
 
+  const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery(undefined, {
+    pollingInterval: 15000,
+  });
 
   const handleFileChange = (e) => {
     const uploaded = e.target.files[0];
@@ -289,7 +294,11 @@ const FineTunePage = () => {
       fileName: file.name,
     });
   
-    setShowConfirmModal(true);
+    if (rabbitTraffic?.messages_ready > 5) {
+      setShowQueueWarning(true);
+    } else {
+      setShowConfirmModal(true);
+    }
   };
 
   const handleConfirmedSubmit = async () => {
@@ -523,6 +532,27 @@ const FineTunePage = () => {
               </FormatBox>
             )}
           </Section>
+          <Section>
+            <h3>Queue Status</h3>
+            {isTrafficLoading && <p>Loading traffic...</p>}
+            {isTrafficError && <p style={{ color: 'red' }}>Error loading traffic.</p>}
+            {rabbitTraffic && (
+              <div style={{
+                background: '#fff',
+                border: '1px solid #cdd4d8',
+                borderRadius: '4px',
+                padding: '1rem',
+                fontSize: '0.95rem',
+              }}>
+                <p>
+                  <strong>Waiting to Start:</strong> {rabbitTraffic.messages_ready}
+                </p>
+                <p>
+                  <strong>Currently Running:</strong> {rabbitTraffic.messages_unacknowledged}
+                </p>
+              </div>
+            )}
+          </Section>
         </Sidebar>
       </PageWrapper>
   
@@ -554,6 +584,29 @@ const FineTunePage = () => {
             <ModalButtonGroup>
               <ModalButton onClick={() => setShowConfirmModal(false)}>Cancel</ModalButton>
               <PrimaryButton onClick={handleConfirmedSubmit}>Submit</PrimaryButton>
+            </ModalButtonGroup>
+          </ModalBox>
+        </ModalOverlay>
+      )}
+      {showQueueWarning && submitParams && (
+        <ModalOverlay>
+          <ModalBox>
+            <ModalTitle>High Queue Notice</ModalTitle>
+            <p>
+              There are currently <strong>{rabbitTraffic.messages_ready}</strong> fine-tune requests waiting to be processed.
+              Your request will be added to the queue and may take longer than usual.
+            </p>
+            <p>Do you still want to continue?</p>
+            <ModalButtonGroup>
+              <ModalButton onClick={() => setShowQueueWarning(false)}>Cancel</ModalButton>
+              <PrimaryButton
+                onClick={() => {
+                  setShowQueueWarning(false);
+                  setShowConfirmModal(true);
+                }}
+              >
+                Continue
+              </PrimaryButton>
             </ModalButtonGroup>
           </ModalBox>
         </ModalOverlay>
