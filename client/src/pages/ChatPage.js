@@ -735,6 +735,20 @@ const ChatPage = () => {
   const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
 
+  useEffect(() => {
+    setInput('');
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setSelectedTemplateId(null);
+    setViewMode('chat');
+    setEditingTemplateId(null);
+    setViewingTemplateData(null);
+    setIsTemplateViewReadOnly(false);
+    setShowAddContentPanel(false);
+  }, [activeConversationId]);
+
   const sortedMessages = useMemo(() =>
     [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
     [activeConversation?.messages]
