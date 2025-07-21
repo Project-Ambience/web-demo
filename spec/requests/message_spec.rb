@@ -34,7 +34,7 @@ RSpec.describe "MessageRequests", type: :request do
     end
 
     it "publishes the message to the queue" do
-      create(:message, conversation: conversation, role: 'assistant', content: 'Hi there!', created_at: 1.minute.ago)
+      create(:message, conversation: conversation, role: "assistant", content: "Hi there!", created_at: 1.minute.ago)
       post "/api/conversations/#{conversation.id}/messages", params: valid_params
       conversation.reload
 
@@ -45,6 +45,7 @@ RSpec.describe "MessageRequests", type: :request do
       expected_payload = {
         conversation_id: conversation.id,
         file_url: conversation.file_url,
+        few_shot_template: conversation.few_shot_template,
         input: expected_input_history,
         base_model_path: "some path",
         adapter_path: "some adapter path",
