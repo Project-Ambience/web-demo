@@ -261,7 +261,9 @@ const FineTunePage = () => {
   const [fileError, setFileError] = useState('');
   const [showQueueWarning, setShowQueueWarning] = useState(false);
 
-  const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery();
+  const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery(undefined, {
+    pollingInterval: 15000,
+  });
 
   const handleFileChange = (e) => {
     const uploaded = e.target.files[0];
