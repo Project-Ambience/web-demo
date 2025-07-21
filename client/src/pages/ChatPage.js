@@ -315,6 +315,7 @@ const MessageBubble = styled.div`
   border-radius: 20px;
   line-height: 1.5;
   font-size: 1rem;
+  overflow-wrap: break-word;
 
   &[data-role="user"] {
     background-color: #f0f4f8;
@@ -657,6 +658,7 @@ const MessageAttachmentContainer = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
+  margin-bottom: 0.5rem;
 `;
 
 const AttachmentBubble = styled.div`
