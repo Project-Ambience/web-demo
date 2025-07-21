@@ -19,9 +19,10 @@ class Api::ConversationsController < Api::ApplicationController
   end
 
   def show
-    render json: @conversation.as_json(include: {
-      messages: {}
-    }, methods: [ :file_url, :file_name ])
+    render json: @conversation.as_json(
+      include: :messages,
+      methods: [ :file_url, :file_name ]
+    )
   end
 
   def create
