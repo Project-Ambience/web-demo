@@ -51,7 +51,6 @@ class Api::MessagesController < Api::ApplicationController
       description: template.description,
       examples: template.examples.map { |ex| { input: ex.input, output: ex.output } }
     }
-    
     @conversation.update(few_shot_template: snapshot)
   end
 end

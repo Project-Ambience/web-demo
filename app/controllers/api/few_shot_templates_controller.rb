@@ -1,5 +1,5 @@
 class Api::FewShotTemplatesController < Api::ApplicationController
-  before_action :set_template, only: [:show, :update, :destroy]
+  before_action :set_template, only: [ :show, :update, :destroy ]
 
   def index
     @templates = FewShotTemplate.includes(:examples).order(:name)
@@ -42,7 +42,7 @@ class Api::FewShotTemplatesController < Api::ApplicationController
     params.require(:few_shot_template).permit(
       :name,
       :description,
-      examples_attributes: [:id, :input, :output, :_destroy]
+      examples_attributes: [ :id, :input, :output, :_destroy ]
     )
   end
 end
