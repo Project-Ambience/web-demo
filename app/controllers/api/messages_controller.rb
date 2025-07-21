@@ -8,14 +8,10 @@ class Api::MessagesController < Api::ApplicationController
 
     @message = @conversation.messages.new(content: params[:message][:content], role: "user")
 
-    uploaded_file = params[:message][:file]
-    if uploaded_file.present? && @conversation.file_url.blank?
-      @message.file.attach(uploaded_file)
-    end
-
     if @message.save
-      if @message.file.attached? && @conversation.file_url.blank?
-        @conversation.update(file_url: @message.file_url)
+      uploaded_file = params[:message][:file]
+      if uploaded_file.present? && !@conversation.file.attached?
+        @conversation.file.attach(uploaded_file)
       end
 
       input_history = @conversation.reload.messages.map do |msg|
