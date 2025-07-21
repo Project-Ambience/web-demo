@@ -22,9 +22,25 @@ const Header = styled.div`
   padding-right: 4rem;
 `;
 
+const TitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+`;
+
 const Title = styled.h2`
   margin: 0;
   color: #343a40;
+`;
+
+const InfoLink = styled.a`
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #005eb8;
+  text-decoration: none;
+  &:hover {
+    text-decoration: underline;
+  }
 `;
 
 const TemplateGrid = styled.div`
@@ -70,12 +86,23 @@ const TemplateDescription = styled.p`
 const CardFooter = styled.div`
   margin-top: auto;
   padding-top: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
 `;
 
 const ExampleCount = styled.span`
   font-weight: bold;
   font-size: 0.9rem;
-  color: ${props => props.hasWarning ? '#fd7e14' : '#495057'};
+  color: #495057;
+`;
+
+const CardWarningText = styled.p`
+  font-size: 0.75rem;
+  color: #fd7e14;
+  font-weight: 600;
+  margin: 0;
+  text-align: right;
 `;
 
 const Button = styled.button`
@@ -102,7 +129,12 @@ const FewShotTemplateList = ({ onViewTemplate, onCreateNew }) => {
   return (
     <ListContainer>
       <Header>
-        <Title>Few-Shot Templates</Title>
+        <TitleContainer>
+          <Title>Few-Shot Templates</Title>
+          <InfoLink href="https://www.ibm.com/think/topics/few-shot-prompting" target="_blank" rel="noopener noreferrer">
+            What is Few-Shot?
+          </InfoLink>
+        </TitleContainer>
         <PrimaryButton onClick={onCreateNew}>Create New Template</PrimaryButton>
       </Header>
       <TemplateGrid>
@@ -118,9 +150,14 @@ const FewShotTemplateList = ({ onViewTemplate, onCreateNew }) => {
               </TemplateDescription>
             </div>
             <CardFooter>
-              <ExampleCount hasWarning={template.examples.length >= 5}>
+              <ExampleCount>
                 {template.examples.length} Example{template.examples.length !== 1 ? 's' : ''}
               </ExampleCount>
+              {template.examples.length >= 5 && (
+                <CardWarningText>
+                  Warning: 5+ examples<br />may impact performance.
+                </CardWarningText>
+              )}
             </CardFooter>
           </TemplateCard>
         ))}

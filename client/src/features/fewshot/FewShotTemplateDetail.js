@@ -18,12 +18,19 @@ const DetailContainer = styled.div`
 
 const Header = styled.div`
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
   border-bottom: 2px solid #e9ecef;
   padding-bottom: 1rem;
-  padding-right: 4rem;
+  padding-right: 3rem;
+`;
+
+const TitleRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
 `;
 
 const Title = styled.h2`
@@ -42,8 +49,8 @@ const ContentGroup = styled.div`
 const Label = styled.label`
   display: block;
   font-weight: 600;
-  margin-bottom: 0.5rem;
   color: #495057;
+  padding-top: 0.5rem;
 `;
 
 const Input = styled.input`
@@ -71,7 +78,7 @@ const ReadOnlyText = styled.p`
   font-size: 1rem;
   line-height: 1.5;
   white-space: pre-wrap;
-  padding-left: 1rem;
+  padding: 0.5rem 0;
 `;
 
 const ExampleCard = styled.div`
@@ -79,6 +86,25 @@ const ExampleCard = styled.div`
   padding-top: 1.5rem;
   margin-top: 1.5rem;
   position: relative;
+`;
+
+const ExampleHeader = styled.h4`
+  font-size: 1.1rem;
+  color: #495057;
+  margin-top: 0;
+  margin-bottom: 1rem;
+`;
+
+const FieldRow = styled.div`
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  align-items: start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+
+  &:last-of-type {
+    margin-bottom: 0;
+  }
 `;
 
 const Button = styled.button`
@@ -107,6 +133,15 @@ const SecondaryButton = styled(Button)`
   color: #495057;
   border-color: #ced4da;
   &:hover:not(:disabled) { background-color: #dee2e6; }
+`;
+
+const OutlineButton = styled(Button)`
+  background-color: transparent;
+  color: #005eb8;
+  border: 1px solid #005eb8;
+  &:hover:not(:disabled) { 
+    background-color: #eaf1f8; 
+  }
 `;
 
 const DestructiveOutlineButton = styled(Button)`
@@ -154,11 +189,7 @@ const RemoveExampleButton = styled.button`
 const WarningText = styled.div`
   font-size: 0.9rem;
   color: #fd7e14;
-  margin-bottom: 1.5rem;
-  padding: 1rem;
-  background-color: #fff3e0;
-  border: 1px solid #ffe0b2;
-  border-radius: 4px;
+  font-weight: 600;
 `;
 
 const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveComplete, onBack, onSelectTemplate, onDeleteComplete }) => {
@@ -254,6 +285,17 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
   };
 
   const handleCancelEdit = () => {
+    if (!templateId) {
+      if (hasUnsavedChanges) {
+        if (window.confirm('You have unsaved changes. Are you sure you want to discard them?')) {
+          onBack();
+        }
+      } else {
+        onBack();
+      }
+      return;
+    }
+
     if (hasUnsavedChanges) {
       if (window.confirm('You have unsaved changes. Are you sure you want to discard them?')) {
         resetState(existingTemplate);
@@ -274,8 +316,8 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
   return (
     <DetailContainer>
       <Header>
-        <Title>{activeTemplateData ? activeTemplateData.name : 'Create New Template'}</Title>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+        {!finalIsEditing && !isReadOnly && <BackLinkButton onClick={onBack}>Back to List</BackLinkButton>}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginLeft: 'auto' }}>
           {finalIsEditing ? (
             <>
               <SecondaryButton onClick={handleCancelEdit}>Cancel</SecondaryButton>
@@ -285,12 +327,10 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
             </>
           ) : (
             <>
-              {!isReadOnly && <BackLinkButton onClick={onBack}>Back to List</BackLinkButton>}
-              <div style={{ flexGrow: 1 }} />
               {!isReadOnly && (
                 <>
                   <DestructiveOutlineButton onClick={handleDelete}>Delete</DestructiveOutlineButton>
-                  <SecondaryButton onClick={() => setIsEditing(true)}>Edit</SecondaryButton>
+                  <OutlineButton onClick={() => setIsEditing(true)}>Edit</OutlineButton>
                   <PrimaryButton onClick={() => onSelectTemplate(templateId)}>Select Template</PrimaryButton>
                 </>
               )}
@@ -298,12 +338,17 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
           )}
         </div>
       </Header>
-      
-      {visibleExamples.length >= 5 && (
-        <WarningText>
-          Warning: This template has {visibleExamples.length} examples, which may impact model performance.
-        </WarningText>
-      )}
+
+      <TitleRow>
+        <Title>
+          {activeTemplateData ? activeTemplateData.name : 'Create New Template'}
+        </Title>
+        {visibleExamples.length >= 5 && (
+          <WarningText>
+            Warning: This template has {visibleExamples.length} examples. Using 5 or more examples may impact model performance.
+          </WarningText>
+        )}
+      </TitleRow>
 
       {finalIsEditing ? (
         <form onSubmit={handleSubmit}>
@@ -319,10 +364,15 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
               const originalIndex = examples.findIndex(e => e === ex);
               return (
                 <ExampleCard key={ex.id || `new-${index}`}>
-                  <Label>Input</Label>
-                  <Textarea value={ex.input} onChange={(e) => handleExampleChange(originalIndex, 'input', e.target.value)} />
-                  <Label style={{ marginTop: '1rem' }}>Output</Label>
-                  <Textarea value={ex.output} onChange={(e) => handleExampleChange(originalIndex, 'output', e.target.value)} />
+                  <ExampleHeader>Example {index + 1}</ExampleHeader>
+                  <FieldRow>
+                    <Label>Input</Label>
+                    <Textarea value={ex.input} onChange={(e) => handleExampleChange(originalIndex, 'input', e.target.value)} />
+                  </FieldRow>
+                  <FieldRow>
+                    <Label>Output</Label>
+                    <Textarea value={ex.output} onChange={(e) => handleExampleChange(originalIndex, 'output', e.target.value)} />
+                  </FieldRow>
                   <RemoveExampleButton type="button" onClick={() => removeExample(originalIndex)}>Remove</RemoveExampleButton>
                 </ExampleCard>
               )
@@ -342,10 +392,15 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
             <h3 style={{ marginTop: 0 }}>Examples</h3>
             {visibleExamples.map((ex, index) => (
               <ExampleCard key={ex.id || index}>
-                <Label>Input</Label>
-                <ReadOnlyText>{ex.input}</ReadOnlyText>
-                <Label style={{ marginTop: '1rem' }}>Output</Label>
-                <ReadOnlyText>{ex.output}</ReadOnlyText>
+                <ExampleHeader>Example {index + 1}</ExampleHeader>
+                <FieldRow>
+                  <Label>Input</Label>
+                  <ReadOnlyText>{ex.input}</ReadOnlyText>
+                </FieldRow>
+                <FieldRow>
+                  <Label>Output</Label>
+                  <ReadOnlyText>{ex.output}</ReadOnlyText>
+                </FieldRow>
               </ExampleCard>
             ))}
           </ContentGroup>
