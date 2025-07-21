@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_14_130815) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_18_125629) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -80,6 +80,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_14_130815) do
     t.bigint "base_model_id"
     t.string "path"
     t.string "adapter_path"
+    t.string "speciality"
     t.index ["base_model_id"], name: "index_ai_models_on_base_model_id"
     t.index ["clinician_type_id"], name: "index_ai_models_on_clinician_type_id"
   end

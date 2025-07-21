@@ -23,7 +23,8 @@ class Api::MessagesController < Api::ApplicationController
         file_url: @conversation.file_url,
         input: input_history,
         base_model_path: @conversation.ai_model.path,
-        adapter_path: @conversation.ai_model.adapter_path
+        adapter_path: @conversation.ai_model.adapter_path,
+        speciality: @conversation.ai_model.speciality
       }, ENV["USER_PROMPT_QUEUE_NAME"])
 
       @conversation.awaiting_feedback!
