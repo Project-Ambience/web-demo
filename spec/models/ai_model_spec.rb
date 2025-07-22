@@ -38,6 +38,25 @@ RSpec.describe AiModel, type: :model do
     end
   end
 
+  describe "#is_fine_tune_model" do
+    context "when the model has a base model" do
+      let(:base_ai_model) { create(:ai_model, clinician_type: clinician_type) }
+      let(:ai_model) { create(:ai_model, clinician_type: clinician_type, base_model: base_ai_model) }
+
+      it "returns true" do
+        expect(ai_model.is_fine_tune_model).to be true
+      end
+    end
+
+    context "when the model does not have a base model" do
+      let(:ai_model) { create(:ai_model, clinician_type: clinician_type) }
+
+      it "returns false" do
+        expect(ai_model.is_fine_tune_model).to be false
+      end
+    end
+  end
+
   describe "#as_json" do
     it "includes clinician type name when requested" do
       json = ai_model.as_json(add_clinician_type_name: true)
