@@ -13,8 +13,13 @@ import {
   useGetAiModelByIdQuery,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
+  useGetFewShotTemplatesQuery,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
+import FewShotTemplateList from '../features/fewshot/FewShotTemplateList';
+import FewShotTemplateDetail from '../features/fewshot/FewShotTemplateDetail';
+import AddContentPanel from '../features/fewshot/AddContentPanel';
+
 
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -26,6 +31,13 @@ const SendIcon = () => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
         <path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/>
     </svg>
+);
+
+const ViewIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+    <circle cx="12" cy="12" r="3"></circle>
+  </svg>
 );
 
 const SendSuggestionIcon = () => (
@@ -303,6 +315,7 @@ const MessageBubble = styled.div`
   border-radius: 20px;
   line-height: 1.5;
   font-size: 1rem;
+  overflow-wrap: break-word;
 
   &[data-role="user"] {
     background-color: #f0f4f8;
@@ -427,7 +440,7 @@ const HiddenFileInput = styled.input`
   display: none;
 `;
 
-const FileButton = styled.button`
+const AddContentButton = styled.button`
   position: relative;
   background-color: rgb(226, 231, 238);
   color: rgb(148, 147, 147);
@@ -446,30 +459,17 @@ const FileButton = styled.button`
   &:hover {
     background-color: #BCC8D8;
   }
-
-  &::after {
-    content: 'Max 1 file, 100MB';
-    position: absolute;
-    bottom: 125%;
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: #333;
-    color: #fff;
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    white-space: nowrap;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s ease-in-out;
-  }
-
-  &:hover::after {
-    opacity: 1;
-  }
 `;
 
-const SelectedFileWrapper = styled.div`
+const SelectionBubblesContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+`;
+
+const SelectedItemWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -478,46 +478,35 @@ const SelectedFileWrapper = styled.div`
   background: #e4e9f0;
   border-radius: 16px;
   padding: 0.4rem 0.75rem;
-  margin: 0.5rem auto 0;
-  width: fit-content;
-  max-width: 90%;
-  margin-bottom: 0.5rem;
 `;
 
-const RemoveFileButton = styled.button`
+const ItemActionButton = styled.button`
   background: none;
   border: none;
   color: #888;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
   padding: 0;
   margin-left: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 
+  &:hover {
+    color: #333;
+  }
+`;
+
+const RemoveItemButton = styled(ItemActionButton)`
+  font-size: 1rem;
   &:hover {
     color: #e53935;
   }
 `;
 
-const FileButtonWrapper = styled.div`
+const AddContentWrapper = styled.div`
   position: relative;
   display: inline-block;
-`;
-
-const FileButtonTooltip = styled.div`
-  position: absolute;
-  bottom: 110%;
-  left: 50%;
-  transform: translateX(-50%);
-  background-color: #e53935;
-  color: white;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  z-index: 10;
-  opacity: ${({ visible }) => (visible ? 1 : 0)};
-  transition: opacity 0.3s ease;
-  pointer-events: none;
 `;
 
 const SuggestionsHeader = styled.h4`
@@ -620,6 +609,87 @@ const CompletedMessage = styled.div`
   margin: 0 auto;
 `;
 
+const OverlayContainer = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+`;
+
+const OverlayContent = styled.div`
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+  width: 90%;
+  height: 90%;
+  max-width: 1400px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+`;
+
+const CloseButton = styled.button`
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: #e9ecef;
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  &:hover { background-color: #dee2e6; }
+`;
+
+const MessageAttachmentContainer = styled.div`
+  margin-top: 0.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+`;
+
+const AttachmentBubble = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #e9ecef;
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.9rem;
+`;
+
+const AttachmentLink = styled.a`
+  color: #005eb8;
+  text-decoration: none;
+  &:hover { text-decoration: underline; }
+`;
+
+const AttachmentButton = styled.button`
+  background: none;
+  border: none;
+  color: #005eb8;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  font-weight: 600;
+  &:hover { text-decoration: underline; }
+`;
+
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -630,9 +700,16 @@ const ChatPage = () => {
   const [menuOpenFor, setMenuOpenFor] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
-  const [fileError, setFileError] = useState('');
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+
+  const [viewMode, setViewMode] = useState('chat');
+  const [editingTemplateId, setEditingTemplateId] = useState(null);
+  const [viewingTemplateData, setViewingTemplateData] = useState(null);
+  const [isTemplateViewReadOnly, setIsTemplateViewReadOnly] = useState(false);
+  const [showAddContentPanel, setShowAddContentPanel] = useState(false);
   
   const menuRef = useRef(null);
+  const addContentRef = useRef(null);
   const cable = useRef();
   const fileInputRef = useRef(null);
 
@@ -646,6 +723,7 @@ const ChatPage = () => {
       skip: !activeConversation?.ai_model_id,
     }
   );
+  const { data: templates } = useGetFewShotTemplatesQuery();
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
   const [deleteConversation] = useDeleteConversationMutation();
@@ -657,13 +735,38 @@ const ChatPage = () => {
   const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
 
+  useEffect(() => {
+    setInput('');
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    setSelectedTemplateId(null);
+    setViewMode('chat');
+    setEditingTemplateId(null);
+    setViewingTemplateData(null);
+    setIsTemplateViewReadOnly(false);
+    setShowAddContentPanel(false);
+  }, [activeConversationId]);
+
   const sortedMessages = useMemo(() =>
     [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
     [activeConversation?.messages]
   );
-
+  
   const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
+  const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
+  const [tempFileUrl, setTempFileUrl] = useState(null);
+
+  useEffect(() => {
+    if (selectedFile) {
+      const url = URL.createObjectURL(selectedFile);
+      setTempFileUrl(url);
+      return () => URL.revokeObjectURL(url);
+    }
+    setTempFileUrl(null);
+  }, [selectedFile]);
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -683,10 +786,13 @@ const ChatPage = () => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
         setMenuOpenFor(null);
       }
+      if (addContentRef.current && !addContentRef.current.contains(event.target)) {
+        setShowAddContentPanel(false);
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuRef]);
+  }, [menuRef, addContentRef]);
 
   useEffect(() => {
     if (activeConversationId) {
@@ -732,10 +838,12 @@ const ChatPage = () => {
         message: {
           content: input,
           file: selectedFile,
+          few_shot_template_id: selectedTemplateId,
         },
       });
       setInput('');
       setSelectedFile(null);
+      setSelectedTemplateId(null);
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
       }
@@ -823,17 +931,37 @@ const ChatPage = () => {
         case 'awaiting_prompt':
             return (
                 <MessageInputContainer>
-                    {activeConversation.status === 'awaiting_prompt' && selectedFile && (
-                        <SelectedFileWrapper>
-                            📎 {selectedFile.name}
-                            <RemoveFileButton type="button" onClick={() => {
-                                setSelectedFile(null);
-                                if (fileInputRef.current) fileInputRef.current.value = '';
-                            }}>
-                                ✕
-                            </RemoveFileButton>
-                        </SelectedFileWrapper>
-                    )}
+                    <SelectionBubblesContainer>
+                      {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
+                          <SelectedItemWrapper>
+                              ✨ {selectedTemplate.name}
+                              <ItemActionButton type="button" onClick={() => {
+                                setViewingTemplateData(selectedTemplate);
+                                setIsTemplateViewReadOnly(true);
+                                setViewMode('templateDetail');
+                              }}>
+                                <ViewIcon />
+                              </ItemActionButton>
+                              <RemoveItemButton type="button" onClick={() => setSelectedTemplateId(null)}>
+                                  ✕
+                              </RemoveItemButton>
+                          </SelectedItemWrapper>
+                      )}
+                      {activeConversation.status === 'awaiting_prompt' && selectedFile && (
+                          <SelectedItemWrapper>
+                              📎 {selectedFile.name}
+                              <ItemActionButton as="a" href={tempFileUrl} target="_blank" rel="noopener noreferrer">
+                                <ViewIcon />
+                              </ItemActionButton>
+                              <RemoveItemButton type="button" onClick={() => {
+                                  setSelectedFile(null);
+                                  if (fileInputRef.current) fileInputRef.current.value = '';
+                              }}>
+                                  ✕
+                              </RemoveItemButton>
+                          </SelectedItemWrapper>
+                      )}
+                    </SelectionBubblesContainer>
                     <MessageInputForm onSubmit={handleSendMessage}>
                         <MessageTextarea
                             ref={textareaRef}
@@ -849,37 +977,33 @@ const ChatPage = () => {
                                 }
                             }}
                         />
-                        {activeConversation.status === 'awaiting_prompt' && !activeConversation.file_url && (
-                            <>
+                        {activeConversation.status === 'awaiting_prompt' && (
+                            <AddContentWrapper ref={addContentRef}>
                                 <HiddenFileInput
                                     ref={fileInputRef}
                                     type="file"
                                     accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
                                     onChange={(e) => {
                                         const file = e.target.files[0];
-                                        const maxSizeMB = 100;
-                                        const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-                                        if (file && file.size > maxSizeBytes) {
-                                            setFileError(`File size should not exceed ${maxSizeMB}MB`);
-                                            e.target.value = '';
-                                            setTimeout(() => setFileError(''), 4000);
-                                            return;
-                                        }
-
                                         setSelectedFile(file);
-                                        setFileError('');
                                     }}
                                 />
-                                <FileButtonWrapper>
-                                    <FileButton type="button" onClick={() => fileInputRef.current?.click()}>
-                                    +
-                                    </FileButton>
-                                    <FileButtonTooltip visible={!!fileError}>
-                                    {fileError}
-                                    </FileButtonTooltip>
-                                </FileButtonWrapper>
-                            </>
+                                <AddContentButton type="button" onClick={() => setShowAddContentPanel(p => !p)}>
+                                  +
+                                </AddContentButton>
+                                {showAddContentPanel && (
+                                  <AddContentPanel
+                                    onFileUpload={() => {
+                                      fileInputRef.current?.click();
+                                      setShowAddContentPanel(false);
+                                    }}
+                                    onAddFewShot={() => {
+                                      setViewMode('templateList');
+                                      setShowAddContentPanel(false);
+                                    }}
+                                  />
+                                )}
+                            </AddContentWrapper>
                         )}
                         <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
                             <SendIcon />
@@ -899,6 +1023,48 @@ const ChatPage = () => {
   const filteredConversations = conversations?.filter(convo => 
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const renderOverlayContent = () => {
+    switch(viewMode) {
+      case 'templateList':
+        return <FewShotTemplateList
+          onViewTemplate={(id) => {
+            setEditingTemplateId(id);
+            setIsTemplateViewReadOnly(false);
+            setViewMode('templateDetail');
+          }}
+          onCreateNew={() => {
+            setEditingTemplateId(null);
+            setIsTemplateViewReadOnly(false);
+            setViewMode('templateDetail');
+          }}
+        />
+      case 'templateDetail':
+        return <FewShotTemplateDetail
+          templateId={editingTemplateId}
+          isReadOnly={isTemplateViewReadOnly}
+          templateData={viewingTemplateData}
+          onSaveComplete={(newId) => {
+            if (newId) {
+              setEditingTemplateId(newId);
+            }
+            setIsTemplateViewReadOnly(false);
+            setViewMode('templateDetail');
+          }}
+          onBack={() => {
+            setViewingTemplateData(null);
+            isTemplateViewReadOnly ? setViewMode('chat') : setViewMode('templateList');
+          }}
+          onDeleteComplete={() => setViewMode('templateList')}
+          onSelectTemplate={(id) => {
+            setSelectedTemplateId(id);
+            setViewMode('chat');
+          }}
+        />
+      default:
+        return null;
+    }
+  }
 
   return (
     <ChatPageWrapper>
@@ -957,12 +1123,28 @@ const ChatPage = () => {
                 <MessagesContentWrapper>
                   {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
                     sortedMessages.map((msg, index) => (
-                      <MessageTurn key={msg.id} data-role={msg.role}>
-                        {index === 0 && msg.role === 'user' && activeConversation?.file_url && (
-                           <FileAttachmentBubble href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">
-                             <PaperclipIcon />
-                             {activeConversation.file_name || 'Attached File'}
-                           </FileAttachmentBubble>
+                      <MessageTurn key={msg.id} data-role={msg.role} >
+
+                        {index === 0 && msg.role === 'user' && (
+                          <MessageAttachmentContainer>
+                            {activeConversation.few_shot_template?.name && (
+                              <AttachmentBubble>
+                                ✨
+                                <AttachmentButton onClick={() => {
+                                  setViewingTemplateData(activeConversation.few_shot_template);
+                                  setIsTemplateViewReadOnly(true);
+                                  setViewMode('templateDetail');
+                                }}>
+                                  {activeConversation.few_shot_template.name}
+                                </AttachmentButton>
+                              </AttachmentBubble>
+                            )}
+                            {activeConversation?.file_url && (
+                               <AttachmentBubble>
+                                 📎 <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_name || "Attached File"}</AttachmentLink>
+                               </AttachmentBubble>
+                            )}
+                          </MessageAttachmentContainer>
                         )}
                         <MessageBubble data-role={msg.role}>
                           {msg.content}
@@ -1008,6 +1190,16 @@ const ChatPage = () => {
           )}
         </ChatWindow>
       </ChatLayout>
+      
+      {(viewMode === 'templateList' || viewMode === 'templateDetail') && (
+        <OverlayContainer>
+          <OverlayContent>
+            <CloseButton onClick={() => setViewMode('chat')}>×</CloseButton>
+            {renderOverlayContent()}
+          </OverlayContent>
+        </OverlayContainer>
+      )}
+
     </ChatPageWrapper>
   );
 };

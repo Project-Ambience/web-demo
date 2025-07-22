@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_18_125629) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_19_191559) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -105,7 +105,24 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_18_125629) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.integer "status", default: 0, null: false
+    t.jsonb "few_shot_template"
     t.index ["ai_model_id"], name: "index_conversations_on_ai_model_id"
+  end
+
+  create_table "examples", force: :cascade do |t|
+    t.text "input", null: false
+    t.text "output", null: false
+    t.bigint "few_shot_template_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["few_shot_template_id"], name: "index_examples_on_few_shot_template_id"
+  end
+
+  create_table "few_shot_templates", force: :cascade do |t|
+    t.string "name", null: false
+    t.text "description"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "fine_tune_tasks", force: :cascade do |t|
@@ -185,6 +202,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_18_125629) do
   add_foreign_key "ai_models", "clinician_types"
   add_foreign_key "comments", "ai_models"
   add_foreign_key "conversations", "ai_models"
+  add_foreign_key "examples", "few_shot_templates"
   add_foreign_key "fine_tune_tasks", "ai_models"
   add_foreign_key "messages", "conversations"
   add_foreign_key "model_fine_tune_requests", "ai_models"
