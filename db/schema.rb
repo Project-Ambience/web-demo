@@ -208,6 +208,15 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
     t.index ["ai_model_id"], name: "index_suggested_prompts_on_ai_model_id"
   end
 
+  create_table "tasks", force: :cascade do |t|
+    t.string "title"
+    t.json "parameters"
+    t.bigint "ai_model_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["ai_model_id"], name: "index_tasks_on_ai_model_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_models", "ai_models", column: "base_model_id"
@@ -223,4 +232,5 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
   add_foreign_key "model_install_requests", "clinician_types"
   add_foreign_key "ratings", "ai_models"
   add_foreign_key "suggested_prompts", "ai_models"
+  add_foreign_key "tasks", "ai_models"
 end
