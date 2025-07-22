@@ -8,10 +8,33 @@ import {
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
-const PageLayout = styled.div`padding: 2rem 3rem 4rem; width: 100%; max-width: 1600px; margin: 0 auto;`;
-const WhiteContainer = styled.div`background-color: #fff; padding: 2rem; border: 1px solid #e8edee; border-radius: 6px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);`;
-const PageWrapper = styled.div`display: flex; flex-direction: column; gap: 2rem;`;
-const TabSwitcher = styled.div`display: flex; border-bottom: 2px solid #e0e0e0; margin-top: 1.5rem;`;
+const PageLayout = styled.div`
+  padding: 2rem 3rem 4rem;
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+`;
+
+const WhiteContainer = styled.div`
+  background-color: #fff;
+  padding: 2rem;
+  border: 1px solid #e8edee;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+`;
+
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+`;
+
+const TabSwitcher = styled.div`
+  display: flex;
+  border-bottom: 2px solid #e0e0e0;
+  margin-top: 1.5rem;
+`;
+
 const TabButton = styled.button`
   background: none;
   border: none;
@@ -19,12 +42,23 @@ const TabButton = styled.button`
   font-size: 1rem;
   font-weight: ${({ active }) => (active ? 'bold' : 'normal')};
   color: ${({ active }) => (active ? '#005eb8' : '#555')};
-  border-bottom: ${({ active }) => (active ? '3px solid #005eb8' : '3px solid transparent')};
+  border-bottom: ${({ active }) =>
+    active ? '3px solid #005eb8' : '3px solid transparent'};
   cursor: pointer;
   transition: all 0.2s ease;
-  &:hover { background-color: #f5f8fb; }
+
+  &:hover {
+    background-color: #f5f8fb;
+  }
 `;
-const PaginationWrapper = styled.div`display: flex; justify-content: center; gap: 0.5rem; margin-top: 2rem;`;
+
+const PaginationWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+`;
+
 const PageButton = styled.button`
   background-color: ${({ active }) => (active ? '#005eb8' : '#fff')};
   color: ${({ active }) => (active ? '#fff' : '#005eb8')};
@@ -33,18 +67,88 @@ const PageButton = styled.button`
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
-  &:hover { background-color: ${({ active }) => (active ? '#004199' : '#f0f4f8')}; }
-  &:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  &:hover {
+    background-color: ${({ active }) =>
+      active ? '#004199' : '#f0f4f8'};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 `;
-const Card = styled.div`background-color: #fff; border: 1px solid #e8edee; border-radius: 8px; padding: 1.5rem; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);`;
-const CardContent = styled.div`margin-bottom: 0.75rem; p { margin: 0.25rem 0; line-height: 1.5; }`;
-const BackLink = styled(Link)`display: inline-block; font-weight: bold; color: #005eb8; text-decoration: none; margin-bottom: 1.5rem; &:before { content: '‹ '; font-size: 1.2rem; } &:hover { text-decoration: underline; }`;
-const PageHeader = styled.div`h2 { font-size: 2rem; color: #333; margin: 0; } p { color: #4c6272; margin-top: 0.5rem; }`;
-const EmptyState = styled.div`text-align: center; padding: 3rem 2rem; border: 2px dashed #d1d9de; border-radius: 8px; background-color: #f9fbfc; h3 { color: #4c6272; font-size: 1.5rem; margin-bottom: 0.5rem; } p { color: #777; font-size: 1.1rem; }`;
+
+const Card = styled.div`
+  background-color: #fff;
+  border: 1px solid #e8edee;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+`;
+
+const CardContent = styled.div`
+  margin-bottom: 0.75rem;
+  p {
+    margin: 0.25rem 0;
+    line-height: 1.5;
+  }
+`;
+
+const BackLink = styled(Link)`
+  display: inline-block;
+  font-weight: bold;
+  color: #005eb8;
+  text-decoration: none;
+  margin-bottom: 1.5rem;
+
+  &:before {
+    content: '‹ ';
+    font-size: 1.2rem;
+  }
+
+  &:hover {
+    text-decoration: underline;
+  }
+`;
+
+const PageHeader = styled.div`
+  h2 {
+    font-size: 2rem;
+    color: #333;
+    margin: 0;
+  }
+
+  p {
+    color: #4c6272;
+    margin-top: 0.5rem;
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem 2rem;
+  border: 2px dashed #d1d9de;
+  border-radius: 8px;
+  background-color: #f9fbfc;
+
+  h3 {
+    color: #4c6272;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #777;
+    font-size: 1.1rem;
+  }
+`;
+
 const LikertScale = styled.div`
   display: flex;
   justify-content: space-around;
   margin: 1.5rem 0;
+
   label {
     display: flex;
     flex-direction: column;
@@ -53,12 +157,14 @@ const LikertScale = styled.div`
     color: #444;
     cursor: pointer;
     flex: 1;
+
     input {
       margin-bottom: 0.5rem;
       accent-color: #005eb8;
       width: 18px;
       height: 18px;
     }
+
     span {
       margin-top: 0.3rem;
       text-align: center;
@@ -66,8 +172,26 @@ const LikertScale = styled.div`
     }
   }
 `;
-const FeedbackBox = styled.div`background-color: #f7fafd; border: 1px solid #d8e6f2; border-radius: 12px; padding: 1.5rem; margin-top: 1.5rem;`;
-const CommentInput = styled.textarea`width: 100%; height: 80px; border: 1px solid #ccc; border-radius: 8px; padding: 0.75rem; font-size: 0.9rem; resize: vertical; margin-bottom: 1rem;`;
+
+const FeedbackBox = styled.div`
+  background-color: #f7fafd;
+  border: 1px solid #d8e6f2;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+`;
+
+const CommentInput = styled.textarea`
+  width: 100%;
+  height: 80px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+`;
+
 const SubmitButton = styled.button`
   background-color: #005eb8;
   color: #fff;
@@ -76,11 +200,37 @@ const SubmitButton = styled.button`
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
-  &:hover { background-color: #004199; }
-  &:disabled { background-color: #c8d3e0; cursor: not-allowed; }
+
+  &:hover {
+    background-color: #004199;
+  }
+
+  &:disabled {
+    background-color: #c8d3e0;
+    cursor: not-allowed;
+  }
 `;
-const ThankYouMessage = styled.div`margin-top: 1rem; padding: 1.25rem; background-color: #e8f5e9; border: 1px solid #b2dfdb; border-radius: 8px; color: #2e7d32; font-weight: 500;`;
-const ConversationBadge = styled.div`display: inline-block; background-color: #e1ecf4; color: #005eb8; font-weight: bold; padding: 0.3rem 0.75rem; border-radius: 999px; font-size: 0.85rem; margin-bottom: 1rem;`;
+
+const ThankYouMessage = styled.div`
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background-color: #e8f5e9;
+  border: 1px solid #b2dfdb;
+  border-radius: 8px;
+  color: #2e7d32;
+  font-weight: 500;
+`;
+
+const ConversationBadge = styled.div`
+  display: inline-block;
+  background-color: #e1ecf4;
+  color: #005eb8;
+  font-weight: bold;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+`;
 
 const InterRaterPage = () => {
   const { id: ai_model_id } = useParams();
@@ -96,18 +246,21 @@ const InterRaterPage = () => {
 
   const totalItems = evaluations?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
-  const paginatedEvaluations = evaluations?.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const paginatedEvaluations = evaluations?.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const handleChange = (id, field, value) => {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
       [id]: {
         ...prev[id],
-        [field]: field === 'rating' ? parseInt(value, 10) : value
-      }
+        [field]: field === 'rating' ? parseInt(value, 10) : value,
+      },
     }));
   };
-  
+
   const handleSubmit = async (item) => {
     const payload = {
       ai_model_id: Number(ai_model_id),
@@ -119,18 +272,17 @@ const InterRaterPage = () => {
       comment: formState[item.id]?.comment,
       evaluation_category: 0,
     };
-  
+
     try {
-      const res = await createInterRater(payload).unwrap();
-      console.log("SUBMITTED OK", res);
+      await createInterRater(payload).unwrap();
       setFeedbackSent((prev) => ({
         ...prev,
         [item.id]: true,
       }));
     } catch (err) {
-      console.error("Failed to submit feedback:", err);
+      // Optionally handle error display here
     }
-  };  
+  };
 
   return (
     <PageLayout>
@@ -151,19 +303,21 @@ const InterRaterPage = () => {
             </TabSwitcher>
           </PageHeader>
 
-          {isLoading || isModelLoading ? <Spinner /> : activeTab === 'prompt_engineering' ? (
+          {isLoading || isModelLoading ? (
+            <Spinner />
+          ) : activeTab === 'prompt_engineering' ? (
             <EmptyState>
               <h3>No Evaluation Data</h3>
               <p>This model does not have any prompt engineering evaluation data yet.</p>
             </EmptyState>
-          ) : !evaluations || evaluations.length === 0 ? (
+          ) : totalItems === 0 ? (
             <EmptyState>
               <h3>No Evaluation Data</h3>
               <p>This model does not have any fine-tune model evaluation data yet.</p>
             </EmptyState>
           ) : (
             <>
-              {paginatedEvaluations.map(item => (
+              {paginatedEvaluations.map((item) => (
                 <Card key={item.id}>
                   <ConversationBadge>Conversation ID: {item.id}</ConversationBadge>
                   <CardContent>
@@ -180,7 +334,7 @@ const InterRaterPage = () => {
                   ) : (
                     <FeedbackBox>
                       <LikertScale>
-                        {[0, 1, 2, 3, 4].map(value => (
+                        {[0, 1, 2, 3, 4].map((value) => (
                           <label key={value}>
                             <input
                               type="radio"
@@ -188,7 +342,7 @@ const InterRaterPage = () => {
                               value={value}
                               checked={formState[item.id]?.rating === value}
                               onChange={(e) =>
-                                handleChange(item.id, 'rating', parseInt(e.target.value))
+                                handleChange(item.id, 'rating', e.target.value)
                               }
                             />
                             <span>
@@ -206,7 +360,9 @@ const InterRaterPage = () => {
                       <CommentInput
                         placeholder="Comment..."
                         value={formState[item.id]?.comment || ''}
-                        onChange={(e) => handleChange(item.id, 'comment', e.target.value)}
+                        onChange={(e) =>
+                          handleChange(item.id, 'comment', e.target.value)
+                        }
                       />
                       <SubmitButton
                         onClick={() => handleSubmit(item)}
