@@ -13,12 +13,18 @@ const ListContainer = styled.div`
 `;
 
 const Header = styled.div`
+  position: sticky;
+  top: -1.5rem;
+  margin: -1.5rem -1.5rem 0;
+  padding: 1.5rem 4.5rem 1rem 1.5rem;
+  background: white;
+  z-index: 1;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 2px solid #e9ecef;
-  padding-bottom: 1rem;
-  padding-right: 3rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 `;
 
 const TitleContainer = styled.div`

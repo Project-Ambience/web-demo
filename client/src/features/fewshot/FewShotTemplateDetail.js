@@ -17,11 +17,17 @@ const DetailContainer = styled.div`
 `;
 
 const Header = styled.div`
+  position: sticky;
+  top: -1.5rem;
+  margin: -1.5rem -1.5rem 0;
+  padding: 1.5rem 4.5rem 1rem 1.5rem;
+  background: white;
+  z-index: 1;
   display: flex;
   align-items: center;
   border-bottom: 2px solid #e9ecef;
-  padding-bottom: 1rem;
-  padding-right: 3rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
 `;
 
 const TitleRow = styled.div`
@@ -30,7 +36,6 @@ const TitleRow = styled.div`
   align-items: center;
   gap: 1.5rem;
   margin-top: 1.5rem;
-  margin-bottom: 1.5rem;
 `;
 
 const Title = styled.h2`
@@ -44,6 +49,7 @@ const ContentGroup = styled.div`
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  margin-top: 1.5rem;
 `;
 
 const Label = styled.label`
@@ -351,7 +357,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
       </TitleRow>
 
       {finalIsEditing ? (
-        <form onSubmit={handleSubmit}>
+        <form>
           <ContentGroup>
             <Label htmlFor="templateName">Template Name</Label>
             <Input id="templateName" value={name} onChange={handleFieldChange(setName)} required />
