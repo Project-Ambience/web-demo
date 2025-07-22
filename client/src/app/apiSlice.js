@@ -160,6 +160,9 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: [{ type: 'FewShotTemplate', id: 'LIST' }],
     }),
+    getInterRaterFineTune: builder.query({
+      query: (ai_model_id) => `/inter_raters/fine_tune_model/${ai_model_id}`,
+    }),
   }),
 });
 
@@ -183,4 +186,5 @@ export const {
   useCreateFewShotTemplateMutation,
   useUpdateFewShotTemplateMutation,
   useDeleteFewShotTemplateMutation,
+  useGetInterRaterFineTuneQuery,
 } = apiSlice;

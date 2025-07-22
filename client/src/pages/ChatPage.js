@@ -1276,7 +1276,9 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
-                    sortedMessages.map((msg, index) => (
+                    sortedMessages
+                      .filter(msg => msg.role === 'user' || msg.role === 'assistant')
+                      .map((msg, index) => (
                       <MessageTurn key={msg.id} data-role={msg.role} >
 
                         {index === 0 && msg.role === 'user' && (
@@ -1307,6 +1309,27 @@ const ChatPage = () => {
                         )}
                         <MessageBubble data-role={msg.role}>
                           {msg.content}
+                          {index === 0 && msg.role === 'user' && activeConversation?.file_url && (
+                            <div style={{ marginTop: '0.75rem' }}>
+                              <a
+                                href={activeConversation.file_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.5rem',
+                                  color: '#005eb8',
+                                  textDecoration: 'none',
+                                  fontSize: '0.9rem',
+                                  fontWeight: 500
+                                }}
+                              >
+                                <PaperclipIcon />
+                                {activeConversation.file_name || 'Attached File'}
+                              </a>
+                            </div>
+                          )}
                         </MessageBubble>
                       </MessageTurn>
                     ))
