@@ -280,7 +280,7 @@ const InterRaterPage = () => {
         [item.id]: true,
       }));
     } catch (err) {
-      // Optionally handle error display here
+      console.error('Failed to submit feedback:', err);
     }
   };
 
