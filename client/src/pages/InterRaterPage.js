@@ -232,6 +232,42 @@ const ConversationBadge = styled.div`
   margin-bottom: 1rem;
 `;
 
+const ResponseComparison = styled.div`
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const ResponseBox = styled.div`
+  flex: 1;
+  background-color: #f9fafb;
+  padding: 1rem;
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  min-width: 300px;
+
+  h4 {
+    margin-top: 0;
+    font-size: 1rem;
+    color: #333;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    white-space: pre-line;
+    color: #444;
+    line-height: 1.5;
+    font-size: 0.95rem;
+  }
+`;
+
 const InterRaterPage = () => {
   const { id: ai_model_id } = useParams();
   const [activeTab, setActiveTab] = useState('fine_tune');
@@ -291,6 +327,7 @@ const InterRaterPage = () => {
         <PageWrapper>
           <PageHeader>
             <h2>Model Evaluation</h2>
+            <p></p>
             {model && (
               <>
                 <p><strong>Model:</strong> {model.name}</p>
@@ -325,8 +362,16 @@ const InterRaterPage = () => {
                     {item.file_url && (
                       <p><a href={item.file_url} target="_blank" rel="noopener noreferrer">📎 Attached File</a></p>
                     )}
-                    <p><strong>Fine-Tuned Model's Response:</strong><br />{item.response}</p>
-                    <p><strong>Base Model's Response:</strong><br />{item.response_base_model}</p>
+                    <ResponseComparison>
+                      <ResponseBox>
+                        <h4>Fine-Tuned Model's Response</h4>
+                        <p>{item.response}</p>
+                      </ResponseBox>
+                      <ResponseBox>
+                        <h4>Base Model's Response</h4>
+                        <p>{item.response_base_model}</p>
+                      </ResponseBox>
+                    </ResponseComparison>
                   </CardContent>
 
                   {feedbackSent[item.id] ? (
