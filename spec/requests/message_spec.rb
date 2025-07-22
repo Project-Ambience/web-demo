@@ -158,7 +158,8 @@ RSpec.describe "MessageRequests", type: :request do
           base_model_path: "some path",
           adapter_path: "some adapter path",
           speciality: "summarise",
-          make_extra_inference_on_base_model: true
+          make_extra_inference_on_base_model: true,
+          few_shot_template: nil
         }
 
         expect(expected_input_history.size).to eq(1)
@@ -183,7 +184,8 @@ RSpec.describe "MessageRequests", type: :request do
           base_model_path: "some path",
           adapter_path: "some adapter path",
           speciality: "summarise",
-          make_extra_inference_on_base_model: false
+          make_extra_inference_on_base_model: false,
+          few_shot_template: nil
         }
 
         expect(expected_input_history.size).to eq(1)
