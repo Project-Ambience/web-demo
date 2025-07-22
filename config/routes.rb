@@ -22,7 +22,12 @@ Rails.application.routes.draw do
     post "/model_install_requests/update_status", to: "model_install_requests#update_status"
     post "/model_fine_tune_requests/update_status", to: "model_fine_tune_requests#update_status"
     get "/rabbitmq/traffic", to: "rabbitmq#traffic"
-    get "/inter_raters/fine_tune_model/:ai_model_id", to: "inter_raters#fine_tune_model"
+
+    resources :inter_raters, only: [ :create ] do
+      collection do
+        get "fine_tune_model/:ai_model_id", action: :fine_tune_model
+      end
+    end
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

@@ -163,6 +163,14 @@ export const apiSlice = createApi({
     getInterRaterFineTune: builder.query({
       query: (ai_model_id) => `/inter_raters/fine_tune_model/${ai_model_id}`,
     }),
+    addInterRater: builder.mutation({
+      query: (payload) => ({
+        url: '/inter_raters',
+        method: 'POST',
+        body: { inter_rater: payload }
+      }),
+      invalidatesTags: ['InterRater']
+    }),
   }),
 });
 
@@ -187,4 +195,5 @@ export const {
   useUpdateFewShotTemplateMutation,
   useDeleteFewShotTemplateMutation,
   useGetInterRaterFineTuneQuery,
+  useAddInterRaterMutation,
 } = apiSlice;
