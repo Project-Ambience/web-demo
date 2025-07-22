@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import styled from 'styled-components';
 import { useGetFewShotTemplatesQuery } from '../../app/apiSlice';
 import Spinner from '../../components/common/Spinner';
@@ -16,10 +16,9 @@ const Header = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
   border-bottom: 2px solid #e9ecef;
   padding-bottom: 1rem;
-  padding-right: 4rem;
+  padding-right: 3rem;
 `;
 
 const TitleContainer = styled.div`
@@ -43,10 +42,24 @@ const InfoLink = styled.a`
   }
 `;
 
+const WarningContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  padding-right: 3rem;
+  margin-top: 1.5rem;
+`;
+
+const PageWarning = styled.div`
+  font-size: 0.9rem;
+  color: #fd7e14;
+  font-weight: 600;
+`;
+
 const TemplateGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1.5rem;
+  margin-top: 1.5rem;
 `;
 
 const TemplateCard = styled.div`
@@ -97,12 +110,17 @@ const ExampleCount = styled.span`
   color: #495057;
 `;
 
-const CardWarningText = styled.p`
-  font-size: 0.75rem;
-  color: #fd7e14;
-  font-weight: 600;
-  margin: 0;
-  text-align: right;
+const WarningIcon = styled.div`
+  background-color: #fd7e14;
+  color: white;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
 `;
 
 const Button = styled.button`
@@ -123,6 +141,10 @@ const PrimaryButton = styled(Button)`
 const FewShotTemplateList = ({ onViewTemplate, onCreateNew }) => {
   const { data: templates, isLoading, isError, error } = useGetFewShotTemplatesQuery();
 
+  const shouldShowPageWarning = useMemo(() => {
+    return templates?.some(template => template.examples.length >= 5);
+  }, [templates]);
+
   if (isLoading) return <Spinner />;
   if (isError) return <ErrorMessage>{JSON.stringify(error)}</ErrorMessage>;
 
@@ -137,6 +159,15 @@ const FewShotTemplateList = ({ onViewTemplate, onCreateNew }) => {
         </TitleContainer>
         <PrimaryButton onClick={onCreateNew}>Create New Template</PrimaryButton>
       </Header>
+
+      {shouldShowPageWarning && (
+        <WarningContainer>
+          <PageWarning>
+            Warning: Using 5 or more examples may impact model performance.
+          </PageWarning>
+        </WarningContainer>
+      )}
+      
       <TemplateGrid>
         {templates.map(template => (
           <TemplateCard key={template.id} onClick={() => onViewTemplate(template.id)}>
@@ -154,9 +185,7 @@ const FewShotTemplateList = ({ onViewTemplate, onCreateNew }) => {
                 {template.examples.length} Example{template.examples.length !== 1 ? 's' : ''}
               </ExampleCount>
               {template.examples.length >= 5 && (
-                <CardWarningText>
-                  Warning: 5+ examples<br />may impact performance.
-                </CardWarningText>
+                <WarningIcon>!</WarningIcon>
               )}
             </CardFooter>
           </TemplateCard>
