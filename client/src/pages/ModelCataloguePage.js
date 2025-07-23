@@ -228,6 +228,7 @@ const ModelCataloguePage = () => {
           </SpecialtyList>
         </Sidebar>
         <MainContent>
+          <h2>Select Model</h2>
           {selectedSpecialty ? (
             <>
               <ModelGrid>

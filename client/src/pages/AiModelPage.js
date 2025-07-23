@@ -256,6 +256,16 @@ const AiModelPage = () => {
               <h2>{model.name}</h2>
               <p><strong>Clinical:</strong> {model.clinician_type}</p>
               <MetaInfoGroup>
+                {model.family && (
+                  <MetaTag>
+                    <span>Family: {model.family}</span>
+                  </MetaTag>
+                )}
+                {model.parameter_size && (
+                  <MetaTag>
+                    <span>Parameter size: {model.parameter_size}</span>
+                  </MetaTag>
+                )}
                 {model.base_model && (
                   <MetaTag>
                     <span>Base Model: {model.base_model.name}</span>
@@ -273,6 +283,12 @@ const AiModelPage = () => {
               <h3>Description</h3>
               <p>{model.description}</p>
             </Section>
+            {model.base_model && (
+              <Section>
+                <h3>Fine Tuning Notes</h3>
+                <p>{model.fine_tuning_notes || "No fine tuning notes"}</p>
+              </Section>
+            )}
             <Section>
               <h3>Comments</h3>
               <CommentList>

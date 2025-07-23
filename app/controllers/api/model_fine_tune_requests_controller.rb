@@ -42,7 +42,8 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       clinician_type: clinician_type,
       parameters: fine_tune_task.parameters,
       task: fine_tune_task.title,
-      fine_tune_data: data
+      fine_tune_data: data,
+      fine_tuning_notes: params[:fine_tuning_notes]
     )
 
     if model_fine_tune_request.save
@@ -94,7 +95,10 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       path: model_fine_tune_request.ai_model.path,
       adapter_path: adapter_path,
       keywords: model_fine_tune_request.ai_model.keywords,
-      speciality: model_fine_tune_request.task
+      speciality: model_fine_tune_request.task,
+      family: model_fine_tune_request.ai_model.family,
+      parameter_size: model_fine_tune_request.ai_model.parameter_size,
+      fine_tuning_notes: model_fine_tune_request.fine_tuning_notes
     )
 
     ai_model
