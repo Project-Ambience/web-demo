@@ -137,20 +137,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
     t.index ["ai_model_id"], name: "index_fine_tune_tasks_on_ai_model_id"
   end
 
-  create_table "inter_raters", force: :cascade do |t|
-    t.string "prompt"
-    t.string "first_response"
-    t.text "second_response"
-    t.string "file_url"
-    t.bigint "ai_model_id", null: false
-    t.integer "evaluation_category"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "comment"
-    t.integer "rating"
-    t.index ["ai_model_id"], name: "index_inter_raters_on_ai_model_id"
-  end
-
   create_table "messages", force: :cascade do |t|
     t.string "role"
     t.text "content"
@@ -207,15 +193,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
     t.index ["ai_model_id"], name: "index_suggested_prompts_on_ai_model_id"
   end
 
-  create_table "tasks", force: :cascade do |t|
-    t.string "title"
-    t.json "parameters"
-    t.bigint "ai_model_id", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["ai_model_id"], name: "index_tasks_on_ai_model_id"
-  end
-
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "ai_models", "ai_models", column: "base_model_id"
@@ -224,12 +201,10 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
   add_foreign_key "conversations", "ai_models"
   add_foreign_key "examples", "few_shot_templates"
   add_foreign_key "fine_tune_tasks", "ai_models"
-  add_foreign_key "inter_raters", "ai_models"
   add_foreign_key "messages", "conversations"
   add_foreign_key "model_fine_tune_requests", "ai_models"
   add_foreign_key "model_fine_tune_requests", "clinician_types"
   add_foreign_key "model_install_requests", "clinician_types"
   add_foreign_key "ratings", "ai_models"
   add_foreign_key "suggested_prompts", "ai_models"
-  add_foreign_key "tasks", "ai_models"
 end
