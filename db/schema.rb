@@ -137,20 +137,6 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
     t.index ["ai_model_id"], name: "index_fine_tune_tasks_on_ai_model_id"
   end
 
-  create_table "inter_raters", force: :cascade do |t|
-    t.string "prompt"
-    t.string "first_response"
-    t.text "second_response"
-    t.string "file_url"
-    t.bigint "ai_model_id", null: false
-    t.integer "evaluation_category"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.string "comment"
-    t.integer "rating"
-    t.index ["ai_model_id"], name: "index_inter_raters_on_ai_model_id"
-  end
-
   create_table "messages", force: :cascade do |t|
     t.string "role"
     t.text "content"
