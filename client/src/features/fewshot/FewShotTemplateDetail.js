@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import {
   useGetFewShotTemplateQuery,
@@ -198,6 +198,12 @@ const WarningText = styled.div`
   font-weight: 600;
 `;
 
+const ErrorText = styled.div`
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+`;
+
 const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveComplete, onBack, onSelectTemplate, onDeleteComplete }) => {
   const [isEditing, setIsEditing] = useState(!templateId && !templateData);
 
@@ -213,14 +219,56 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
   const [description, setDescription] = useState('');
   const [examples, setExamples] = useState([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [errors, setErrors] = useState({});
+
+  const nameInputRef = useRef(null);
+  const exampleRefs = useRef(new Map());
 
   const activeTemplateData = templateData || existingTemplate;
+
+  useEffect(() => {
+    if (Object.keys(errors).length === 0) return;
+
+    const scrollOptions = { behavior: 'smooth', block: 'center' };
+
+    if (errors.name && nameInputRef.current) {
+      nameInputRef.current.scrollIntoView(scrollOptions);
+      return;
+    }
+
+    if (errors['examples.input'] || errors['examples.output']) {
+      for (let i = 0; i < examples.length; i++) {
+        const example = examples[i];
+        if (example._destroy) continue;
+
+        const isInputBlank = !example.input?.trim();
+        const isOutputBlank = !example.output?.trim();
+
+        if (errors['examples.input'] && isInputBlank) {
+          const el = exampleRefs.current.get(`${i}-input`);
+          if (el) {
+            el.scrollIntoView(scrollOptions);
+            return;
+          }
+        }
+
+        if (errors['examples.output'] && isOutputBlank) {
+          const el = exampleRefs.current.get(`${i}-output`);
+          if (el) {
+            el.scrollIntoView(scrollOptions);
+            return;
+          }
+        }
+      }
+    }
+  }, [errors, examples]);
 
   const resetState = (template) => {
     setName(template ? template.name : '');
     setDescription(template ? template.description || '' : '');
     setExamples(template ? template.examples.map(ex => ({...ex})) : [{ input: '', output: '' }]);
     setHasUnsavedChanges(false);
+    setErrors({});
   };
 
   useEffect(() => {
@@ -230,9 +278,14 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
     }
   }, [activeTemplateData, templateId, templateData]);
 
-  const handleFieldChange = (setter) => (e) => {
+  const handleFieldChange = (setter, fieldName) => (e) => {
     setter(e.target.value);
     setHasUnsavedChanges(true);
+    if (errors[fieldName]) {
+      const newErrors = { ...errors };
+      delete newErrors[fieldName];
+      setErrors(newErrors);
+    }
   };
 
   const handleExampleChange = (index, field, value) => {
@@ -240,6 +293,13 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
     newExamples[index] = { ...newExamples[index], [field]: value };
     setExamples(newExamples);
     setHasUnsavedChanges(true);
+
+    const errorKey = `examples.${field}`;
+    if (errors[errorKey]) {
+        const newErrors = { ...errors };
+        delete newErrors[errorKey];
+        setErrors(newErrors);
+    }
   };
 
   const addExample = () => {
@@ -261,6 +321,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setErrors({});
     const payload = {
       few_shot_template: { name, description, examples_attributes: examples }
     };
@@ -275,7 +336,11 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
         onSaveComplete(newTemplate.id);
       }
     } catch (err) {
-      alert('Failed to save template: ' + JSON.stringify(err.data));
+      if (err.data) {
+        setErrors(err.data);
+      } else {
+        setErrors({ general: "An unexpected error occurred. Please try again." });
+      }
     }
   };
 
@@ -308,7 +373,17 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
         setIsEditing(false);
       }
     } else {
+      resetState(existingTemplate);
       setIsEditing(false);
+    }
+  };
+
+  const setExampleRef = (index, type) => (el) => {
+    const key = `${index}-${type}`;
+    if (el) {
+      exampleRefs.current.set(key, el);
+    } else {
+      exampleRefs.current.delete(key);
     }
   };
 
@@ -327,7 +402,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
           {finalIsEditing ? (
             <>
               <SecondaryButton onClick={handleCancelEdit}>Cancel</SecondaryButton>
-              <PrimaryButton onClick={handleSubmit} disabled={!hasUnsavedChanges || isSaving}>
+              <PrimaryButton onClick={handleSubmit} disabled={isSaving}>
                 {isSaving ? 'Saving...' : 'Save Changes'}
               </PrimaryButton>
             </>
@@ -356,28 +431,43 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
         )}
       </TitleRow>
 
+      {errors.general && <ErrorText style={{ textAlign: 'center', marginBottom: '1rem', fontWeight: 'bold' }}>{errors.general}</ErrorText>}
+
       {finalIsEditing ? (
         <form>
           <ContentGroup>
             <Label htmlFor="templateName">Template Name</Label>
-            <Input id="templateName" value={name} onChange={handleFieldChange(setName)} required />
+            <Input ref={nameInputRef} id="templateName" value={name} onChange={handleFieldChange(setName, 'name')} required />
+            {errors.name && <ErrorText>{errors.name.join(', ')}</ErrorText>}
+
             <Label htmlFor="templateDescription" style={{ marginTop: '1rem' }}>Description (Optional)</Label>
-            <Textarea id="templateDescription" value={description} onChange={handleFieldChange(setDescription)} />
+            <Textarea id="templateDescription" value={description} onChange={handleFieldChange(setDescription, 'description')} />
           </ContentGroup>
           <ContentGroup>
             <h3 style={{ marginTop: 0 }}>Examples</h3>
             {visibleExamples.map((ex, index) => {
               const originalIndex = examples.findIndex(e => e === ex);
+              const isInputBlank = !ex.input || ex.input.trim() === '';
+              const isOutputBlank = !ex.output || ex.output.trim() === '';
+              const hasInputError = errors['examples.input'] && isInputBlank;
+              const hasOutputError = errors['examples.output'] && isOutputBlank;
+
               return (
                 <ExampleCard key={ex.id || `new-${index}`}>
                   <ExampleHeader>Example {index + 1}</ExampleHeader>
                   <FieldRow>
                     <Label>Input</Label>
-                    <Textarea value={ex.input} onChange={(e) => handleExampleChange(originalIndex, 'input', e.target.value)} />
+                    <div>
+                      <Textarea ref={setExampleRef(originalIndex, 'input')} value={ex.input} onChange={(e) => handleExampleChange(originalIndex, 'input', e.target.value)} />
+                      {hasInputError && <ErrorText>{errors['examples.input'].join(', ')}</ErrorText>}
+                    </div>
                   </FieldRow>
                   <FieldRow>
                     <Label>Output</Label>
-                    <Textarea value={ex.output} onChange={(e) => handleExampleChange(originalIndex, 'output', e.target.value)} />
+                    <div>
+                      <Textarea ref={setExampleRef(originalIndex, 'output')} value={ex.output} onChange={(e) => handleExampleChange(originalIndex, 'output', e.target.value)} />
+                      {hasOutputError && <ErrorText>{errors['examples.output'].join(', ')}</ErrorText>}
+                    </div>
                   </FieldRow>
                   <RemoveExampleButton type="button" onClick={() => removeExample(originalIndex)}>Remove</RemoveExampleButton>
                 </ExampleCard>
