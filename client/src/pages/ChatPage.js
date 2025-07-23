@@ -707,6 +707,7 @@ const ChatPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [isCoTEnabled, setIsCoTEnabled] = useState(false);
 
   const [fileError, setFileError] = useState('');
   const [viewMode, setViewMode] = useState('chat');
@@ -755,6 +756,12 @@ const ChatPage = () => {
     setIsTemplateViewReadOnly(false);
     setShowAddContentPanel(false);
   }, [activeConversationId]);
+
+  useEffect(() => {
+    if (activeConversation) {
+      setIsCoTEnabled(activeConversation.cot);
+    }
+  }, [activeConversation]);
 
   const sortedMessages = useMemo(() =>
     [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
@@ -845,6 +852,7 @@ const ChatPage = () => {
           content: input,
           file: selectedFile,
           few_shot_template_id: selectedTemplateId,
+          enable_cot: isCoTEnabled,
         },
       });
       setInput('');
@@ -904,6 +912,10 @@ const ChatPage = () => {
             textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
         }
     }, 0);
+  };
+
+  const handleCoTDisable = () => {
+    setIsCoTEnabled(false);
   };
 
   const renderInputArea = () => {
@@ -968,6 +980,14 @@ const ChatPage = () => {
                               </RemoveItemButton>
                           </SelectedItemWrapper>
                       )}
+                      {activeConversation.status === 'awaiting_prompt' && isCoTEnabled && (
+                        <SelectedItemWrapper>
+                          🧠 Chain-of-Thought Enabled
+                          <RemoveItemButton type="button" onClick={handleCoTDisable}>
+                            ✕
+                          </RemoveItemButton>
+                        </SelectedItemWrapper>
+                      )}
                     </SelectionBubblesContainer>
                     <MessageInputForm onSubmit={handleSendMessage}>
                         <MessageTextarea
@@ -1017,6 +1037,10 @@ const ChatPage = () => {
                                     }}
                                     onAddFewShot={() => {
                                       setViewMode('templateList');
+                                      setShowAddContentPanel(false);
+                                    }}
+                                    onEnableCoT={() => {
+                                      setIsCoTEnabled(true);
                                       setShowAddContentPanel(false);
                                     }}
                                   />

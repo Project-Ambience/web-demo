@@ -22,6 +22,9 @@ const PanelButton = styled.button`
   font-size: 0.9rem;
   cursor: pointer;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 
   &:hover {
     background-color: #f0f4f8;
@@ -67,7 +70,7 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const AddContentPanel = ({ onFileUpload, onAddFewShot }) => {
+const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT }) => {
   return (
     <PanelContainer>
       <ButtonWrapper>
@@ -76,6 +79,9 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot }) => {
         </PanelButton>
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
+      <PanelButton onClick={onEnableCoT}>
+        🧠 Enable Chain-of-Thought
+      </PanelButton>
       <PanelButton onClick={onAddFewShot}>
         ✨ Add Few-Shot
       </PanelButton>

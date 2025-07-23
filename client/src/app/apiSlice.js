@@ -85,6 +85,10 @@ export const apiSlice = createApi({
             formData.append('message[few_shot_template_id]', message.few_shot_template_id);
         }
 
+        if (message.enable_cot !== undefined && message.enable_cot !== null) {
+            formData.append('message[enable_cot]', message.enable_cot);
+        }
+
         return {
           url: `/conversations/${conversation_id}/messages`,
           method: 'POST',
