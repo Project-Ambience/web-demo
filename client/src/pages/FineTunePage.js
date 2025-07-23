@@ -250,6 +250,7 @@ const FineTunePage = () => {
 
   const [modelName, setModelName] = useState('');
   const [description, setDescription] = useState('');
+  const [fine_tuning_notes, setFineTuningNotes] = useState('');
   const [taskId, setTaskId] = useState('');
   const [clinicianTypeId, setClinicianTypeId] = useState('');
   const [file, setFile] = useState(null);
@@ -289,6 +290,7 @@ const FineTunePage = () => {
     setSubmitParams({
       modelName,
       description,
+      fine_tuning_notes,
       task: selectedTask?.title || '(unknown)',
       clinicianType: selectedClinician?.name || '(unknown)',
       fileName: file.name,
@@ -307,6 +309,7 @@ const FineTunePage = () => {
     const formData = new FormData();
     formData.append('name', modelName);
     formData.append('description', description);
+    formData.append('fine_tuning_notes', fine_tuning_notes);
     formData.append('fine_tune_task_id', taskId);
     formData.append('clinician_type_id', clinicianTypeId);
     formData.append('file', file);
@@ -409,6 +412,14 @@ const FineTunePage = () => {
                   </option>
                 ))}
               </select>
+
+              <label htmlFor="fine_tuning_notes">Fine Tuning Notes</label>
+              <textarea
+                id="fine_tuning_notes"
+                value={fine_tuning_notes}
+                onChange={(e) => setFineTuningNotes(e.target.value)}
+                placeholder="Note for this fine-tuned model"
+              />
   
               <PrimaryButton type="submit" disabled={isSubmitting}>
                 {isSubmitting ? 'Submitting...' : 'Submit'}
@@ -576,6 +587,9 @@ const FineTunePage = () => {
               </li>
               <li>
                 <strong>Clinician type:</strong> {submitParams.clinicianType}
+              </li>
+              <li>
+                <strong>Fine Tuning Notes:</strong> {submitParams.fine_tuning_notes}
               </li>
               <li>
                 <strong>File:</strong> {submitParams.fileName}

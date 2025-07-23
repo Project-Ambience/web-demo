@@ -148,6 +148,18 @@ const ModelDescription = styled.p`
     line-height: 1.4;
 `;
 
+const FineTunedTag = styled.div`
+  display: inline-block;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  font-weight: 600;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  margin-top: 0.5rem;
+  width: fit-content;
+`;
+
 // --- COMPONENT ---
 
 const ModelCataloguePage = () => {
@@ -216,6 +228,7 @@ const ModelCataloguePage = () => {
           </SpecialtyList>
         </Sidebar>
         <MainContent>
+          <h2>Select Model</h2>
           {selectedSpecialty ? (
             <>
               <ModelGrid>
@@ -229,6 +242,8 @@ const ModelCataloguePage = () => {
                             ? `${model.description.substring(0, 100)}...`
                             : 'No description available.'}
                         </ModelDescription>
+                        {model.base_model && <FineTunedTag>Fine-Tuned</FineTunedTag>}
+                        <p></p>
                       </div>
                       <StarRating rating={model.average_rating} />
                     </ModelCard>

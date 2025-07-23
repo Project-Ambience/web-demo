@@ -16,7 +16,8 @@ class Api::ClinicianTypesController < Api::ApplicationController
             clinician_type_id: model.clinician_type_id,
             created_at: model.created_at,
             updated_at: model.updated_at,
-            average_rating: model.average_rating
+            average_rating: model.average_rating,
+            base_model: model.base_model&.name
           }
         end
       }

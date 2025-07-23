@@ -34,7 +34,9 @@ class Api::ModelInstallRequestsController < Api::ApplicationController
       description: model_install_request.description,
       clinician_type_id: model_install_request.clinician_type_id,
       keywords: [ model_install_request.keyword ],
-      path: model_install_request.path
+      path: model_install_request.path,
+      family: model_install_request.family,
+      parameter_size: model_install_request.parameter_size
     )
   end
 end

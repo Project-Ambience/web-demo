@@ -1,5 +1,5 @@
 ActiveAdmin.register AiModel do
-  permit_params :fine_tune_data_format, :allow_fine_tune
+  permit_params :fine_tune_data_format, :allow_fine_tune, :name, :description, :speciality, :family, :parameter_size, :fine_tuning_notes
   actions :all, except: [ :new, :destroy, :create ]
 
   filter :id
@@ -20,8 +20,14 @@ ActiveAdmin.register AiModel do
   form do |f|
     f.semantic_errors
     f.inputs do
+      f.input :name
+      f.input :description
+      f.input :speciality
+      f.input :family
+      f.input :parameter_size
       f.input :fine_tune_data_format
       f.input :allow_fine_tune
+      f.input :fine_tuning_notes
     end
     f.actions
   end

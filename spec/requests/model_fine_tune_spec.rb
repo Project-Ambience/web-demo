@@ -60,7 +60,7 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
 
   describe "POST /api/model_fine_tune_requests/update_status" do
     let(:ai_model) { create(:ai_model, allow_fine_tune: true) }
-    let!(:model_fine_tune_request) { create(:model_fine_tune_request, ai_model: ai_model) }
+    let!(:model_fine_tune_request) { create(:model_fine_tune_request, ai_model: ai_model, task: "summarise", fine_tuning_notes: "some note") }
     let(:update_params) do
       {
         id: model_fine_tune_request.id,
@@ -101,6 +101,10 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
       expect(new_ai_model.adapter_path).to eq("path/to/adapter")
       expect(new_ai_model.path).to eq(model_fine_tune_request.ai_model.path)
       expect(new_ai_model.keywords).to eq(model_fine_tune_request.ai_model.keywords)
+      expect(new_ai_model.speciality).to eq(model_fine_tune_request.task)
+      expect(new_ai_model.family).to eq(model_fine_tune_request.ai_model.family)
+      expect(new_ai_model.parameter_size).to eq(model_fine_tune_request.ai_model.parameter_size)
+      expect(new_ai_model.fine_tuning_notes).to eq(model_fine_tune_request.fine_tuning_notes)
     end
 
 
