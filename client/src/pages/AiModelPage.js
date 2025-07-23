@@ -154,6 +154,34 @@ const BackLink = styled(Link)`
   }
 `;
 
+const MetaInfoGroup = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin: 0.5rem 0 1rem;
+`;
+
+const MetaTag = styled.div`
+  background-color: #f1f5f9;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  max-width: 200px;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    display: inline-block;
+  }
+`;
+
+
 const AiModelPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -226,7 +254,19 @@ const AiModelPage = () => {
           <MainContent>
             <ModelHeader>
               <h2>{model.name}</h2>
-              <p><strong>Clinical Specialty:</strong> {model.clinician_type}</p>
+              <p><strong>Clinical:</strong> {model.clinician_type}</p>
+              <MetaInfoGroup>
+                {model.base_model && (
+                  <MetaTag>
+                    <span>Base Model: {model.base_model.name}</span>
+                  </MetaTag>
+                )}
+                {model.speciality && (
+                  <MetaTag>
+                    <span>Speciality: {model.speciality}</span>
+                  </MetaTag>
+                )}
+              </MetaInfoGroup>
               <StarRating rating={model.average_rating} />
             </ModelHeader>
             <Section>
