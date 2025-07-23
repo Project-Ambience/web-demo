@@ -20,7 +20,6 @@ import FewShotTemplateList from '../features/fewshot/FewShotTemplateList';
 import FewShotTemplateDetail from '../features/fewshot/FewShotTemplateDetail';
 import AddContentPanel from '../features/fewshot/AddContentPanel';
 
-
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
         <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
@@ -250,7 +249,6 @@ const EditForm = styled.form`
   padding: 0.25rem 0.5rem;
 `;
 
-
 const ChatWindow = styled.main`
   display: flex;
   flex-direction: column;
@@ -459,6 +457,15 @@ const AddContentButton = styled.button`
   &:hover {
     background-color: #BCC8D8;
   }
+`;
+
+const FileErrorText = styled.div`
+  color: #e53935;
+  font-size: 0.8rem;
+  text-align: center;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+  height: 1rem;
 `;
 
 const SelectionBubblesContainer = styled.div`
@@ -689,7 +696,6 @@ const AttachmentButton = styled.button`
   &:hover { text-decoration: underline; }
 `;
 
-
 const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -702,6 +708,7 @@ const ChatPage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
 
+  const [fileError, setFileError] = useState('');
   const [viewMode, setViewMode] = useState('chat');
   const [editingTemplateId, setEditingTemplateId] = useState(null);
   const [viewingTemplateData, setViewingTemplateData] = useState(null);
@@ -730,7 +737,6 @@ const ChatPage = () => {
   const [acceptFeedback, { isLoading: isAccepting }] = useAcceptFeedbackMutation();
   const [rejectFeedback, { isLoading: isRejecting }] = useRejectFeedbackMutation();
 
-
   const [input, setInput] = useState('');
   const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
@@ -745,6 +751,7 @@ const ChatPage = () => {
     setViewMode('chat');
     setEditingTemplateId(null);
     setViewingTemplateData(null);
+    setFileError('');
     setIsTemplateViewReadOnly(false);
     setShowAddContentPanel(false);
   }, [activeConversationId]);
@@ -828,7 +835,6 @@ const ChatPage = () => {
       };
     }
   }, [activeConversationId, dispatch]);
-
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
@@ -931,6 +937,7 @@ const ChatPage = () => {
         case 'awaiting_prompt':
             return (
                 <MessageInputContainer>
+                    {fileError && <FileErrorText>{fileError}</FileErrorText>}
                     <SelectionBubblesContainer>
                       {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
                           <SelectedItemWrapper>
@@ -985,7 +992,18 @@ const ChatPage = () => {
                                     accept=".png,.jpg,.jpeg,.gif,.webp,.bmp,.txt,.pdf,.json"
                                     onChange={(e) => {
                                         const file = e.target.files[0];
+                                        const maxSizeMB = 100;
+                                        const maxSizeBytes = maxSizeMB * 1024 * 1024;
+                                        
+                                        if (file && file.size > maxSizeBytes) {
+                                          setFileError(`File size should not exceed ${maxSizeMB}MB`);
+                                          e.target.value = '';
+                                          setTimeout(() => setFileError(''), 4000);
+                                          return;
+                                        }
+                                        
                                         setSelectedFile(file);
+                                        setFileError('');
                                     }}
                                 />
                                 <AddContentButton type="button" onClick={() => setShowAddContentPanel(p => !p)}>
