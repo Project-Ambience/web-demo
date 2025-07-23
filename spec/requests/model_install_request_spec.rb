@@ -39,7 +39,9 @@ RSpec.describe "ModelInstallRequests", type: :request do
         name: request.name,
         description: request.description,
         clinician_type_id: request.clinician_type_id,
-        keywords: [ "example_keyword" ]
+        keywords: [ "example_keyword" ],
+        family: request.family,
+        parameter_size: request.parameter_size
       )
 
       expect(response).to have_http_status(:ok)

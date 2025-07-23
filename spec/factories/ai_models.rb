@@ -4,5 +4,7 @@ FactoryBot.define do
     description { "This is a test AI model description." }
     clinician_type
     keywords { [ "keyword1", "keyword2" ] }
+    family { "test_family" }
+    parameter_size { "1B" }
   end
 end
