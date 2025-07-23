@@ -162,6 +162,7 @@ export const apiSlice = createApi({
     }),
     getInterRaterFineTune: builder.query({
       query: (ai_model_id) => `/inter_raters/fine_tune_model/${ai_model_id}`,
+      providesTags: ['InterRater']
     }),
     addInterRater: builder.mutation({
       query: (payload) => ({

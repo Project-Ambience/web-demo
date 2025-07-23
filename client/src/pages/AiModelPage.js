@@ -340,7 +340,10 @@ const AiModelPage = () => {
             </Section>
             <Section>
               <h4>Model Evaluation</h4>
-              <PrimaryButton onClick={() => navigate(`/ai-models/${model.id}/evaluate`)}>
+              <PrimaryButton
+                onClick={() => navigate(`/ai-models/${model.id}/evaluate`)}
+                disabled={!model.base_model}
+              >
                 Evaluate Model
               </PrimaryButton>
             </Section>
