@@ -1177,7 +1177,7 @@ const ChatPage = () => {
                         <Spinner />
                       ) : modelDetails?.suggested_prompts?.length > 0 ? (
                         <div>
-                          <SuggestionsHeader>Here are some suggestions to get you started:</SuggestionsHeader>
+                          <SuggestionsHeader>Here are some starting tutorial prompts to help you get started:</SuggestionsHeader>
                           <SuggestionsGrid>
                             {modelDetails.suggested_prompts.map((p, i) => (
                               <SuggestionCard key={i} onClick={() => handlePromptClick(p.prompt)}>
@@ -1190,7 +1190,7 @@ const ChatPage = () => {
                       ) : (
                         <EmptySuggestionState>
                            <EmptySuggestionIcon />
-                           <p>No suggestions available for this model right now.</p>
+                           <p>No starting tutorial prompts available for this model right now.</p>
                         </EmptySuggestionState>
                       )}
                     </>
