@@ -4,7 +4,8 @@ import styled from 'styled-components';
 const PanelContainer = styled.div`
   position: absolute;
   bottom: 100%;
-  left: 0;
+  left: 50%;
+  transform: translateX(-70%);
   margin-bottom: 0.5rem;
   background: white;
   border-radius: 8px;
@@ -25,6 +26,7 @@ const PanelButton = styled.button`
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  flex-grow: 1;
 
   &:hover {
     background-color: #f0f4f8;
@@ -41,7 +43,7 @@ const TooltipText = styled.span`
   padding: 5px 0;
   position: absolute;
   z-index: 1;
-  bottom: 125%;
+  bottom: 110%;
   left: 50%;
   margin-left: -65px;
   opacity: 0;
@@ -63,6 +65,9 @@ const TooltipText = styled.span`
 
 const ButtonWrapper = styled.div`
   position: relative;
+  & > ${PanelButton} {
+    border-radius: 8px 8px 0 0;
+  }
 
   &:hover ${TooltipText} {
     visibility: visible;
@@ -70,7 +75,44 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT }) => {
+const ButtonRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 0.5rem;
+
+  &:hover {
+    background-color: #f0f4f8;
+  }
+
+  ${PanelButton}:hover {
+    background-color: transparent;
+  }
+`;
+
+const HelpButton = styled.button`
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-weight: bold;
+  color: #888;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+
+  &:hover {
+    background-color: #e0e6ec;
+    color: #005eb8;
+  }
+`;
+
+
+const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT, onShowCoTInfo, onShowFewShotInfo }) => {
   return (
     <PanelContainer>
       <ButtonWrapper>
@@ -79,12 +121,20 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT }) => {
         </PanelButton>
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
-      <PanelButton onClick={onEnableCoT}>
-        🧠 Enable Chain-of-Thought
-      </PanelButton>
-      <PanelButton onClick={onAddFewShot}>
-        ✨ Add Few-Shot
-      </PanelButton>
+
+      <ButtonRow>
+        <PanelButton onClick={onEnableCoT}>
+          🧠 Enable Chain-of-Thought
+        </PanelButton>
+        <HelpButton onClick={(e) => { e.stopPropagation(); onShowCoTInfo(); }}>?</HelpButton>
+      </ButtonRow>
+
+      <ButtonRow>
+        <PanelButton onClick={onAddFewShot}>
+          ✨ Add Few-Shot
+        </PanelButton>
+        <HelpButton onClick={(e) => { e.stopPropagation(); onShowFewShotInfo(); }}>?</HelpButton>
+      </ButtonRow>
     </PanelContainer>
   );
 };
