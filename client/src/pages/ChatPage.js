@@ -482,6 +482,13 @@ const SelectedItemWrapper = styled.div`
   padding: 0.4rem 0.75rem;
 `;
 
+const BubbleText = styled.span`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+`;
+
 const ItemActionButton = styled.button`
   background: none;
   border: none;
@@ -676,6 +683,10 @@ const AttachmentBubble = styled.div`
 const AttachmentLink = styled.a`
   color: #005eb8;
   text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
   &:hover { text-decoration: underline; }
 `;
 
@@ -688,6 +699,10 @@ const AttachmentButton = styled.button`
   display: flex;
   align-items: center;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
   &:hover { text-decoration: underline; }
 `;
 
@@ -1001,7 +1016,7 @@ const ChatPage = () => {
                       )}
                       {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
                           <SelectedItemWrapper>
-                              <MaterialIcon iconName="content_copy" /> {selectedTemplate.name}
+                              <MaterialIcon iconName="content_copy" /> <BubbleText>{selectedTemplate.name}</BubbleText>
                               <ItemActionButton type="button" onClick={() => {
                                 setViewingTemplateData(selectedTemplate);
                                 setIsTemplateViewReadOnly(true);
@@ -1016,7 +1031,7 @@ const ChatPage = () => {
                       )}
                       {activeConversation.status === 'awaiting_prompt' && selectedFile && (
                           <SelectedItemWrapper>
-                              <MaterialIcon iconName="attachment" /> {selectedFile.name}
+                              <MaterialIcon iconName="attachment" /> <BubbleText>{selectedFile.name}</BubbleText>
                               <ItemActionButton as="a" href={tempFileUrl} target="_blank" rel="noopener noreferrer">
                                 <ViewIcon />
                               </ItemActionButton>
