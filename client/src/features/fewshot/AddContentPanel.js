@@ -125,7 +125,7 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT, onShowCoTInf
 
       <ButtonRow>
         <PanelButton onClick={onEnableCoT}>
-          <MaterialIcon iconName="conversion_path" /> Enable Chain-of-Thought
+          <MaterialIcon iconName="lightbulb_2" /> Enable Thinking
         </PanelButton>
         <HelpButton onClick={(e) => { e.stopPropagation(); onShowCoTInfo(); }}>?</HelpButton>
       </ButtonRow>

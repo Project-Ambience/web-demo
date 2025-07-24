@@ -991,6 +991,14 @@ const ChatPage = () => {
                 <MessageInputContainer>
                     {fileError && <FileErrorText>{fileError}</FileErrorText>}
                     <SelectionBubblesContainer>
+                      {activeConversation.status === 'awaiting_prompt' && isCoTEnabled && (
+                        <SelectedItemWrapper>
+                          <MaterialIcon iconName="lightbulb" /> Thinking
+                          <RemoveItemButton type="button" onClick={handleCoTDisable}>
+                            ✕
+                          </RemoveItemButton>
+                        </SelectedItemWrapper>
+                      )}
                       {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
                           <SelectedItemWrapper>
                               <MaterialIcon iconName="content_copy" /> {selectedTemplate.name}
@@ -1019,14 +1027,6 @@ const ChatPage = () => {
                                   ✕
                               </RemoveItemButton>
                           </SelectedItemWrapper>
-                      )}
-                      {activeConversation.status === 'awaiting_prompt' && isCoTEnabled && (
-                        <SelectedItemWrapper>
-                          <MaterialIcon iconName="conversion_path" /> Chain-of-Thought Enabled
-                          <RemoveItemButton type="button" onClick={handleCoTDisable}>
-                            ✕
-                          </RemoveItemButton>
-                        </SelectedItemWrapper>
                       )}
                     </SelectionBubblesContainer>
                     <MessageInputForm onSubmit={handleSendMessage}>
@@ -1160,9 +1160,9 @@ const ChatPage = () => {
     <OverlayContainer onClick={() => setShowCoTInfoModal(false)}>
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalCloseButton onClick={() => setShowCoTInfoModal(false)}>×</ModalCloseButton>
-        <h3>What is Chain-of-Thought?</h3>
+        <h3>What is Thinking?</h3>
         <p>
-          Enabling Chain-of-Thought (CoT) asks the AI to "think out loud". Instead of just giving a direct answer, it will first explain its reasoning, break down the problem, and walk through the steps it took to arrive at the conclusion. This makes the AI's response more transparent and easier to verify.
+	  Enabling "Thinking" uses a technique called <strong>Chain-of-Thought (CoT)</strong>. It prompts the AI to "think out loud" by explaining its reasoning step-by-step before providing a final answer. This makes the response more transparent and easier to verify.
         </p>
         <h4>When to use it:</h4>
         <ul>
@@ -1271,6 +1271,12 @@ const ChatPage = () => {
 
                         {index === 0 && msg.role === 'user' && (
                           <MessageAttachmentContainer>
+                            {activeConversation.cot && (
+                              <AttachmentBubble>
+                                <MaterialIcon iconName="lightbulb" />
+                                <AttachmentButton as="span" style={{ cursor: 'default', textDecoration: 'none' }}>Thinking</AttachmentButton>
+                              </AttachmentBubble>
+                            )}
                             {activeConversation.few_shot_template?.name && (
                               <AttachmentBubble>
                                 <MaterialIcon iconName="content_copy" />
