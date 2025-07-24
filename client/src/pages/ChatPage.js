@@ -19,6 +19,7 @@ import Spinner from '../components/common/Spinner';
 import FewShotTemplateList from '../features/fewshot/FewShotTemplateList';
 import FewShotTemplateDetail from '../features/fewshot/FewShotTemplateDetail';
 import AddContentPanel from '../features/fewshot/AddContentPanel';
+import MaterialIcon from '../components/common/MaterialIcon';
 
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
@@ -48,12 +49,6 @@ const SendSuggestionIcon = () => (
 const EmptySuggestionIcon = () => (
   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="#a0a0a0">
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-  </svg>
-);
-
-const PaperclipIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
   </svg>
 );
 
@@ -998,7 +993,7 @@ const ChatPage = () => {
                     <SelectionBubblesContainer>
                       {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
                           <SelectedItemWrapper>
-                              ✨ {selectedTemplate.name}
+                              <MaterialIcon iconName="content_copy" /> {selectedTemplate.name}
                               <ItemActionButton type="button" onClick={() => {
                                 setViewingTemplateData(selectedTemplate);
                                 setIsTemplateViewReadOnly(true);
@@ -1013,7 +1008,7 @@ const ChatPage = () => {
                       )}
                       {activeConversation.status === 'awaiting_prompt' && selectedFile && (
                           <SelectedItemWrapper>
-                              📎 {selectedFile.name}
+                              <MaterialIcon iconName="attachment" /> {selectedFile.name}
                               <ItemActionButton as="a" href={tempFileUrl} target="_blank" rel="noopener noreferrer">
                                 <ViewIcon />
                               </ItemActionButton>
@@ -1027,7 +1022,7 @@ const ChatPage = () => {
                       )}
                       {activeConversation.status === 'awaiting_prompt' && isCoTEnabled && (
                         <SelectedItemWrapper>
-                          🧠 Chain-of-Thought Enabled
+                          <MaterialIcon iconName="conversion_path" /> Chain-of-Thought Enabled
                           <RemoveItemButton type="button" onClick={handleCoTDisable}>
                             ✕
                           </RemoveItemButton>
@@ -1278,7 +1273,7 @@ const ChatPage = () => {
                           <MessageAttachmentContainer>
                             {activeConversation.few_shot_template?.name && (
                               <AttachmentBubble>
-                                ✨
+                                <MaterialIcon iconName="content_copy" />
                                 <AttachmentButton onClick={() => {
                                   setViewingTemplateData(activeConversation.few_shot_template);
                                   setIsTemplateViewReadOnly(true);
@@ -1290,7 +1285,7 @@ const ChatPage = () => {
                             )}
                             {activeConversation?.file_url && (
                                <AttachmentBubble>
-                                 📎 <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_name || "Attached File"}</AttachmentLink>
+                                 <MaterialIcon iconName="attachment" /> <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_name || "Attached File"}</AttachmentLink>
                                </AttachmentBubble>
                             )}
                           </MessageAttachmentContainer>

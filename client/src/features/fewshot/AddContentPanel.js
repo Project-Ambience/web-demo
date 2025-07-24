@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import MaterialIcon from '../../components/common/MaterialIcon';
 
 const PanelContainer = styled.div`
   position: absolute;
@@ -117,21 +118,21 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT, onShowCoTInf
     <PanelContainer>
       <ButtonWrapper>
         <PanelButton onClick={onFileUpload}>
-          📎 Upload File
+          <MaterialIcon iconName="attachment" /> Upload File
         </PanelButton>
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
 
       <ButtonRow>
         <PanelButton onClick={onEnableCoT}>
-          🧠 Enable Chain-of-Thought
+          <MaterialIcon iconName="conversion_path" /> Enable Chain-of-Thought
         </PanelButton>
         <HelpButton onClick={(e) => { e.stopPropagation(); onShowCoTInfo(); }}>?</HelpButton>
       </ButtonRow>
 
       <ButtonRow>
         <PanelButton onClick={onAddFewShot}>
-          ✨ Add Few-Shot
+          <MaterialIcon iconName="content_copy" /> Add Few-Shot
         </PanelButton>
         <HelpButton onClick={(e) => { e.stopPropagation(); onShowFewShotInfo(); }}>?</HelpButton>
       </ButtonRow>
