@@ -696,8 +696,6 @@ const AttachmentButton = styled.button`
   color: #005eb8;
   cursor: pointer;
   padding: 0;
-  display: flex;
-  align-items: center;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
