@@ -19,7 +19,7 @@ class ModelInstallRequest < ApplicationRecord
   end
 
   def self.ransackable_attributes(auth_object = nil)
-    [ "clinician_type_id", "id", "name", "path", "status" ]
+    [ "clinician_type_id", "id", "name", "path", "status", "family", "parameter_size" ]
   end
 
   private
