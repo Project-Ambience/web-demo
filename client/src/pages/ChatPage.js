@@ -967,8 +967,8 @@ const ChatPage = () => {
     }, 0);
   };
 
-  const handleCoTDisable = () => {
-    setIsCoTEnabled(false);
+  const handleToggleCoT = () => {
+    setIsCoTEnabled(prevState => !prevState);
   };
 
   const renderInputArea = () => {
@@ -1007,7 +1007,7 @@ const ChatPage = () => {
                       {activeConversation.status === 'awaiting_prompt' && isCoTEnabled && (
                         <SelectedItemWrapper>
                           <MaterialIcon iconName="lightbulb" /> Thinking
-                          <RemoveItemButton type="button" onClick={handleCoTDisable}>
+                          <RemoveItemButton type="button" onClick={() => setIsCoTEnabled(false)}>
                             ✕
                           </RemoveItemButton>
                         </SelectedItemWrapper>
@@ -1092,10 +1092,8 @@ const ChatPage = () => {
                                       setViewMode('templateList');
                                       setShowAddContentPanel(false);
                                     }}
-                                    onEnableCoT={() => {
-                                      setIsCoTEnabled(true);
-                                      setShowAddContentPanel(false);
-                                    }}
+                                    isCoTEnabled={isCoTEnabled}
+                                    onToggleCoT={handleToggleCoT}
                                     onShowCoTInfo={() => {
                                       setShowCoTInfoModal(true);
                                       setShowAddContentPanel(false);

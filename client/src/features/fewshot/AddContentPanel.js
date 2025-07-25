@@ -1,6 +1,7 @@
 import React from 'react';
 import styled from 'styled-components';
 import MaterialIcon from '../../components/common/MaterialIcon';
+import ToggleSwitch from '../../components/common/ToggleSwitch';
 
 const PanelContainer = styled.div`
   position: absolute;
@@ -12,6 +13,7 @@ const PanelContainer = styled.div`
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 10;
+  min-width: 240px;
 `;
 
 const PanelButton = styled.button`
@@ -25,6 +27,7 @@ const PanelButton = styled.button`
   cursor: pointer;
   white-space: nowrap;
   display: flex;
+  user-select: none;
   align-items: center;
   gap: 0.5rem;
   flex-grow: 1;
@@ -76,44 +79,69 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const ButtonRow = styled.div`
+const Row = styled.label`
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-right: 0.5rem;
-
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  
   &:hover {
     background-color: #f0f4f8;
   }
+`;
 
-  ${PanelButton}:hover {
-    background-color: transparent;
+const ClickableRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  
+  &:hover {
+    background-color: #f0f4f8;
   }
 `;
 
-const HelpButton = styled.button`
-  background: transparent;
-  border: none;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
+const LabelWrapper = styled.div`
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-weight: bold;
-  color: #888;
-  font-size: 0.9rem;
-  flex-shrink: 0;
+  gap: 0.5rem;
+`;
 
+const ControlsWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const InfoIcon = styled.span`
+  cursor: pointer;
+  color: #888;
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  justify-content: center;
+  
   &:hover {
     background-color: #e0e6ec;
     color: #005eb8;
   }
+
+  & > .material-symbols-outlined {
+    top: 0;
+    font-size: 1.1rem;
+  }
 `;
 
-
-const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT, onShowCoTInfo, onShowFewShotInfo }) => {
+const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT, onShowCoTInfo, onShowFewShotInfo }) => {
   return (
     <PanelContainer>
       <ButtonWrapper>
@@ -123,19 +151,28 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, onEnableCoT, onShowCoTInf
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
 
-      <ButtonRow>
-        <PanelButton onClick={onEnableCoT}>
-          <MaterialIcon iconName="lightbulb_2" /> Enable Thinking
-        </PanelButton>
-        <HelpButton onClick={(e) => { e.stopPropagation(); onShowCoTInfo(); }}>?</HelpButton>
-      </ButtonRow>
+      <Row onClick={onToggleCoT}>
+        <LabelWrapper>
+          <MaterialIcon iconName="lightbulb_2" />
+          <span>Enable Thinking</span>
+        </LabelWrapper>
+        <ControlsWrapper>
+          <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowCoTInfo(); }}>
+            <MaterialIcon iconName="help_outline" />
+          </InfoIcon>
+          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
+        </ControlsWrapper>
+      </Row>
 
-      <ButtonRow>
-        <PanelButton onClick={onAddFewShot}>
-          <MaterialIcon iconName="content_copy" /> Add Few-Shot
-        </PanelButton>
-        <HelpButton onClick={(e) => { e.stopPropagation(); onShowFewShotInfo(); }}>?</HelpButton>
-      </ButtonRow>
+      <ClickableRow onClick={onAddFewShot}>
+        <LabelWrapper>
+            <MaterialIcon iconName="content_copy" /> 
+            <span>Add Few-Shot</span>
+            <InfoIcon onClick={(e) => { e.stopPropagation(); onShowFewShotInfo(); }}>
+                <MaterialIcon iconName="help_outline" />
+            </InfoIcon>
+        </LabelWrapper>
+      </ClickableRow>
     </PanelContainer>
   );
 };
