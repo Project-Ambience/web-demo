@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate'],
+  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate', 'FineTuneRequest'],
   endpoints: builder => ({
     getClinicianTypes: builder.query({
       query: () => '/clinician_types',
@@ -19,6 +19,10 @@ export const apiSlice = createApi({
     getAiModelById: builder.query({
       query: id => `/ai_models/${id}`,
       providesTags: (result, error, id) => [{ type: 'Model', id }],
+    }),
+    getTunableModels: builder.query({
+      query: () => '/ai_models/tunable',
+      providesTags: ['Model'],
     }),
     addRating: builder.mutation({
       query: ({ ai_model_id, rating }) => ({
@@ -119,6 +123,14 @@ export const apiSlice = createApi({
         method: 'POST',
         body: formData,
       }),
+      invalidatesTags: ['FineTuneRequest']
+    }),
+    getFineTuneRequests: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams(params).toString();
+        return `/model_fine_tune_requests?${queryParams}`;
+      },
+      providesTags: ['FineTuneRequest'],
     }),
     acceptFeedback: builder.mutation({
       query: (id) => ({
@@ -201,6 +213,7 @@ export const {
   useGetClinicianTypesQuery,
   useGetAiModelsQuery,
   useGetAiModelByIdQuery,
+  useGetTunableModelsQuery,
   useAddRatingMutation,
   useAddCommentMutation,
   useGetConversationsQuery,
@@ -211,6 +224,7 @@ export const {
   useDeleteConversationMutation,
   useAddMessageMutation,
   useCreateFineTuneRequestMutation,
+  useGetFineTuneRequestsQuery,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
   useGetRabbitMQTrafficQuery,

@@ -1,4 +1,31 @@
 class Api::ModelFineTuneRequestsController < Api::ApplicationController
+  def index
+    requests = ModelFineTuneRequest.includes(:ai_model, :clinician_type)
+      .by_status(params[:status])
+      .by_base_model(params[:base_model_id])
+      .created_after(params[:start_date])
+      .created_before(params[:end_date])
+      .search_by_name(params[:search])
+      .order(created_at: :desc)
+
+    paginated_requests = requests.page(params[:page]).per(20)
+
+    render json: {
+      requests: paginated_requests.as_json(
+        methods: [ :status ],
+        include: {
+          ai_model: { only: [ :id, :name ] },
+          clinician_type: { only: [ :id, :name ] }
+        }
+      ),
+      pagination: {
+        current_page: paginated_requests.current_page,
+        total_pages: paginated_requests.total_pages,
+        total_count: paginated_requests.total_count
+      }
+    }
+  end
+
   def create
     required_params = %i[name description fine_tune_task_id clinician_type_id file]
     missing = required_params.select { |key| params[key].blank? }

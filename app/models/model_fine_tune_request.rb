@@ -12,6 +12,12 @@ class ModelFineTuneRequest < ApplicationRecord
     failed: 3
   }
 
+  scope :by_status, ->(status) { where(status: status) if status.present? && status != "all" }
+  scope :by_base_model, ->(model_id) { where(ai_model_id: model_id) if model_id.present? }
+  scope :created_after, ->(date) { where("created_at >= ?", date) if date.present? }
+  scope :created_before, ->(date) { where("created_at <= ?", date) if date.present? }
+  scope :search_by_name, ->(term) { where("name ILIKE ?", "%#{term}%") if term.present? }
+
   after_initialize :set_default_status, if: :new_record?
   after_create :publish_fine_tune_request_to_rabbit_mq
 

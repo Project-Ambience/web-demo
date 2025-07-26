@@ -72,6 +72,9 @@ const Header = () => {
         <StyledNavLink to="/chat">
           Prompt
         </StyledNavLink>
+        <StyledNavLink to="/fine-tune-status">
+          Fine-Tune Status
+        </StyledNavLink>
       </Nav>
     </HeaderContainer>
   );

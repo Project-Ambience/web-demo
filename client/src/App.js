@@ -6,6 +6,7 @@ import GlobalStyles from './components/layout/GlobalStyles';
 import ModelCataloguePage from './pages/ModelCataloguePage';
 import AiModelPage from './pages/AiModelPage';
 import FineTunePage from './pages/FineTunePage';
+import FineTuneStatusPage from './pages/FineTuneStatusPage';
 import ChatPage from './pages/ChatPage';
 import InterRaterPage from './pages/InterRaterPage';
 import NewInferencePairPage from './pages/NewInferencePairPage';
@@ -34,13 +35,12 @@ function App() {
         <Routes>
           <Route path="/" element={<ModelCataloguePage />} />
           <Route path="/ai-models/:id" element={<AiModelPage />} />
-          {/* --- ADD THIS ROUTE --- */}
-          {/* Using a generic /chat route for now, can be adapted */}
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:conversationId" element={<ChatPage />} />
           <Route path="/fine-tune/:id" element={<FineTunePage />} />
           <Route path="/ai-models/:id/evaluate" element={<InterRaterPage />} />
           <Route path="/ai-models/:id/new/inference-pair" element={<NewInferencePairPage />} />
+          <Route path="/fine-tune-status" element={<FineTuneStatusPage />} />
         </Routes>
       </MainContent>
     </AppContainer>
