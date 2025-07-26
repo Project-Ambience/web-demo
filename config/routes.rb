@@ -25,7 +25,7 @@ Rails.application.routes.draw do
 
     resources :inter_raters, only: [ :create ] do
       collection do
-        get "fine_tune_model/:ai_model_id", action: :fine_tune_model
+        get "response_pairs/:ai_model_id", action: :response_pairs
       end
     end
   end

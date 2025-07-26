@@ -160,8 +160,8 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: [{ type: 'FewShotTemplate', id: 'LIST' }],
     }),
-    getInterRaterFineTune: builder.query({
-      query: (ai_model_id) => `/inter_raters/fine_tune_model/${ai_model_id}`,
+    getInterRaterResponsePairs: builder.query({
+      query: (ai_model_id) => `/inter_raters/response_pairs/${ai_model_id}`,
       providesTags: ['InterRater']
     }),
     addInterRater: builder.mutation({
@@ -195,6 +195,6 @@ export const {
   useCreateFewShotTemplateMutation,
   useUpdateFewShotTemplateMutation,
   useDeleteFewShotTemplateMutation,
-  useGetInterRaterFineTuneQuery,
+  useGetInterRaterResponsePairsQuery,
   useAddInterRaterMutation,
 } = apiSlice;

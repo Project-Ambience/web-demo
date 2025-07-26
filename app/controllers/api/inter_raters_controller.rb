@@ -9,22 +9,26 @@ class Api::InterRatersController < Api::ApplicationController
     end
   end
 
-  def fine_tune_model
-    @ai_model = AiModel.find(params[:ai_model_id])
-    return unless @ai_model.is_fine_tune_model
+  def response_pairs
+    @inter_raters = InterRater.where(ai_model_id: params[:ai_model_id])
 
-    @conversations = Conversation
-      .includes(:messages, :ai_model)
-      .where(status: "completed", ai_model: @ai_model)
-
-    response_data = @conversations.map do |convo|
+    response_data = @inter_raters.map do |inter_rater|
       {
-        id: convo.id,
-        prompt: convo.messages.first.content,
-        response: convo.messages.second.content,
-        response_base_model: convo.messages.find { |m| m.role == "assistant-base-model" }.content,
-        file_url: convo.file_url,
-        file_name: convo.file_name
+        id: inter_rater.id,
+        first_conversation_id: inter_rater.first_conversation_id,
+        first_conversation_ai_model_name: inter_rater.first_conversation.ai_model.name,
+        first_conversation_base_prompt: inter_rater.first_conversation.base_prompt,
+        first_conversation_first_response: inter_rater.first_conversation.first_response,
+        first_conversation_file_url: inter_rater.first_conversation.file_url,
+        first_conversation_file_name: inter_rater.first_conversation.file_name,
+        first_conversation_few_shot_template: inter_rater.first_conversation.few_shot_template,
+        second_conversation_id: inter_rater.second_conversation_id,
+        second_conversation_ai_model_name: inter_rater.second_conversation.ai_model.name,
+        second_conversation_base_prompt: inter_rater.second_conversation.base_prompt,
+        second_conversation_first_response: inter_rater.second_conversation.first_response,
+        second_conversation_file_url: inter_rater.second_conversation.file_url,
+        second_conversation_file_name: inter_rater.second_conversation.file_name,
+        second_conversation_few_shot_template: inter_rater.second_conversation.few_shot_template
       }
     end
 
@@ -35,12 +39,9 @@ class Api::InterRatersController < Api::ApplicationController
 
   def inter_rater_params
     params.require(:inter_rater).permit(
-      :prompt,
-      :first_response,
-      :second_response,
-      :file_url,
+      :first_conversation_id,
+      :second_conversation_id,
       :ai_model_id,
-      :evaluation_category,
       :comment,
       :rating
     )

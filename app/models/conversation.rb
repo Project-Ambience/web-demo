@@ -17,4 +17,12 @@ class Conversation < ApplicationRecord
   def file_name
     self.file.attached? ? self.file.filename.to_s : nil
   end
+
+  def base_prompt
+    self.messages&.first&.content
+  end
+
+  def first_response
+    self.messages&.second&.content
+  end
 end

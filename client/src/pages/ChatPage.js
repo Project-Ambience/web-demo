@@ -1276,9 +1276,7 @@ const ChatPage = () => {
               <MessageArea ref={messageAreaRef}>
                 <MessagesContentWrapper>
                   {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
-                    sortedMessages
-                      .filter(msg => msg.role === 'user' || msg.role === 'assistant')
-                      .map((msg, index) => (
+                    sortedMessages.map((msg, index) => (
                       <MessageTurn key={msg.id} data-role={msg.role} >
 
                         {index === 0 && msg.role === 'user' && (

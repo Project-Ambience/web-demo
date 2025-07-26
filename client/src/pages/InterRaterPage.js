@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import styled from 'styled-components';
 import {
-  useGetInterRaterFineTuneQuery,
+  useGetInterRaterResponsePairsQuery,
   useGetAiModelByIdQuery,
   useAddInterRaterMutation,
 } from '../app/apiSlice';
@@ -27,29 +27,6 @@ const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
   gap: 2rem;
-`;
-
-const TabSwitcher = styled.div`
-  display: flex;
-  border-bottom: 2px solid #e0e0e0;
-  margin-top: 1.5rem;
-`;
-
-const TabButton = styled.button`
-  background: none;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  font-weight: ${({ active }) => (active ? 'bold' : 'normal')};
-  color: ${({ active }) => (active ? '#005eb8' : '#555')};
-  border-bottom: ${({ active }) =>
-    active ? '3px solid #005eb8' : '3px solid transparent'};
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: #f5f8fb;
-  }
 `;
 
 const PaginationWrapper = styled.div`
@@ -221,17 +198,6 @@ const ThankYouMessage = styled.div`
   font-weight: 500;
 `;
 
-const ConversationBadge = styled.div`
-  display: inline-block;
-  background-color: #e1ecf4;
-  color: #005eb8;
-  font-weight: bold;
-  padding: 0.3rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
-`;
-
 const ResponseComparison = styled.div`
   display: flex;
   gap: 1.5rem;
@@ -268,15 +234,16 @@ const ResponseBox = styled.div`
   }
 `;
 
+// --- Main Component ---
+
 const InterRaterPage = () => {
   const { id: ai_model_id } = useParams();
-  const [activeTab, setActiveTab] = useState('fine_tune');
   const [formState, setFormState] = useState({});
   const [feedbackSent, setFeedbackSent] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 3;
 
-  const { data: evaluations, isLoading } = useGetInterRaterFineTuneQuery(ai_model_id);
+  const { data: evaluations, isLoading } = useGetInterRaterResponsePairsQuery(ai_model_id);
   const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
@@ -334,42 +301,26 @@ const InterRaterPage = () => {
                 {model.base_model && <p><strong>Base Model:</strong> {model.base_model.name}</p>}
               </>
             )}
-            <TabSwitcher>
-              <TabButton active={activeTab === 'fine_tune'} onClick={() => { setActiveTab('fine_tune'); setCurrentPage(1); }}>Fine Tune Model</TabButton>
-              <TabButton active={activeTab === 'prompt_engineering'} onClick={() => { setActiveTab('prompt_engineering'); setCurrentPage(1); }}>Prompt Engineering</TabButton>
-            </TabSwitcher>
           </PageHeader>
 
           {isLoading || isModelLoading ? (
             <Spinner />
-          ) : activeTab === 'prompt_engineering' ? (
-            <EmptyState>
-              <h3>No Evaluation Data</h3>
-              <p>This model does not have any prompt engineering evaluation data yet.</p>
-            </EmptyState>
           ) : totalItems === 0 ? (
             <EmptyState>
               <h3>No Evaluation Data</h3>
-              <p>This model does not have any fine-tune model evaluation data yet.</p>
+              <p>This model does not have any evaluation data yet.</p>
             </EmptyState>
           ) : (
             <>
               {paginatedEvaluations.map((item) => (
                 <Card key={item.id}>
-                  <ConversationBadge>Conversation ID: {item.id}</ConversationBadge>
                   <CardContent>
-                    <p><strong>Prompt:</strong><br />{item.prompt}</p>
-                    {item.file_url && (
-                      <p><a href={item.file_url} target="_blank" rel="noopener noreferrer">📎 Attached File</a></p>
-                    )}
                     <ResponseComparison>
                       <ResponseBox>
-                        <h4>Fine-Tuned Model's Response</h4>
-                        <p>{item.response}</p>
+                        <h4>First Inference</h4>
                       </ResponseBox>
                       <ResponseBox>
-                        <h4>Base Model's Response</h4>
-                        <p>{item.response_base_model}</p>
+                        <h4>Second Inference</h4>
                       </ResponseBox>
                     </ResponseComparison>
                   </CardContent>
@@ -379,7 +330,7 @@ const InterRaterPage = () => {
                   ) : (
                     <FeedbackBox>
                       <LikertScale>
-                        {[0, 1, 2, 3, 4].map((value) => (
+                        {[0, 1, 2, 3].map((value) => (
                           <label key={value}>
                             <input
                               type="radio"
@@ -394,7 +345,6 @@ const InterRaterPage = () => {
                               {[
                                 'Strongly\nPrefer Fine-Tuned model',
                                 'Prefer\nFine-Tuned model',
-                                'Neutral',
                                 'Prefer\nBase Model',
                                 'Strongly\nPrefer Base Model',
                               ][value]}

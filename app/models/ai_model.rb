@@ -17,10 +17,6 @@ class AiModel < ApplicationRecord
     ratings.average(:rating)&.to_f.round(1)
   end
 
-  def is_fine_tune_model
-    self.base_model.present?
-  end
-
   def as_json(options = {})
     super(options).tap do |json|
       if options[:add_clinician_type_name]
