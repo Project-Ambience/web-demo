@@ -1,6 +1,4 @@
 class Api::ModelFineTuneRequestsController < Api::ApplicationController
-  before_action :set_fine_tune_request, only: [:start, :update_status]
-
   def index
     requests = ModelFineTuneRequest.includes(:ai_model, :clinician_type)
       .by_status(params[:status])
@@ -14,7 +12,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
 
     render json: {
       requests: paginated_requests.as_json(
-        only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message],
+        only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters],
         methods: [ :status ],
         include: {
           ai_model: { only: [ :id, :name ] },
@@ -26,6 +24,16 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
         total_pages: paginated_requests.total_pages,
         total_count: paginated_requests.total_count
       }
+    }
+  end
+  
+  def statistics
+    counts = ModelFineTuneRequest.group(:status).count
+    
+    render json: {
+      validating: counts["validating"] || 0,
+      queued: counts["queued"] || 0,
+      in_progress: counts["in_progress"] || 0,
     }
   end
 
@@ -77,6 +85,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     )
 
     if model_fine_tune_request.save
+      broadcast_status_update(model_fine_tune_request)
       render json: model_fine_tune_request, status: :created
       return
     end
@@ -84,43 +93,58 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     render json: { error: model_fine_tune_request.errors.full_messages }, status: :bad_request
   end
 
-  def start
-    if @model_fine_tune_request.queued?
-      @model_fine_tune_request.in_progress!
-      render json: { message: "Status updated to in_progress" }, status: :ok
-    else
-      render json: { error: "Request is not in a queued state" }, status: :unprocessable_entity
-    end
-  end
-
   def update_status
-    status = params[:status]
-    adapter_path = params[:adapter_path]
-    error_message = params[:error]
+    request = ModelFineTuneRequest.find_by(id: params[:id])
+    return render json: { error: "Record not found" }, status: :not_found unless request
 
-    if !@model_fine_tune_request.in_progress?
-      render json: { error: "Request is not ready to update" }, status: :bad_request and return
-    end
-
-    case status
+    case params[:status]
+    when "validation_succeeded"
+      request.queued! if request.validating?
+    when "validation_failed"
+      request.update(status: :validation_failed, error_message: params[:error]) if request.validating?
+    when "processing_started"
+      request.in_progress! if request.queued?
     when "success"
-      @model_fine_tune_request.done!
-      ai_model = create_ai_model(@model_fine_tune_request, adapter_path)
-      @model_fine_tune_request.update(new_ai_model_id: ai_model.id)
+      if request.in_progress?
+        request.done!
+        ai_model = create_ai_model(request, params[:adapter_path])
+        request.update(new_ai_model_id: ai_model.id)
+      end
     when "fail"
-      @model_fine_tune_request.update(status: :failed, error_message: error_message)
+      request.update(status: :failed, error_message: params[:error]) if request.in_progress?
     else
-      render json: { error: "Invalid status" }, status: :unprocessable_entity and return
+      return render json: { error: "Invalid status" }, status: :unprocessable_entity
     end
-
+    
+    broadcast_status_update(request)
     render json: { message: "Status updated successfully" }, status: :ok
   end
 
   private
 
-  def set_fine_tune_request
-    @model_fine_tune_request = ModelFineTuneRequest.find_by(id: params[:id])
-    render json: { error: "Record not found" }, status: :not_found unless @model_fine_tune_request
+  def broadcast_status_update(request)
+    counts = ModelFineTuneRequest.group(:status).count
+    statistics = {
+      validating: counts["validating"] || 0,
+      queued: counts["queued"] || 0,
+      in_progress: counts["in_progress"] || 0,
+    }
+    
+    updated_request_json = request.as_json(
+      only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters],
+      methods: [ :status ],
+      include: {
+        ai_model: { only: [ :id, :name ] },
+        clinician_type: { only: [ :id, :name ] }
+      }
+    )
+
+    payload = {
+      statistics: statistics,
+      updated_request: updated_request_json
+    }
+
+    ActionCable.server.broadcast("fine_tune_status_channel", payload)
   end
 
   def create_ai_model(model_fine_tune_request, adapter_path)

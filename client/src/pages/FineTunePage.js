@@ -5,7 +5,7 @@ import {
   useGetAiModelByIdQuery, 
   useGetClinicianTypesQuery, 
   useCreateFineTuneRequestMutation,
-  useGetRabbitMQTrafficQuery
+  useGetFineTuneStatisticsQuery
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -247,6 +247,10 @@ const FineTunePage = () => {
   } = useGetClinicianTypesQuery();
 
   const [createFineTuneRequest, { isLoading: isSubmitting }] = useCreateFineTuneRequestMutation();
+  
+  const { data: stats } = useGetFineTuneStatisticsQuery(undefined, {
+    pollingInterval: 15000,
+  });
 
   const [modelName, setModelName] = useState('');
   const [description, setDescription] = useState('');
@@ -261,20 +265,6 @@ const FineTunePage = () => {
   const [submissionSuccess, setSubmissionSuccess] = useState(null);
   const [fileError, setFileError] = useState('');
   const [showQueueWarning, setShowQueueWarning] = useState(false);
-
-  const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery(undefined, {
-    pollingInterval: 15000,
-  });
-
-  const handleFileChange = (e) => {
-    const uploaded = e.target.files[0];
-    if (uploaded && uploaded.type === 'application/json') {
-      setFile(uploaded);
-    } 
-    else {
-      setSubmissionError('Please upload a fine-tuning .json file.');
-    }
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -296,7 +286,7 @@ const FineTunePage = () => {
       fileName: file.name,
     });
   
-    if (rabbitTraffic?.messages_ready > 5) {
+    if (stats?.queued > 5) {
       setShowQueueWarning(true);
     } else {
       setShowConfirmModal(true);
@@ -545,10 +535,7 @@ const FineTunePage = () => {
           </Section>
           <Section>
             <h3>Queue Status</h3>
-            {isTrafficLoading && <p>Loading traffic...</p>}
-            {isTrafficError && <p style={{ color: 'red' }}>Error loading traffic.</p>}
-            {rabbitTraffic && (
-              <div style={{
+            <div style={{
                 background: '#fff',
                 border: '1px solid #cdd4d8',
                 borderRadius: '4px',
@@ -556,13 +543,12 @@ const FineTunePage = () => {
                 fontSize: '0.95rem',
               }}>
                 <p>
-                  <strong>Waiting to Start:</strong> {rabbitTraffic.messages_ready}
+                  <strong>Waiting to Start:</strong> {stats?.queued ?? 0}
                 </p>
                 <p>
-                  <strong>Currently Running:</strong> {rabbitTraffic.messages_unacknowledged}
+                  <strong>Currently Running:</strong> {stats?.in_progress ?? 0}
                 </p>
               </div>
-            )}
           </Section>
         </Sidebar>
       </PageWrapper>
@@ -607,7 +593,7 @@ const FineTunePage = () => {
           <ModalBox>
             <ModalTitle>High Queue Notice</ModalTitle>
             <p>
-              There are currently <strong>{rabbitTraffic.messages_ready}</strong> fine-tune requests waiting to be processed.
+              There are currently <strong>{stats?.queued ?? 0}</strong> fine-tune requests waiting to be processed.
               Your request will be added to the queue and may take longer than usual.
             </p>
             <p>Do you still want to continue?</p>

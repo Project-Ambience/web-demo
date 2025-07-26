@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styled, { css } from 'styled-components';
 import { Link } from 'react-router-dom';
-import { useGetFineTuneRequestsQuery, useGetRabbitMQTrafficQuery, useGetTunableModelsQuery } from '../app/apiSlice';
+import { useDispatch } from 'react-redux';
+import { createConsumer } from '@rails/actioncable';
+import { apiSlice, useGetFineTuneRequestsQuery, useGetFineTuneStatisticsQuery, useGetTunableModelsQuery } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
 const CheckmarkIcon = () => (
@@ -135,10 +137,6 @@ const OptionListItem = styled.li`
   }
 `;
 
-const DropdownContainer = styled.div`
-  position: relative;
-`;
-
 const DropdownMenu = styled.div`
   position: absolute;
   top: calc(100% + 4px);
@@ -202,7 +200,7 @@ const CardTitle = styled.h4`
   font-size: 1rem;
 `;
 
-const CardValue = styled.p`
+const CardValue = styled.div`
   margin: 0;
   font-size: 2rem;
   font-weight: bold;
@@ -558,19 +556,18 @@ const INITIAL_FILTERS = {
 };
 
 const FineTuneStatusPage = () => {
+  const dispatch = useDispatch();
+  const cable = useRef();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [customDates, setCustomDates] = useState({ start: '', end: '' });
   const [apiParams, setApiParams] = useState({ page: 1 });
   const [isBaseModelOpen, setIsBaseModelOpen] = useState(false);
   const baseModelRef = useRef();
   useOnClickOutside(baseModelRef, () => setIsBaseModelOpen(false));
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
-  const { data: trafficData } = useGetRabbitMQTrafficQuery(undefined, {
-    pollingInterval: 15000,
-  });
+  const { data: stats, isLoading: isLoadingStats } = useGetFineTuneStatisticsQuery();
   const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
 
   useEffect(() => {
@@ -580,7 +577,6 @@ const FineTuneStatusPage = () => {
       base_model_id: filters.base_model_id,
       status: filters.status
     };
-
     const now = new Date();
     switch (filters.time_period) {
       case 'day':
@@ -602,12 +598,53 @@ const FineTuneStatusPage = () => {
     setApiParams(prev => ({ ...params, page: prev.page }));
   }, [filters, customDates]);
 
+  useEffect(() => {
+    if (!cable.current) {
+      cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
+    }
+
+    const channelParams = { channel: 'FineTuneStatusChannel' };
+
+    const channelHandlers = {
+      received: (data) => {
+        console.log('Received real-time update for fine-tune status:', data);
+        dispatch(
+          apiSlice.util.updateQueryData('getFineTuneStatistics', undefined, (draft) => {
+            Object.assign(draft, data.statistics);
+          })
+        );
+        dispatch(
+          apiSlice.util.updateQueryData('getFineTuneRequests', apiParams, (draft) => {
+            if (!draft || !draft.requests) return;
+            const index = draft.requests.findIndex(req => req.id === data.updated_request.id);
+            if (index !== -1) {
+              draft.requests[index] = data.updated_request;
+            } else {
+              draft.requests.unshift(data.updated_request);
+            }
+          })
+        );
+      },
+      connected: () => {
+        console.log("Connected to FineTuneStatusChannel");
+      },
+      disconnected: () => {
+        console.log("Disconnected from FineTuneStatusChannel");
+      }
+    };
+
+    const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
+
+    return () => {
+      console.log("Unsubscribing from FineTuneStatusChannel");
+      subscription.unsubscribe();
+    };
+  }, [dispatch, apiParams]);
+
   const { data, isLoading, isFetching } = useGetFineTuneRequestsQuery(apiParams);
   const requests = data?.requests || [];
   const pagination = data?.pagination || {};
-
   const selectedModelName = tunableModels?.find(m => m.id === filters.base_model_id)?.name || 'All Models';
-
   const hasActiveFilters = useMemo(() => {
     return filters.search !== '' ||
            filters.base_model_id !== '' ||
@@ -637,7 +674,6 @@ const FineTuneStatusPage = () => {
         <PageLayout>
           <Sidebar>
             <SidebarTitle>Refine by</SidebarTitle>
-
             <FilterSection>
               <FilterSectionTitle>New Model Name</FilterSectionTitle>
               <SearchContainer>
@@ -651,7 +687,6 @@ const FineTuneStatusPage = () => {
                 />
               </SearchContainer>
             </FilterSection>
-
             <RelativeFilterSection ref={baseModelRef}>
               <FilterSectionTitle>Base Model</FilterSectionTitle>
               <OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(prev => !prev)}>
@@ -679,7 +714,6 @@ const FineTuneStatusPage = () => {
                 </DropdownMenu>
               )}
             </RelativeFilterSection>
-            
             <FilterSection>
               <FilterSectionTitle>Status</FilterSectionTitle>
               <OptionList>
@@ -695,7 +729,6 @@ const FineTuneStatusPage = () => {
                 ))}
               </OptionList>
             </FilterSection>
-
             <FilterSection>
               <FilterSectionTitle>Time Period</FilterSectionTitle>
               <OptionList>
@@ -720,18 +753,20 @@ const FineTuneStatusPage = () => {
           </Sidebar>
           <MainContent>
             <h2>Fine-Tune Status Dashboard</h2>
-            
             <DashboardGrid>
               <Card>
-                <CardTitle>Jobs in Queue</CardTitle>
-                <CardValue>{trafficData?.messages_ready ?? <Spinner />}</CardValue>
+                <CardTitle>Validating</CardTitle>
+                <CardValue>{isLoadingStats ? <Spinner /> : stats?.validating ?? 0}</CardValue>
               </Card>
               <Card>
-                <CardTitle>Jobs Running</CardTitle>
-                <CardValue>{trafficData?.messages_unacknowledged ?? <Spinner />}</CardValue>
+                <CardTitle>Queued</CardTitle>
+                <CardValue>{isLoadingStats ? <Spinner /> : stats?.queued ?? 0}</CardValue>
+              </Card>
+              <Card>
+                <CardTitle>In Progress</CardTitle>
+                <CardValue>{isLoadingStats ? <Spinner /> : stats?.in_progress ?? 0}</CardValue>
               </Card>
             </DashboardGrid>
-
             {isLoading || isFetching ? <Spinner /> : (
               <>
                 {requests.length > 0 ? (
@@ -756,7 +791,7 @@ const FineTuneStatusPage = () => {
                               <span>Task</span>
                               {req.task}
                             </MetaItem>
-                             {req.status === 'failed' && req.error_message && (
+                             {(req.status === 'failed' || req.status === 'validation_failed') && req.error_message && (
                                 <MetaItem style={{ gridColumn: '1 / -1' }}>
                                   <span>Error</span>
                                   <ErrorBlock style={{ padding: '0.5rem', fontSize: '0.8rem' }}>{req.error_message}</ErrorBlock>

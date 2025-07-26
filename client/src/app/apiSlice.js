@@ -132,6 +132,10 @@ export const apiSlice = createApi({
       },
       providesTags: ['FineTuneRequest'],
     }),
+    getFineTuneStatistics: builder.query({
+        query: () => '/model_fine_tune_requests/statistics',
+        providesTags: ['FineTuneRequest'],
+    }),
     acceptFeedback: builder.mutation({
       query: (id) => ({
         url: `/conversations/${id}/accept_feedback`,
@@ -145,9 +149,6 @@ export const apiSlice = createApi({
         method: 'POST',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
-    }),
-    getRabbitMQTraffic: builder.query({
-      query: () => '/rabbitmq/traffic',
     }),
     getFewShotTemplates: builder.query({
       query: () => '/few_shot_templates',
@@ -225,9 +226,9 @@ export const {
   useAddMessageMutation,
   useCreateFineTuneRequestMutation,
   useGetFineTuneRequestsQuery,
+  useGetFineTuneStatisticsQuery,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
-  useGetRabbitMQTrafficQuery,
   useGetFewShotTemplatesQuery,
   useGetFewShotTemplateQuery,
   useCreateFewShotTemplateMutation,
