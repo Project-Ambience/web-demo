@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useGetFineTuneRequestsQuery, useGetRabbitMQTrafficQuery, useGetTunableModelsQuery } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
@@ -209,35 +209,80 @@ const CardValue = styled.p`
   color: #005eb8;
 `;
 
-const TableContainer = styled.div`
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #e8edee;
+const TaskList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 `;
 
-const TableWrapper = styled.div`
-  overflow-x: auto;
-`;
-
-const Table = styled.table`
-  width: 100%;
-  border-collapse: collapse;
+const TaskCard = styled.div`
   background: #fff;
-
-  th, td {
-    padding: 1rem;
-    text-align: left;
-    border-bottom: 1px solid #e8edee;
-  }
+  border-radius: 4px;
+  border: 1px solid #e8edee;
+  border-left: 5px solid ${({ status }) => {
+    switch (status) {
+      case 'done': return '#2e7d32';
+      case 'failed': return '#c62828';
+      case 'in_progress': return '#0277bd';
+      case 'queued': return '#5f6368';
+      case 'pending':
+      default: return '#ced4da';
+    }
+  }};
   
-  tr:last-child td {
-    border-bottom: none;
-  }
+  ${({ status }) => status === 'failed' && css`
+    border-color: #c62828;
+  `}
+`;
 
-  th {
-    background-color: #f8f9fa;
+const TaskCardHeader = styled.div`
+  padding: 1rem 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 1px solid #e8edee;
+`;
+
+const TaskCardTitle = styled.h3`
+  margin: 0;
+  font-size: 1.25rem;
+  color: #2c3e50;
+`;
+
+const TaskCardBody = styled.div`
+  padding: 1rem 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+`;
+
+const MetaItem = styled.div`
+  font-size: 0.9rem;
+  span {
+    display: block;
+    color: #4c6272;
     font-weight: 600;
+    margin-bottom: 0.25rem;
   }
+`;
+
+const TaskCardFooter = styled.div`
+  padding: 1rem 1.5rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #e8edee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`;
+
+const Timestamp = styled.time`
+  font-size: 0.85rem;
+  color: #5f6368;
+`;
+
+const ActionGroup = styled.div`
+  display: flex;
+  gap: 0.75rem;
 `;
 
 const StatusBadge = styled.span`
@@ -248,9 +293,7 @@ const StatusBadge = styled.span`
   text-transform: capitalize;
   white-space: nowrap;
   border: 1px solid transparent;
-
   color: ${({ status }) => (status === 'pending' ? '#005eb8' : '#fff')};
-  
   background-color: ${({ status }) => {
     switch (status) {
       case 'done': return '#2e7d32';
@@ -261,7 +304,6 @@ const StatusBadge = styled.span`
       default: return '#5f6368';
     }
   }};
-  
   border-color: ${({ status }) => (status === 'pending' ? '#005eb8' : 'transparent')};
 `;
 
@@ -273,9 +315,22 @@ const ActionButton = styled(Link)`
   text-decoration: none;
   font-weight: bold;
   font-size: 0.9rem;
-
   &:hover {
     background-color: #003087;
+  }
+`;
+
+const DetailsButton = styled.button`
+  background-color: #f0f4f5;
+  color: #4c6272;
+  border: 1px solid #ced4da;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  &:hover {
+    background-color: #e8edee;
   }
 `;
 
@@ -292,7 +347,6 @@ const PaginationControls = styled.div`
     background: #fff;
     cursor: pointer;
     border-radius: 20px;
-    
     &:disabled {
       cursor: not-allowed;
       opacity: 0.5;
@@ -309,6 +363,179 @@ const EmptyStateWrapper = styled.div`
   border-radius: 8px;
   color: #4c6272;
 `;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+`;
+
+const ModalContent = styled.div`
+  background: #fff;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.header`
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e8edee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+
+  h3 {
+    margin: 0;
+    color: #003087;
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const ModalFooter = styled.footer`
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e8edee;
+  display: flex;
+  justify-content: flex-end;
+`;
+
+const CloseButton = styled.button`
+  background-color: #e8edee;
+  color: #4c6272;
+  border: 1px solid #ced4da;
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  &:hover {
+    background-color: #dde3ea;
+  }
+`;
+
+const DetailSection = styled.div`
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: #4c6272;
+    font-size: 1rem;
+  }
+  p {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+`;
+
+const DetailGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #e8edee;
+  border-bottom: 1px solid #e8edee;
+`;
+
+const DetailItem = styled.div`
+  h4 {
+    margin: 0 0 0.25rem 0;
+    color: #4c6272;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  p {
+    margin: 0;
+    font-size: 1rem;
+  }
+`;
+
+const CodeBlock = styled.pre`
+  background-color: #f0f4f5;
+  color: #333;
+  padding: 1rem;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: monospace;
+  font-size: 0.85rem;
+`;
+
+const ErrorBlock = styled(CodeBlock)`
+  background-color: #fdecea;
+  color: #a4282a;
+`;
+
+const RequestDetailsModal = ({ request, onClose }) => {
+  const modalRef = useRef();
+  useOnClickOutside(modalRef, onClose);
+
+  return (
+    <ModalOverlay>
+      <ModalContent ref={modalRef}>
+        <ModalHeader>
+          <h3>{request.name}</h3>
+          <StatusBadge status={request.status}>{request.status.replace('_', ' ')}</StatusBadge>
+        </ModalHeader>
+        <ModalBody>
+          <DetailSection>
+            <h4>Description</h4>
+            <p>{request.description || 'N/A'}</p>
+          </DetailSection>
+          <DetailSection>
+            <h4>Fine-Tuning Notes</h4>
+            <p>{request.fine_tuning_notes || 'N/A'}</p>
+          </DetailSection>
+
+          <DetailGrid>
+            <DetailItem>
+              <h4>Base Model</h4>
+              <p>{request.ai_model.name}</p>
+            </DetailItem>
+            <DetailItem>
+              <h4>Clinician Type</h4>
+              <p>{request.clinician_type.name}</p>
+            </DetailItem>
+            <DetailItem>
+              <h4>Task</h4>
+              <p>{request.task}</p>
+            </DetailItem>
+            <DetailItem>
+              <h4>Submitted At</h4>
+              <p>{new Date(request.created_at).toLocaleString()}</p>
+            </DetailItem>
+          </DetailGrid>
+
+          {request.error_message && (
+            <DetailSection>
+              <h4>Error Message</h4>
+              <ErrorBlock>{request.error_message}</ErrorBlock>
+            </DetailSection>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <CloseButton onClick={onClose}>Close</CloseButton>
+        </ModalFooter>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
 
 const STATUSES = ['all', 'pending', 'queued', 'in_progress', 'done', 'failed'];
 const TIME_PERIODS = {
@@ -333,6 +560,9 @@ const FineTuneStatusPage = () => {
   const [isBaseModelOpen, setIsBaseModelOpen] = useState(false);
   const baseModelRef = useRef();
   useOnClickOutside(baseModelRef, () => setIsBaseModelOpen(false));
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState(null);
 
   const { data: trafficData } = useGetRabbitMQTrafficQuery(undefined, {
     pollingInterval: 15000,
@@ -381,181 +611,201 @@ const FineTuneStatusPage = () => {
            filters.time_period !== 'all';
   }, [filters]);
 
+  const handleOpenModal = (request) => {
+    setSelectedRequest(request);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedRequest(null);
+  };
+
   return (
-    <div style={{
-        position: 'fixed',
-        top: '70px',
-        left: '0',
-        width: '100vw',
-        height: 'calc(100vh - 70px)',
-    }}>
-      <PageLayout>
-        <Sidebar>
-          <SidebarTitle>Refine by</SidebarTitle>
+    <>
+      <div style={{
+          position: 'fixed',
+          top: '70px',
+          left: '0',
+          width: '100vw',
+          height: 'calc(100vh - 70px)',
+      }}>
+        <PageLayout>
+          <Sidebar>
+            <SidebarTitle>Refine by</SidebarTitle>
 
-          <FilterSection>
-            <FilterSectionTitle>New Model Name</FilterSectionTitle>
-            <SearchContainer>
-              <SearchIcon />
-              <SearchInput
-                type="text"
-                name="search"
-                placeholder="Filter by name..."
-                value={filters.search}
-                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
-              />
-            </SearchContainer>
-          </FilterSection>
+            <FilterSection>
+              <FilterSectionTitle>New Model Name</FilterSectionTitle>
+              <SearchContainer>
+                <SearchIcon />
+                <SearchInput
+                  type="text"
+                  name="search"
+                  placeholder="Filter by name..."
+                  value={filters.search}
+                  onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
+                />
+              </SearchContainer>
+            </FilterSection>
 
-          <RelativeFilterSection ref={baseModelRef}>
-            <FilterSectionTitle>Base Model</FilterSectionTitle>
-            <OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(prev => !prev)}>
-              <span>{selectedModelName}</span>
-              <DropdownArrow isOpen={isBaseModelOpen} />
-            </OptionListItem>
-            {isBaseModelOpen && (
-              <DropdownMenu>
-                <OptionList>
-                  <OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}>
-                    <span>All Models</span>
-                    <CheckmarkIcon />
-                  </OptionListItem>
-                  {isLoadingModels ? <Spinner /> : tunableModels?.map(model => (
-                    <OptionListItem
-                      key={model.id}
-                      isActive={filters.base_model_id === model.id}
-                      onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}
-                    >
-                      <span>{model.name}</span>
+            <RelativeFilterSection ref={baseModelRef}>
+              <FilterSectionTitle>Base Model</FilterSectionTitle>
+              <OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(prev => !prev)}>
+                <span>{selectedModelName}</span>
+                <DropdownArrow isOpen={isBaseModelOpen} />
+              </OptionListItem>
+              {isBaseModelOpen && (
+                <DropdownMenu>
+                  <OptionList>
+                    <OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}>
+                      <span>All Models</span>
                       <CheckmarkIcon />
                     </OptionListItem>
-                  ))}
-                </OptionList>
-              </DropdownMenu>
-            )}
-          </RelativeFilterSection>
-          
-          <FilterSection>
-            <FilterSectionTitle>Status</FilterSectionTitle>
-            <OptionList>
-              {STATUSES.map(status => (
-                <OptionListItem
-                  key={status}
-                  isActive={filters.status === status}
-                  onClick={() => setFilters(f => ({ ...f, status }))}
-                >
-                  <span>{status.replace('_', ' ')}</span>
-                  <CheckmarkIcon />
-                </OptionListItem>
-              ))}
-            </OptionList>
-          </FilterSection>
-
-          <FilterSection>
-            <FilterSectionTitle>Time Period</FilterSectionTitle>
-            <OptionList>
-              {Object.entries(TIME_PERIODS).map(([key, value]) => (
-                <React.Fragment key={key}>
-                  <OptionListItem isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}>
-                    <span>{value}</span>
+                    {isLoadingModels ? <Spinner /> : tunableModels?.map(model => (
+                      <OptionListItem
+                        key={model.id}
+                        isActive={filters.base_model_id === model.id}
+                        onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}
+                      >
+                        <span>{model.name}</span>
+                        <CheckmarkIcon />
+                      </OptionListItem>
+                    ))}
+                  </OptionList>
+                </DropdownMenu>
+              )}
+            </RelativeFilterSection>
+            
+            <FilterSection>
+              <FilterSectionTitle>Status</FilterSectionTitle>
+              <OptionList>
+                {STATUSES.map(status => (
+                  <OptionListItem
+                    key={status}
+                    isActive={filters.status === status}
+                    onClick={() => setFilters(f => ({ ...f, status }))}
+                  >
+                    <span>{status.replace('_', ' ')}</span>
                     <CheckmarkIcon />
                   </OptionListItem>
-                  {filters.time_period === 'custom' && key === 'custom' && (
-                    <CustomDateWrapper>
-                      <label htmlFor="start_date">From</label>
-                      <input type="date" id="start_date" value={customDates.start} onChange={e => setCustomDates(d => ({ ...d, start: e.target.value }))} />
-                      <label htmlFor="end_date">To</label>
-                      <input type="date" id="end_date" value={customDates.end} onChange={e => setCustomDates(d => ({ ...d, end: e.target.value }))} />
-                    </CustomDateWrapper>
-                  )}
-                </React.Fragment>
-              ))}
-            </OptionList>
-          </FilterSection>
-        </Sidebar>
-        <MainContent>
-          <h2>Fine-Tune Status Dashboard</h2>
-          
-          <DashboardGrid>
-             <Card>
-              <CardTitle>Jobs in Queue</CardTitle>
-              <CardValue>{trafficData?.messages_ready ?? <Spinner />}</CardValue>
-            </Card>
-            <Card>
-              <CardTitle>Jobs Running</CardTitle>
-              <CardValue>{trafficData?.messages_unacknowledged ?? <Spinner />}</CardValue>
-            </Card>
-          </DashboardGrid>
+                ))}
+              </OptionList>
+            </FilterSection>
 
-          {isLoading || isFetching ? <Spinner /> : (
-            <>
-              {requests.length > 0 ? (
-                <>
-                  <TableContainer>
-                    <TableWrapper>
-                      <Table>
-                        <thead>
-                          <tr>
-                            <th>Status</th>
-                            <th>New Model Name</th>
-                            <th>Base Model</th>
-                            <th>Clinician Type</th>
-                            <th>Task</th>
-                            <th>Submitted At</th>
-                            <th>Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {requests.map(req => (
-                            <tr key={req.id}>
-                              <td><StatusBadge status={req.status}>{req.status.replace('_', ' ')}</StatusBadge></td>
-                              <td>{req.name}</td>
-                              <td><Link to={`/ai-models/${req.ai_model.id}`}>{req.ai_model.name}</Link></td>
-                              <td>{req.clinician_type.name}</td>
-                              <td>{req.task}</td>
-                              <td>{new Date(req.created_at).toLocaleString()}</td>
-                              <td>
-                                {req.status === 'done' && req.new_ai_model_id && (
-                                  <ActionButton to={`/ai-models/${req.new_ai_model_id}`}>View Model</ActionButton>
-                                )}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </TableWrapper>
-                  </TableContainer>
-                  <PaginationControls>
-                    <button
-                      onClick={() => setApiParams(p => ({ ...p, page: p.page - 1 }))}
-                      disabled={!pagination.current_page || pagination.current_page === 1}
-                    >
-                      Previous
-                    </button>
-                    <button
-                      onClick={() => setApiParams(p => ({ ...p, page: p.page + 1 }))}
-                      disabled={!pagination.total_pages || pagination.current_page === pagination.total_pages}
-                    >
-                      Next
-                    </button>
-                  </PaginationControls>
-                </>
-              ) : (
-                <EmptyStateWrapper>
-                  <h3>{hasActiveFilters ? 'No Results Found' : 'No Tasks Submitted'}</h3>
-                  <p>
-                    {hasActiveFilters 
-                      ? 'Try adjusting your filters to find what you are looking for.' 
-                      : 'There are no fine-tuning tasks to display yet.'
-                    }
-                  </p>
-                </EmptyStateWrapper>
-              )}
-            </>
-          )}
-        </MainContent>
-      </PageLayout>
-    </div>
+            <FilterSection>
+              <FilterSectionTitle>Time Period</FilterSectionTitle>
+              <OptionList>
+                {Object.entries(TIME_PERIODS).map(([key, value]) => (
+                  <React.Fragment key={key}>
+                    <OptionListItem isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}>
+                      <span>{value}</span>
+                      <CheckmarkIcon />
+                    </OptionListItem>
+                    {filters.time_period === 'custom' && key === 'custom' && (
+                      <CustomDateWrapper>
+                        <label htmlFor="start_date">From</label>
+                        <input type="date" id="start_date" value={customDates.start} onChange={e => setCustomDates(d => ({ ...d, start: e.target.value }))} />
+                        <label htmlFor="end_date">To</label>
+                        <input type="date" id="end_date" value={customDates.end} onChange={e => setCustomDates(d => ({ ...d, end: e.target.value }))} />
+                      </CustomDateWrapper>
+                    )}
+                  </React.Fragment>
+                ))}
+              </OptionList>
+            </FilterSection>
+          </Sidebar>
+          <MainContent>
+            <h2>Fine-Tune Status Dashboard</h2>
+            
+            <DashboardGrid>
+              <Card>
+                <CardTitle>Jobs in Queue</CardTitle>
+                <CardValue>{trafficData?.messages_ready ?? <Spinner />}</CardValue>
+              </Card>
+              <Card>
+                <CardTitle>Jobs Running</CardTitle>
+                <CardValue>{trafficData?.messages_unacknowledged ?? <Spinner />}</CardValue>
+              </Card>
+            </DashboardGrid>
+
+            {isLoading || isFetching ? <Spinner /> : (
+              <>
+                {requests.length > 0 ? (
+                  <>
+                    <TaskList>
+                      {requests.map(req => (
+                        <TaskCard key={req.id} status={req.status}>
+                          <TaskCardHeader>
+                            <TaskCardTitle>{req.name}</TaskCardTitle>
+                            <StatusBadge status={req.status}>{req.status.replace('_', ' ')}</StatusBadge>
+                          </TaskCardHeader>
+                          <TaskCardBody>
+                            <MetaItem>
+                              <span>Base Model</span>
+                              {req.ai_model.name}
+                            </MetaItem>
+                            <MetaItem>
+                              <span>Clinician Type</span>
+                              {req.clinician_type.name}
+                            </MetaItem>
+                            <MetaItem>
+                              <span>Task</span>
+                              {req.task}
+                            </MetaItem>
+                             {req.status === 'failed' && req.error_message && (
+                                <MetaItem style={{ gridColumn: '1 / -1' }}>
+                                  <span>Error</span>
+                                  <ErrorBlock style={{ padding: '0.5rem', fontSize: '0.8rem' }}>{req.error_message}</ErrorBlock>
+                                </MetaItem>
+                             )}
+                          </TaskCardBody>
+                          <TaskCardFooter>
+                            <Timestamp>Submitted: {new Date(req.created_at).toLocaleString()}</Timestamp>
+                            <ActionGroup>
+                              <DetailsButton onClick={() => handleOpenModal(req)}>Details</DetailsButton>
+                              {req.status === 'done' && req.new_ai_model_id && (
+                                <ActionButton to={`/ai-models/${req.new_ai_model_id}`}>View Model</ActionButton>
+                              )}
+                            </ActionGroup>
+                          </TaskCardFooter>
+                        </TaskCard>
+                      ))}
+                    </TaskList>
+                    <PaginationControls>
+                      <button
+                        onClick={() => setApiParams(p => ({ ...p, page: p.page - 1 }))}
+                        disabled={!pagination.current_page || pagination.current_page === 1}
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => setApiParams(p => ({ ...p, page: p.page + 1 }))}
+                        disabled={!pagination.total_pages || pagination.current_page === pagination.total_pages}
+                      >
+                        Next
+                      </button>
+                    </PaginationControls>
+                  </>
+                ) : (
+                  <EmptyStateWrapper>
+                    <h3>{hasActiveFilters ? 'No Results Found' : 'No Tasks Submitted'}</h3>
+                    <p>
+                      {hasActiveFilters 
+                        ? 'Try adjusting your filters to find what you are looking for.' 
+                        : 'There are no fine-tuning tasks to display yet.'
+                      }
+                    </p>
+                  </EmptyStateWrapper>
+                )}
+              </>
+            )}
+          </MainContent>
+        </PageLayout>
+      </div>
+      {isModalOpen && selectedRequest && (
+        <RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} />
+      )}
+    </>
   );
 };
 
