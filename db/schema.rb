@@ -180,6 +180,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_28_140750) do
     t.string "task"
     t.bigint "new_ai_model_id"
     t.string "fine_tuning_notes"
+    t.text "error_message"
     t.index ["ai_model_id"], name: "index_model_fine_tune_requests_on_ai_model_id"
     t.index ["clinician_type_id"], name: "index_model_fine_tune_requests_on_clinician_type_id"
   end

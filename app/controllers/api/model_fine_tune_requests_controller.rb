@@ -95,6 +95,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
   def update_status
     status = params[:status]
     adapter_path = params[:adapter_path]
+    error_message = params[:error]
 
     if !@model_fine_tune_request.in_progress?
       render json: { error: "Request is not ready to update" }, status: :bad_request and return
@@ -106,7 +107,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       ai_model = create_ai_model(@model_fine_tune_request, adapter_path)
       @model_fine_tune_request.update(new_ai_model_id: ai_model.id)
     when "fail"
-      @model_fine_tune_request.failed!
+      @model_fine_tune_request.update(status: :failed, error_message: error_message)
     else
       render json: { error: "Invalid status" }, status: :unprocessable_entity and return
     end
