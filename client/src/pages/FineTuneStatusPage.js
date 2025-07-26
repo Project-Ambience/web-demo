@@ -222,15 +222,17 @@ const TaskCard = styled.div`
   border-left: 5px solid ${({ status }) => {
     switch (status) {
       case 'done': return '#2e7d32';
-      case 'failed': return '#c62828';
+      case 'failed':
+      case 'validation_failed': return '#c62828';
       case 'in_progress': return '#0277bd';
-      case 'queued': return '#5f6368';
+      case 'queued': return '#f57c00';
+      case 'validating': return '#1e88e5';
       case 'pending':
       default: return '#ced4da';
     }
   }};
   
-  ${({ status }) => status === 'failed' && css`
+  ${({ status }) => (status === 'failed' || status === 'validation_failed') && css`
     border-color: #c62828;
   `}
 `;
@@ -297,9 +299,11 @@ const StatusBadge = styled.span`
   background-color: ${({ status }) => {
     switch (status) {
       case 'done': return '#2e7d32';
-      case 'failed': return '#c62828';
+      case 'failed':
+      case 'validation_failed': return '#c62828';
       case 'in_progress': return '#0277bd';
-      case 'queued': return '#5f6368';
+      case 'queued': return '#f57c00';
+      case 'validating': return '#1e88e5';
       case 'pending': return '#fff';
       default: return '#5f6368';
     }
@@ -521,7 +525,7 @@ const RequestDetailsModal = ({ request, onClose }) => {
               <p>{new Date(request.created_at).toLocaleString()}</p>
             </DetailItem>
           </DetailGrid>
-
+          
           {request.error_message && (
             <DetailSection>
               <h4>Error Message</h4>
@@ -537,7 +541,7 @@ const RequestDetailsModal = ({ request, onClose }) => {
   );
 };
 
-const STATUSES = ['all', 'pending', 'queued', 'in_progress', 'done', 'failed'];
+const STATUSES = ['all', 'validating', 'queued', 'in_progress', 'done', 'validation_failed', 'failed'];
 const TIME_PERIODS = {
   all: 'All Time',
   day: 'Last 24 Hours',

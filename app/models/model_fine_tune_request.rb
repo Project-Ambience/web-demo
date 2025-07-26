@@ -7,10 +7,12 @@ class ModelFineTuneRequest < ApplicationRecord
 
   enum :status, {
     pending: 0,
-    queued: 1,
-    in_progress: 2,
-    done: 3,
-    failed: 4
+    validating: 1,
+    validation_failed: 2,
+    queued: 3,
+    in_progress: 4,
+    failed: 5,
+    done: 6
   }
 
   scope :by_status, ->(status) { where(status: status) if status.present? && status != "all" }
@@ -39,7 +41,7 @@ class ModelFineTuneRequest < ApplicationRecord
 
     begin
       MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
-      self.queued!
+      self.validating!
     rescue => e
       self.failed!
     end
