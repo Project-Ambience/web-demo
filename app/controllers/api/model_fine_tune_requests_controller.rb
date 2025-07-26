@@ -1,4 +1,6 @@
 class Api::ModelFineTuneRequestsController < Api::ApplicationController
+  before_action :set_fine_tune_request, only: [:start, :update_status]
+
   def index
     requests = ModelFineTuneRequest.includes(:ai_model, :clinician_type)
       .by_status(params[:status])
@@ -81,29 +83,30 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     render json: { error: model_fine_tune_request.errors.full_messages }, status: :bad_request
   end
 
+  def start
+    if @model_fine_tune_request.queued?
+      @model_fine_tune_request.in_progress!
+      render json: { message: "Status updated to in_progress" }, status: :ok
+    else
+      render json: { error: "Request is not in a queued state" }, status: :unprocessable_entity
+    end
+  end
+
   def update_status
-    request_id = params[:id]
     status = params[:status]
     adapter_path = params[:adapter_path]
 
-    model_fine_tune_request = ModelFineTuneRequest.find_by(id: request_id)
-
-    if model_fine_tune_request.nil?
-      render json: { error: "Record not found" }, status: :not_found and return
-    end
-
-    if !model_fine_tune_request.in_progress?
+    if !@model_fine_tune_request.in_progress?
       render json: { error: "Request is not ready to update" }, status: :bad_request and return
     end
 
     case status
     when "success"
-      model_fine_tune_request.done!
-      ai_model = create_ai_model(model_fine_tune_request, adapter_path)
-      model_fine_tune_request.update(new_ai_model_id: ai_model.id)
-      model_fine_tune_request.save!
+      @model_fine_tune_request.done!
+      ai_model = create_ai_model(@model_fine_tune_request, adapter_path)
+      @model_fine_tune_request.update(new_ai_model_id: ai_model.id)
     when "fail"
-      model_fine_tune_request.failed!
+      @model_fine_tune_request.failed!
     else
       render json: { error: "Invalid status" }, status: :unprocessable_entity and return
     end
@@ -113,8 +116,13 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
 
   private
 
+  def set_fine_tune_request
+    @model_fine_tune_request = ModelFineTuneRequest.find_by(id: params[:id])
+    render json: { error: "Record not found" }, status: :not_found unless @model_fine_tune_request
+  end
+
   def create_ai_model(model_fine_tune_request, adapter_path)
-    ai_model = AiModel.create!(
+    AiModel.create!(
       name: model_fine_tune_request.name,
       description: model_fine_tune_request.description,
       clinician_type_id: model_fine_tune_request.clinician_type_id,
@@ -127,7 +135,5 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       parameter_size: model_fine_tune_request.ai_model.parameter_size,
       fine_tuning_notes: model_fine_tune_request.fine_tuning_notes
     )
-
-    ai_model
   end
 end

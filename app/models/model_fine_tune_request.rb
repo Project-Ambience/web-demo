@@ -7,9 +7,10 @@ class ModelFineTuneRequest < ApplicationRecord
 
   enum :status, {
     pending: 0,
-    in_progress: 1,
-    done: 2,
-    failed: 3
+    queued: 1,
+    in_progress: 2,
+    done: 3,
+    failed: 4
   }
 
   scope :by_status, ->(status) { where(status: status) if status.present? && status != "all" }
@@ -36,11 +37,9 @@ class ModelFineTuneRequest < ApplicationRecord
       callback_url: ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"]
     }
 
-    # TODO: Add this to a job
-    # Add reason for failure
     begin
       MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
-      self.in_progress!
+      self.queued!
     rescue => e
       self.failed!
     end

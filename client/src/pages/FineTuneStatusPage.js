@@ -247,16 +247,22 @@ const StatusBadge = styled.span`
   font-weight: bold;
   text-transform: capitalize;
   white-space: nowrap;
-  color: #fff;
+  border: 1px solid transparent;
+
+  color: ${({ status }) => (status === 'pending' ? '#005eb8' : '#fff')};
+  
   background-color: ${({ status }) => {
     switch (status) {
       case 'done': return '#2e7d32';
       case 'failed': return '#c62828';
       case 'in_progress': return '#0277bd';
-      case 'pending':
+      case 'queued': return '#5f6368';
+      case 'pending': return '#fff';
       default: return '#5f6368';
     }
   }};
+  
+  border-color: ${({ status }) => (status === 'pending' ? '#005eb8' : 'transparent')};
 `;
 
 const ActionButton = styled(Link)`
@@ -304,7 +310,7 @@ const EmptyStateWrapper = styled.div`
   color: #4c6272;
 `;
 
-const STATUSES = ['all', 'pending', 'in_progress', 'done', 'failed'];
+const STATUSES = ['all', 'pending', 'queued', 'in_progress', 'done', 'failed'];
 const TIME_PERIODS = {
   all: 'All Time',
   day: 'Last 24 Hours',
