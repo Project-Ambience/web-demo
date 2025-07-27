@@ -12,7 +12,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
 
     render json: {
       requests: paginated_requests.as_json(
-        only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters],
+        only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data],
         methods: [ :status ],
         include: {
           ai_model: { only: [ :id, :name ] },
@@ -131,7 +131,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     }
     
     updated_request_json = request.as_json(
-      only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters],
+      only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data],
       methods: [ :status ],
       include: {
         ai_model: { only: [ :id, :name ] },

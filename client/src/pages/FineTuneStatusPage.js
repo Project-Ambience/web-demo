@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import styled, { css } from 'styled-components';
+import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
@@ -207,106 +207,75 @@ const CardValue = styled.div`
   color: #005eb8;
 `;
 
-const TaskList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-`;
-
-const TaskCard = styled.div`
+const TableWrapper = styled.div`
+  overflow-x: auto;
   background: #fff;
-  border-radius: 4px;
   border: 1px solid #e8edee;
-  border-left: 5px solid ${({ status }) => {
-    switch (status) {
-      case 'done': return '#2e7d32';
-      case 'failed':
-      case 'validation_failed': return '#c62828';
-      case 'in_progress': return '#0277bd';
-      case 'queued': return '#f57c00';
-      case 'validating': return '#1e88e5';
-      case 'pending':
-      default: return '#ced4da';
-    }
-  }};
-  
-  ${({ status }) => (status === 'failed' || status === 'validation_failed') && css`
-    border-color: #c62828;
-  `}
+  border-radius: 4px;
 `;
 
-const TaskCardHeader = styled.div`
-  padding: 1rem 1.5rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  border-bottom: 1px solid #e8edee;
-`;
-
-const TaskCardTitle = styled.h3`
-  margin: 0;
-  font-size: 1.25rem;
-  color: #2c3e50;
-`;
-
-const TaskCardBody = styled.div`
-  padding: 1rem 1.5rem;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1rem;
-`;
-
-const MetaItem = styled.div`
+const StyledTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.9rem;
-  span {
-    display: block;
-    color: #4c6272;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
+`;
+
+const Thead = styled.thead`
+  background-color: #f8f9fa;
+`;
+
+const Tbody = styled.tbody``;
+
+const Tr = styled.tr`
+  &:not(:last-child) {
+    border-bottom: 1px solid #e8edee;
   }
 `;
 
-const TaskCardFooter = styled.div`
-  padding: 1rem 1.5rem;
-  background-color: #f8f9fa;
-  border-top: 1px solid #e8edee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+const Th = styled.th`
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4c6272;
+  white-space: nowrap;
+  border-bottom: 2px solid #e8edee;
 `;
 
-const Timestamp = styled.time`
-  font-size: 0.85rem;
-  color: #5f6368;
-`;
+const Td = styled.td`
+  padding: 0.8rem 1rem;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: #2c3e50;
 
-const ActionGroup = styled.div`
-  display: flex;
-  gap: 0.75rem;
+  &.actions {
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+  }
 `;
 
 const StatusBadge = styled.span`
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
   font-weight: bold;
   text-transform: capitalize;
   white-space: nowrap;
-  border: 1px solid transparent;
-  color: ${({ status }) => (status === 'pending' ? '#005eb8' : '#fff')};
-  background-color: ${({ status }) => {
+  color: ${({ status }) => {
     switch (status) {
-      case 'done': return '#2e7d32';
+      case 'done':
+        return '#2e7d32'; // Success Green
       case 'failed':
-      case 'validation_failed': return '#c62828';
-      case 'in_progress': return '#0277bd';
-      case 'queued': return '#f57c00';
-      case 'validating': return '#1e88e5';
-      case 'pending': return '#fff';
-      default: return '#5f6368';
+      case 'validation_failed':
+        return '#c62828'; // Failure Red
+      case 'in_progress':
+        return '#005eb8'; // Active Blue
+      case 'pending':
+      case 'queued':
+      case 'validating':
+      default:
+        return '#5f6368'; // Neutral / Waiting Grey
     }
   }};
-  border-color: ${({ status }) => (status === 'pending' ? '#005eb8' : 'transparent')};
 `;
 
 const ActionButton = styled(Link)`
@@ -333,6 +302,19 @@ const DetailsButton = styled.button`
   cursor: pointer;
   &:hover {
     background-color: #e8edee;
+  }
+`;
+
+const DataViewButton = styled.a`
+  background-color: #e8edee;
+  color: #2c3e50;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  &:hover {
+    background-color: #dde3ea;
   }
 `;
 
@@ -484,16 +466,33 @@ const ErrorBlock = styled(CodeBlock)`
   color: #a4282a;
 `;
 
+const getStatusText = (status) => {
+    if (status === 'failed') {
+        return 'Fine-Tune Failed';
+    }
+    return status.replace(/_/g, ' ');
+};
+
 const RequestDetailsModal = ({ request, onClose }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
+
+  const parametersUri = `data:application/json;charset=utf-8,${encodeURIComponent(
+    JSON.stringify(request.parameters, null, 2)
+  )}`;
+
+  const datasetUri = request.fine_tune_data 
+    ? `data:application/json;charset=utf-8,${encodeURIComponent(
+        JSON.stringify(request.fine_tune_data, null, 2)
+      )}`
+    : null;
 
   return (
     <ModalOverlay>
       <ModalContent ref={modalRef}>
         <ModalHeader>
           <h3>{request.name}</h3>
-          <StatusBadge status={request.status}>{request.status.replace('_', ' ')}</StatusBadge>
+          <StatusBadge status={request.status}>{getStatusText(request.status)}</StatusBadge>
         </ModalHeader>
         <ModalBody>
           <DetailSection>
@@ -523,6 +522,20 @@ const RequestDetailsModal = ({ request, onClose }) => {
               <p>{new Date(request.created_at).toLocaleString()}</p>
             </DetailItem>
           </DetailGrid>
+
+          <DetailSection>
+            <h4>Data & Parameters</h4>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
+              {datasetUri && (
+                <DataViewButton href={datasetUri} target="_blank" rel="noopener noreferrer">
+                  View Dataset
+                </DataViewButton>
+              )}
+              <DataViewButton href={parametersUri} target="_blank" rel="noopener noreferrer">
+                View Parameters
+              </DataViewButton>
+            </div>
+          </DetailSection>
           
           {request.error_message && (
             <DetailSection>
@@ -771,45 +784,41 @@ const FineTuneStatusPage = () => {
               <>
                 {requests.length > 0 ? (
                   <>
-                    <TaskList>
-                      {requests.map(req => (
-                        <TaskCard key={req.id} status={req.status}>
-                          <TaskCardHeader>
-                            <TaskCardTitle>{req.name}</TaskCardTitle>
-                            <StatusBadge status={req.status}>{req.status.replace('_', ' ')}</StatusBadge>
-                          </TaskCardHeader>
-                          <TaskCardBody>
-                            <MetaItem>
-                              <span>Base Model</span>
-                              {req.ai_model.name}
-                            </MetaItem>
-                            <MetaItem>
-                              <span>Clinician Type</span>
-                              {req.clinician_type.name}
-                            </MetaItem>
-                            <MetaItem>
-                              <span>Task</span>
-                              {req.task}
-                            </MetaItem>
-                             {(req.status === 'failed' || req.status === 'validation_failed') && req.error_message && (
-                                <MetaItem style={{ gridColumn: '1 / -1' }}>
-                                  <span>Error</span>
-                                  <ErrorBlock style={{ padding: '0.5rem', fontSize: '0.8rem' }}>{req.error_message}</ErrorBlock>
-                                </MetaItem>
-                             )}
-                          </TaskCardBody>
-                          <TaskCardFooter>
-                            <Timestamp>Submitted: {new Date(req.created_at).toLocaleString()}</Timestamp>
-                            <ActionGroup>
-                              <DetailsButton onClick={() => handleOpenModal(req)}>Details</DetailsButton>
-                              {req.status === 'done' && req.new_ai_model_id && (
-                                <ActionButton to={`/ai-models/${req.new_ai_model_id}`}>View Model</ActionButton>
-                              )}
-                            </ActionGroup>
-                          </TaskCardFooter>
-                        </TaskCard>
-                      ))}
-                    </TaskList>
+                    <TableWrapper>
+                        <StyledTable>
+                            <Thead>
+                                <Tr>
+                                    <Th>New Model Name</Th>
+                                    <Th>Status</Th>
+                                    <Th>Base Model</Th>
+                                    <Th>Task</Th>
+                                    <Th>Submitted</Th>
+                                    <Th></Th>
+                                </Tr>
+                            </Thead>
+                            <Tbody>
+                                {requests.map(req => (
+                                    <Tr key={req.id}>
+                                        <Td><strong>{req.name}</strong></Td>
+                                        <Td>
+                                          <StatusBadge status={req.status}>
+                                            {getStatusText(req.status)}
+                                          </StatusBadge>
+                                        </Td>
+                                        <Td>{req.ai_model.name}</Td>
+                                        <Td>{req.task}</Td>
+                                        <Td>{new Date(req.created_at).toLocaleString()}</Td>
+                                        <Td className="actions">
+                                            <DetailsButton onClick={() => handleOpenModal(req)}>Details</DetailsButton>
+                                            {req.status === 'done' && req.new_ai_model_id && (
+                                                <ActionButton to={`/ai-models/${req.new_ai_model_id}`}>View Model</ActionButton>
+                                            )}
+                                        </Td>
+                                    </Tr>
+                                ))}
+                            </Tbody>
+                        </StyledTable>
+                    </TableWrapper>
                     <PaginationControls>
                       <button
                         onClick={() => setApiParams(p => ({ ...p, page: p.page - 1 }))}
