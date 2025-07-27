@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import { useParams, Link } from 'react-router-dom';
 import { 
@@ -266,6 +266,15 @@ const FineTunePage = () => {
   const [fileError, setFileError] = useState('');
   const [showQueueWarning, setShowQueueWarning] = useState(false);
 
+  const calculatedStats = useMemo(() => {
+    const waitingToStart = (stats?.waiting_for_validation ?? 0) + 
+                           (stats?.validating ?? 0) + 
+                           (stats?.waiting_for_fine_tune ?? 0);
+    const currentlyRunning = stats?.fine_tuning ?? 0;
+    return { waitingToStart, currentlyRunning };
+  }, [stats]);
+
+
   const handleSubmit = (e) => {
     e.preventDefault();
   
@@ -286,7 +295,7 @@ const FineTunePage = () => {
       fileName: file.name,
     });
   
-    if (stats?.queued > 5) {
+    if (calculatedStats.waitingToStart > 5) {
       setShowQueueWarning(true);
     } else {
       setShowConfirmModal(true);
@@ -416,61 +425,6 @@ const FineTunePage = () => {
               </PrimaryButton>
             </form>
           </Section>
-  
-          <Section>
-            <h3>History</h3>
-            <div
-              style={{
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                overflow: 'hidden',
-              }}
-            >
-              {model.model_fine_tune_requests?.length > 0 ? (
-                model.model_fine_tune_requests.map((request, index) => (
-                  <div
-                    key={request.id || index}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '1rem',
-                      borderBottom:
-                        index !== model.model_fine_tune_requests.length - 1
-                          ? '1px solid #ccc'
-                          : 'none',
-                      backgroundColor: '#fff',
-                    }}
-                  >
-                    <div>
-                      <strong>Model name:</strong> {request.name}
-                      <br />
-                      <strong>Status:</strong> {request.status}
-                      <br />
-                      <strong>Task:</strong> {request.task}
-                      <br />
-                      <strong>Created at:</strong> {request.created_at}
-                    </div>
-                    <div>
-                      {request.status === 'done' && (
-                        <Link
-                          to={`/ai-models/${request.new_ai_model_id}`}
-                          style={{
-                            color: '#005eb8',
-                            fontWeight: 'normal',
-                            fontSize: '0.95rem',
-                          }}
-                        >
-                          Visit model
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p style={{ padding: '1rem' }}>No fine-tune requests submitted yet.</p>
-              )}
-            </div>
-          </Section>
         </MainContent>
   
         <Sidebar>
@@ -506,7 +460,7 @@ const FineTunePage = () => {
                 }}
                 required
               />
-              <Tooltip>Max 1 file, 50MB</Tooltip>
+              <Tooltip>Max 1 file, 100MB</Tooltip>
               {fileError && <ErrorTooltip>{fileError}</ErrorTooltip>}
             </FileInputWrapper>
 
@@ -543,10 +497,10 @@ const FineTunePage = () => {
                 fontSize: '0.95rem',
               }}>
                 <p>
-                  <strong>Waiting to Start:</strong> {stats?.queued ?? 0}
+                  <strong>Waiting to Start:</strong> {calculatedStats.waitingToStart}
                 </p>
                 <p>
-                  <strong>Currently Running:</strong> {stats?.in_progress ?? 0}
+                  <strong>Currently Running:</strong> {calculatedStats.currentlyRunning}
                 </p>
               </div>
           </Section>
@@ -593,7 +547,7 @@ const FineTunePage = () => {
           <ModalBox>
             <ModalTitle>High Queue Notice</ModalTitle>
             <p>
-              There are currently <strong>{stats?.queued ?? 0}</strong> fine-tune requests waiting to be processed.
+              There are currently <strong>{calculatedStats.waitingToStart}</strong> fine-tune requests waiting to be processed.
               Your request will be added to the queue and may take longer than usual.
             </p>
             <p>Do you still want to continue?</p>

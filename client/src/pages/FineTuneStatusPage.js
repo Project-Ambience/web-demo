@@ -811,8 +811,7 @@ const FineTuneStatusPage = () => {
                                                   target="_blank"
                                                   rel="noopener noreferrer"
                                                 >View Model</ActionButton>
-
-					    )}
+                                            )}
                                         </Td>
                                     </Tr>
                                 ))}

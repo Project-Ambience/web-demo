@@ -28,6 +28,17 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       }
     }
   end
+  
+  def statistics
+    counts = ModelFineTuneRequest.group(:status).count
+    
+    render json: {
+      waiting_for_validation: counts["waiting_for_validation"] || 0,
+      validating: counts["validating"] || 0,
+      waiting_for_fine_tune: counts["waiting_for_fine_tune"] || 0,
+      fine_tuning: counts["fine_tuning"] || 0,
+    }
+  end
 
   def create
     required_params = %i[name description fine_tune_task_id clinician_type_id file]
