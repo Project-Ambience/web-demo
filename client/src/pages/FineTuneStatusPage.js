@@ -6,6 +6,16 @@ import { createConsumer } from '@rails/actioncable';
 import { apiSlice, useGetFineTuneRequestsQuery, useGetTunableModelsQuery } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
+const SortArrowIcon = ({ direction }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+       style={{ 
+         transition: 'transform 0.2s ease-in-out',
+         transform: direction === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)' 
+       }}>
+    <path d="M12 5V19M12 19L18 13M12 19L6 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
 const CheckmarkIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M9.00016 16.1698L4.83016 11.9998L3.41016 13.4098L9.00016 18.9998L21.0002 6.99984L19.5902 5.58984L9.00016 16.1698Z" fill="#005eb8"/>
@@ -13,7 +23,7 @@ const CheckmarkIcon = () => (
 );
 
 const DropdownArrow = ({ isOpen }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease-in-out' }}>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease-in-out' }}>
     <path d="M7 10l5 5 5-5z" />
   </svg>
 );
@@ -41,7 +51,7 @@ const useOnClickOutside = (ref, handler) => {
 
 const PageLayout = styled.div`
   display: grid;
-  grid-template-columns: 260px 1fr;
+  grid-template-columns: 240px 1fr;
   gap: 2rem;
   height: 100%;
   width: 100%;
@@ -71,10 +81,6 @@ const FilterSection = styled.div`
   &:last-of-type {
     border-bottom: none;
   }
-`;
-
-const RelativeFilterSection = styled(FilterSection)`
-  position: relative;
 `;
 
 const FilterSectionTitle = styled.h4`
@@ -118,9 +124,7 @@ const OptionList = styled.ul`
 const OptionListItem = styled.li`
   padding: 0.75rem 1.5rem;
   cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  position: relative;
   font-weight: ${({ isActive }) => (isActive ? '600' : 'normal')};
   color: ${({ isActive }) => (isActive ? '#005eb8' : '#4c6272')};
   background-color: ${({ isActive }) => (isActive ? '#eaf1f8' : 'transparent')};
@@ -131,17 +135,13 @@ const OptionListItem = styled.li`
   &:hover {
     background-color: #e8edee;
   }
-
-  svg {
-    visibility: ${({ isActive }) => (isActive ? 'visible' : 'hidden')};
-  }
 `;
 
 const DropdownMenu = styled.div`
   position: absolute;
   top: calc(100% + 4px);
   left: 0;
-  width: 100%;
+  right: 0;
   background-color: #f8f9fa;
   border: 1px solid #ced4da;
   border-radius: 4px;
@@ -226,6 +226,20 @@ const Td = styled.td`
     justify-content: flex-end;
     align-items: center;
     gap: 0.75rem;
+  }
+`;
+
+const SortHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+  color: inherit;
+  
+  &:hover {
+    color: #005eb8;
   }
 `;
 
@@ -442,6 +456,16 @@ const ErrorBlock = styled(CodeBlock)`
   color: #a4282a;
 `;
 
+const IconWrapper = styled.div`
+  visibility: ${({ isVisible }) => (isVisible ? 'visible' : 'hidden')};
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+`;
+
 const getStatusText = (status) => {
     switch(status) {
         case 'failed':
@@ -546,11 +570,6 @@ const STATUSES = [
     { label: 'Failed', value: 'validation_failed,failed' },
 ];
 
-const SORT_ORDERS = [
-    { label: 'Newest to Oldest', value: 'desc' },
-    { label: 'Oldest to Newest', value: 'asc' },
-];
-
 const TIME_PERIODS = {
   all: 'All Time',
   day: 'Last 24 Hours',
@@ -619,7 +638,6 @@ const FineTuneStatusPage = () => {
 
     const channelHandlers = {
       received: (data) => {
-        console.log('Received real-time update for fine-tune status:', data);
         dispatch(
           apiSlice.util.updateQueryData('getFineTuneRequests', apiParams, (draft) => {
             if (!draft || !draft.requests) return;
@@ -633,17 +651,14 @@ const FineTuneStatusPage = () => {
         );
       },
       connected: () => {
-        console.log("Connected to FineTuneStatusChannel");
       },
       disconnected: () => {
-        console.log("Disconnected from FineTuneStatusChannel");
       }
     };
 
     const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
 
     return () => {
-      console.log("Unsubscribing from FineTuneStatusChannel");
       subscription.unsubscribe();
     };
   }, [dispatch, apiParams]);
@@ -667,6 +682,14 @@ const FineTuneStatusPage = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedRequest(null);
+  };
+
+  const handleTimePeriodClick = (key) => {
+    setFilters(prev => ({ ...prev, time_period: key, sort_order: 'desc' }));
+  };
+
+  const handleSortClick = () => {
+    setFilters(prev => ({ ...prev, sort_order: prev.sort_order === 'desc' ? 'asc' : 'desc' }));
   };
 
   return (
@@ -694,33 +717,43 @@ const FineTuneStatusPage = () => {
                 />
               </SearchContainer>
             </FilterSection>
-            <RelativeFilterSection ref={baseModelRef}>
+            <FilterSection ref={baseModelRef}>
               <FilterSectionTitle>Base Model</FilterSectionTitle>
-              <OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(prev => !prev)}>
-                <span>{selectedModelName}</span>
-                <DropdownArrow isOpen={isBaseModelOpen} />
-              </OptionListItem>
-              {isBaseModelOpen && (
-                <DropdownMenu>
-                  <OptionList>
-                    <OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}>
-                      <span>All Models</span>
-                      <CheckmarkIcon />
-                    </OptionListItem>
-                    {isLoadingModels ? <Spinner /> : tunableModels?.map(model => (
-                      <OptionListItem
-                        key={model.id}
-                        isActive={filters.base_model_id === model.id}
-                        onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}
-                      >
-                        <span>{model.name}</span>
-                        <CheckmarkIcon />
+              <div style={{ position: 'relative' }}>
+                <OptionList>
+                  <OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(prev => !prev)}>
+                    <span>{selectedModelName}</span>
+                    <IconWrapper isVisible={true}>
+                      <DropdownArrow isOpen={isBaseModelOpen} />
+                    </IconWrapper>
+                  </OptionListItem>
+                </OptionList>
+                {isBaseModelOpen && (
+                  <DropdownMenu>
+                    <OptionList>
+                      <OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}>
+                        <span>All Models</span>
+                        <IconWrapper isVisible={!filters.base_model_id}>
+                          <CheckmarkIcon />
+                        </IconWrapper>
                       </OptionListItem>
-                    ))}
-                  </OptionList>
-                </DropdownMenu>
-              )}
-            </RelativeFilterSection>
+                      {isLoadingModels ? <Spinner /> : tunableModels?.map(model => (
+                        <OptionListItem
+                          key={model.id}
+                          isActive={filters.base_model_id === model.id}
+                          onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}
+                        >
+                          <span>{model.name}</span>
+                           <IconWrapper isVisible={filters.base_model_id === model.id}>
+                            <CheckmarkIcon />
+                          </IconWrapper>
+                        </OptionListItem>
+                      ))}
+                    </OptionList>
+                  </DropdownMenu>
+                )}
+              </div>
+            </FilterSection>
             <FilterSection>
               <FilterSectionTitle>Status</FilterSectionTitle>
               <OptionList>
@@ -731,22 +764,9 @@ const FineTuneStatusPage = () => {
                     onClick={() => setFilters(f => ({ ...f, status: status.value }))}
                   >
                     <span>{status.label}</span>
-                    <CheckmarkIcon />
-                  </OptionListItem>
-                ))}
-              </OptionList>
-            </FilterSection>
-             <FilterSection>
-              <FilterSectionTitle>Sort By</FilterSectionTitle>
-              <OptionList>
-                {SORT_ORDERS.map(order => (
-                  <OptionListItem
-                    key={order.value}
-                    isActive={filters.sort_order === order.value}
-                    onClick={() => setFilters(f => ({ ...f, sort_order: order.value }))}
-                  >
-                    <span>{order.label}</span>
-                    <CheckmarkIcon />
+                    <IconWrapper isVisible={filters.status === status.value}>
+                        <CheckmarkIcon />
+                    </IconWrapper>
                   </OptionListItem>
                 ))}
               </OptionList>
@@ -756,9 +776,11 @@ const FineTuneStatusPage = () => {
               <OptionList>
                 {Object.entries(TIME_PERIODS).map(([key, value]) => (
                   <React.Fragment key={key}>
-                    <OptionListItem isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}>
+                    <OptionListItem isActive={filters.time_period === key} onClick={() => handleTimePeriodClick(key)}>
                       <span>{value}</span>
-                      <CheckmarkIcon />
+                      <IconWrapper isVisible={filters.time_period === key}>
+                        <CheckmarkIcon />
+                      </IconWrapper>
                     </OptionListItem>
                     {filters.time_period === 'custom' && key === 'custom' && (
                       <CustomDateWrapper>
@@ -787,7 +809,12 @@ const FineTuneStatusPage = () => {
                                     <Th>Status</Th>
                                     <Th>Base Model</Th>
                                     <Th>Task</Th>
-                                    <Th>Submitted</Th>
+                                    <Th>
+                                      <SortHeader onClick={handleSortClick}>
+                                        <span>Submitted Time</span>
+                                        <SortArrowIcon direction={filters.sort_order} />
+                                      </SortHeader>
+                                    </Th>
                                     <Th></Th>
                                 </Tr>
                             </Thead>
