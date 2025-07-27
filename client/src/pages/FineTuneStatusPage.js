@@ -3,7 +3,7 @@ import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
-import { apiSlice, useGetFineTuneRequestsQuery, useGetFineTuneStatisticsQuery, useGetTunableModelsQuery } from '../app/apiSlice';
+import { apiSlice, useGetFineTuneRequestsQuery, useGetTunableModelsQuery } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
 const CheckmarkIcon = () => (
@@ -180,33 +180,6 @@ const MainContent = styled.main`
   gap: 2rem;
 `;
 
-const DashboardGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 1.5rem;
-`;
-
-const Card = styled.div`
-  background: #fff;
-  border: 1px solid #e8edee;
-  border-radius: 4px;
-  padding: 1.5rem;
-  text-align: center;
-`;
-
-const CardTitle = styled.h4`
-  margin: 0 0 0.5rem 0;
-  color: #4c6272;
-  font-size: 1rem;
-`;
-
-const CardValue = styled.div`
-  margin: 0;
-  font-size: 2rem;
-  font-weight: bold;
-  color: #005eb8;
-`;
-
 const TableWrapper = styled.div`
   overflow-x: auto;
   background: #fff;
@@ -256,29 +229,30 @@ const Td = styled.td`
   }
 `;
 
-const StatusBadge = styled.span`
+const StatusText = styled.span`
   font-weight: bold;
   text-transform: capitalize;
   white-space: nowrap;
   color: ${({ status }) => {
     switch (status) {
       case 'done':
-        return '#2e7d32'; // Success Green
+        return '#2e7d32';
       case 'failed':
       case 'validation_failed':
-        return '#c62828'; // Failure Red
-      case 'in_progress':
-        return '#005eb8'; // Active Blue
-      case 'pending':
-      case 'queued':
+        return '#c62828';
+      case 'fine_tuning':
       case 'validating':
+        return '#005eb8';
+      case 'pending':
+      case 'waiting_for_validation':
+      case 'waiting_for_fine_tune':
       default:
-        return '#5f6368'; // Neutral / Waiting Grey
+        return '#5f6368';
     }
   }};
 `;
 
-const ActionButton = styled(Link)`
+const ActionButton = styled.a`
   background-color: #005eb8;
   color: white;
   padding: 0.4rem 0.8rem;
@@ -305,7 +279,7 @@ const DetailsButton = styled.button`
   }
 `;
 
-const DataViewButton = styled.a`
+const DataViewButton = styled.button`
   background-color: #e8edee;
   color: #2c3e50;
   padding: 0.4rem 0.8rem;
@@ -313,6 +287,8 @@ const DataViewButton = styled.a`
   text-decoration: none;
   font-weight: 600;
   font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
   &:hover {
     background-color: #dde3ea;
   }
@@ -467,32 +443,42 @@ const ErrorBlock = styled(CodeBlock)`
 `;
 
 const getStatusText = (status) => {
-    if (status === 'failed') {
-        return 'Fine-Tune Failed';
+    switch(status) {
+        case 'failed':
+            return 'Fine-Tune Failed';
+        case 'waiting_for_validation':
+            return 'Waiting for Validation';
+        case 'waiting_for_fine_tune':
+            return 'Waiting for Fine Tune';
+        case 'validation':
+             return 'Validation';
+        case 'fine_tune':
+            return 'Fine Tune'
+        default:
+            return status.replace(/_/g, ' ');
     }
-    return status.replace(/_/g, ' ');
 };
 
 const RequestDetailsModal = ({ request, onClose }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
 
-  const parametersUri = `data:application/json;charset=utf-8,${encodeURIComponent(
-    JSON.stringify(request.parameters, null, 2)
-  )}`;
-
-  const datasetUri = request.fine_tune_data 
-    ? `data:application/json;charset=utf-8,${encodeURIComponent(
-        JSON.stringify(request.fine_tune_data, null, 2)
-      )}`
-    : null;
+  const openJsonInNewTab = (jsonData) => {
+    const newWindow = window.open("", "_blank");
+    if (newWindow) {
+      newWindow.document.write('<pre>' + JSON.stringify(jsonData, null, 2) + '</pre>');
+      newWindow.document.close();
+    } else {
+      alert("Please allow pop-ups for this site to view the data.");
+    }
+  };
 
   return (
     <ModalOverlay>
       <ModalContent ref={modalRef}>
         <ModalHeader>
           <h3>{request.name}</h3>
-          <StatusBadge status={request.status}>{getStatusText(request.status)}</StatusBadge>
+          <StatusText status={request.status}>{getStatusText(request.status)}</StatusText>
         </ModalHeader>
         <ModalBody>
           <DetailSection>
@@ -526,12 +512,12 @@ const RequestDetailsModal = ({ request, onClose }) => {
           <DetailSection>
             <h4>Data & Parameters</h4>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-              {datasetUri && (
-                <DataViewButton href={datasetUri} target="_blank" rel="noopener noreferrer">
+              {request.fine_tune_data && (
+                <DataViewButton onClick={() => openJsonInNewTab(request.fine_tune_data)}>
                   View Dataset
                 </DataViewButton>
               )}
-              <DataViewButton href={parametersUri} target="_blank" rel="noopener noreferrer">
+              <DataViewButton onClick={() => openJsonInNewTab(request.parameters)}>
                 View Parameters
               </DataViewButton>
             </div>
@@ -552,7 +538,19 @@ const RequestDetailsModal = ({ request, onClose }) => {
   );
 };
 
-const STATUSES = ['all', 'validating', 'queued', 'in_progress', 'done', 'validation_failed', 'failed'];
+const STATUSES = [
+    { label: 'All', value: 'all' },
+    { label: 'Validation', value: 'waiting_for_validation,validating' },
+    { label: 'Fine Tune', value: 'waiting_for_fine_tune,fine_tuning' },
+    { label: 'Done', value: 'done' },
+    { label: 'Failed', value: 'validation_failed,failed' },
+];
+
+const SORT_ORDERS = [
+    { label: 'Newest to Oldest', value: 'desc' },
+    { label: 'Oldest to Newest', value: 'asc' },
+];
+
 const TIME_PERIODS = {
   all: 'All Time',
   day: 'Last 24 Hours',
@@ -566,6 +564,7 @@ const INITIAL_FILTERS = {
   base_model_id: '',
   time_period: 'all',
   status: 'all',
+  sort_order: 'desc',
 };
 
 const FineTuneStatusPage = () => {
@@ -580,7 +579,6 @@ const FineTuneStatusPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
 
-  const { data: stats, isLoading: isLoadingStats } = useGetFineTuneStatisticsQuery();
   const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
 
   useEffect(() => {
@@ -588,7 +586,8 @@ const FineTuneStatusPage = () => {
       page: 1,
       search: filters.search,
       base_model_id: filters.base_model_id,
-      status: filters.status
+      status: filters.status,
+      sort_order: filters.sort_order,
     };
     const now = new Date();
     switch (filters.time_period) {
@@ -621,11 +620,6 @@ const FineTuneStatusPage = () => {
     const channelHandlers = {
       received: (data) => {
         console.log('Received real-time update for fine-tune status:', data);
-        dispatch(
-          apiSlice.util.updateQueryData('getFineTuneStatistics', undefined, (draft) => {
-            Object.assign(draft, data.statistics);
-          })
-        );
         dispatch(
           apiSlice.util.updateQueryData('getFineTuneRequests', apiParams, (draft) => {
             if (!draft || !draft.requests) return;
@@ -732,11 +726,26 @@ const FineTuneStatusPage = () => {
               <OptionList>
                 {STATUSES.map(status => (
                   <OptionListItem
-                    key={status}
-                    isActive={filters.status === status}
-                    onClick={() => setFilters(f => ({ ...f, status }))}
+                    key={status.value}
+                    isActive={filters.status === status.value}
+                    onClick={() => setFilters(f => ({ ...f, status: status.value }))}
                   >
-                    <span>{status.replace('_', ' ')}</span>
+                    <span>{status.label}</span>
+                    <CheckmarkIcon />
+                  </OptionListItem>
+                ))}
+              </OptionList>
+            </FilterSection>
+             <FilterSection>
+              <FilterSectionTitle>Sort By</FilterSectionTitle>
+              <OptionList>
+                {SORT_ORDERS.map(order => (
+                  <OptionListItem
+                    key={order.value}
+                    isActive={filters.sort_order === order.value}
+                    onClick={() => setFilters(f => ({ ...f, sort_order: order.value }))}
+                  >
+                    <span>{order.label}</span>
                     <CheckmarkIcon />
                   </OptionListItem>
                 ))}
@@ -766,20 +775,6 @@ const FineTuneStatusPage = () => {
           </Sidebar>
           <MainContent>
             <h2>Fine-Tune Status Dashboard</h2>
-            <DashboardGrid>
-              <Card>
-                <CardTitle>Validating</CardTitle>
-                <CardValue>{isLoadingStats ? <Spinner /> : stats?.validating ?? 0}</CardValue>
-              </Card>
-              <Card>
-                <CardTitle>Queued</CardTitle>
-                <CardValue>{isLoadingStats ? <Spinner /> : stats?.queued ?? 0}</CardValue>
-              </Card>
-              <Card>
-                <CardTitle>In Progress</CardTitle>
-                <CardValue>{isLoadingStats ? <Spinner /> : stats?.in_progress ?? 0}</CardValue>
-              </Card>
-            </DashboardGrid>
             {isLoading || isFetching ? <Spinner /> : (
               <>
                 {requests.length > 0 ? (
@@ -801,9 +796,9 @@ const FineTuneStatusPage = () => {
                                     <Tr key={req.id}>
                                         <Td><strong>{req.name}</strong></Td>
                                         <Td>
-                                          <StatusBadge status={req.status}>
+                                          <StatusText status={req.status}>
                                             {getStatusText(req.status)}
-                                          </StatusBadge>
+                                          </StatusText>
                                         </Td>
                                         <Td>{req.ai_model.name}</Td>
                                         <Td>{req.task}</Td>
@@ -811,8 +806,13 @@ const FineTuneStatusPage = () => {
                                         <Td className="actions">
                                             <DetailsButton onClick={() => handleOpenModal(req)}>Details</DetailsButton>
                                             {req.status === 'done' && req.new_ai_model_id && (
-                                                <ActionButton to={`/ai-models/${req.new_ai_model_id}`}>View Model</ActionButton>
-                                            )}
+                                                <ActionButton
+                                                  href={`/ai-models/${req.new_ai_model_id}`}
+                                                  target="_blank"
+                                                  rel="noopener noreferrer"
+                                                >View Model</ActionButton>
+
+					    )}
                                         </Td>
                                     </Tr>
                                 ))}

@@ -2,7 +2,8 @@
 
 # This script simulates a fine-tuning worker. It connects to RabbitMQ,
 # consumes 6 messages from the fine-tuning queue, and updates their status
-# via the callback URL to simulate a full lifecycle for each request.
+# via the callback URL to simulate a full lifecycle for each request according
+# to the new, more granular workflow.
 #
 # Usage:
 # 1. Ensure your Rails server is running.
@@ -72,58 +73,64 @@ class FineTuneSimulator
 
     case request_number
     when 1
-      simulate_success(request_id, callback_url)
+      simulate_done(request_id, callback_url)
     when 2
-      simulate_failure(request_id, callback_url)
+      simulate_failed(request_id, callback_url)
     when 3
-      simulate_in_progress(request_id, callback_url)
+      simulate_fine_tuning(request_id, callback_url)
     when 4
-      simulate_queued(request_id, callback_url)
+      simulate_waiting_for_fine_tune(request_id, callback_url)
     when 5
       simulate_validation_failed(request_id, callback_url)
     when 6
-      simulate_validating(request_id)
+      simulate_validating(request_id, callback_url)
     end
   end
 
-  def simulate_success(id, url)
-    puts "  -> Simulating a SUCCESSFUL job."
+  def simulate_done(id, url)
+    puts "  -> Simulating a DONE job."
+    update_status(id, url, 'validation_started')
     update_status(id, url, 'validation_succeeded')
     update_status(id, url, 'processing_started')
     update_status(id, url, 'success', adapter_path: "simulated/path/to/adapter/#{id}")
-    puts "  -> Status: DONE"
+    puts "  -> Final Status: DONE"
   end
 
-  def simulate_failure(id, url)
-    puts "  -> Simulating a FAILED job."
+  def simulate_failed(id, url)
+    puts "  -> Simulating a FAILED (Fine-Tune) job."
+    update_status(id, url, 'validation_started')
     update_status(id, url, 'validation_succeeded')
     update_status(id, url, 'processing_started')
     update_status(id, url, 'fail', error: "Simulation: Inference process ran out of memory during training.")
-    puts "  -> Status: FAILED"
+    puts "  -> Final Status: FAILED"
   end
-
-  def simulate_in_progress(id, url)
-    puts "  -> Simulating an IN PROGRESS job."
+  
+  def simulate_fine_tuning(id, url)
+    puts "  -> Simulating a FINE TUNING job."
+    update_status(id, url, 'validation_started')
     update_status(id, url, 'validation_succeeded')
     update_status(id, url, 'processing_started')
-    puts "  -> Status: IN PROGRESS"
+    puts "  -> Final Status: FINE TUNING"
   end
 
-  def simulate_queued(id, url)
-    puts "  -> Simulating a QUEUED job."
+  def simulate_waiting_for_fine_tune(id, url)
+    puts "  -> Simulating a WAITING FOR FINE TUNE job."
+    update_status(id, url, 'validation_started')
     update_status(id, url, 'validation_succeeded')
-    puts "  -> Status: QUEUED"
+    puts "  -> Final Status: WAITING FOR FINE TUNE"
   end
 
   def simulate_validation_failed(id, url)
     puts "  -> Simulating a VALIDATION FAILED job."
+    update_status(id, url, 'validation_started')
     update_status(id, url, 'validation_failed', error: "Simulation: Dataset format mismatch. Expected 'input' and 'output' keys.")
-    puts "  -> Status: VALIDATION FAILED"
+    puts "  -> Final Status: VALIDATION FAILED"
   end
 
-  def simulate_validating(id)
-    puts "  -> Simulating a VALIDATING job (no callback)."
-    puts "  -> Status: VALIDATING"
+  def simulate_validating(id, url)
+    puts "  -> Simulating a VALIDATING job."
+    update_status(id, url, 'validation_started')
+    puts "  -> Final Status: VALIDATING"
   end
 
   def update_status(id, url, status, details = {})

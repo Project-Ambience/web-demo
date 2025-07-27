@@ -1,12 +1,14 @@
 class Api::ModelFineTuneRequestsController < Api::ApplicationController
   def index
+    sort_order = params[:sort_order] == 'asc' ? :asc : :desc
+
     requests = ModelFineTuneRequest.includes(:ai_model, :clinician_type)
       .by_status(params[:status])
       .by_base_model(params[:base_model_id])
       .created_after(params[:start_date])
       .created_before(params[:end_date])
       .search_by_name(params[:search])
-      .order(created_at: :desc)
+      .order(created_at: sort_order)
 
     paginated_requests = requests.page(params[:page]).per(20)
 
@@ -24,16 +26,6 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
         total_pages: paginated_requests.total_pages,
         total_count: paginated_requests.total_count
       }
-    }
-  end
-  
-  def statistics
-    counts = ModelFineTuneRequest.group(:status).count
-    
-    render json: {
-      validating: counts["validating"] || 0,
-      queued: counts["queued"] || 0,
-      in_progress: counts["in_progress"] || 0,
     }
   end
 
@@ -98,20 +90,22 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     return render json: { error: "Record not found" }, status: :not_found unless request
 
     case params[:status]
+    when "validation_started"
+      request.validating! if request.waiting_for_validation?
     when "validation_succeeded"
-      request.queued! if request.validating?
+      request.waiting_for_fine_tune! if request.validating?
     when "validation_failed"
       request.update(status: :validation_failed, error_message: params[:error]) if request.validating?
     when "processing_started"
-      request.in_progress! if request.queued?
+      request.fine_tuning! if request.waiting_for_fine_tune?
     when "success"
-      if request.in_progress?
+      if request.fine_tuning?
         request.done!
         ai_model = create_ai_model(request, params[:adapter_path])
         request.update(new_ai_model_id: ai_model.id)
       end
     when "fail"
-      request.update(status: :failed, error_message: params[:error]) if request.in_progress?
+      request.update(status: :failed, error_message: params[:error]) if request.fine_tuning?
     else
       return render json: { error: "Invalid status" }, status: :unprocessable_entity
     end
@@ -125,9 +119,10 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
   def broadcast_status_update(request)
     counts = ModelFineTuneRequest.group(:status).count
     statistics = {
+      waiting_for_validation: counts["waiting_for_validation"] || 0,
       validating: counts["validating"] || 0,
-      queued: counts["queued"] || 0,
-      in_progress: counts["in_progress"] || 0,
+      waiting_for_fine_tune: counts["waiting_for_fine_tune"] || 0,
+      fine_tuning: counts["fine_tuning"] || 0,
     }
     
     updated_request_json = request.as_json(
