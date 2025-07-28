@@ -235,15 +235,35 @@ const ResponseBox = styled.div`
 `;
 
 const Tag = styled.span`
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
   background-color: #e6f0fa;
-  color:rgb(130, 132, 133);
+  color: rgb(130, 132, 133);
   padding: 0.3rem 0.75rem;
   margin-right: 0.5rem;
   margin-top: 0.5rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
+  cursor: ${({ clickable }) => (clickable ? 'pointer' : 'default')};
+  transition: background-color 0.2s ease, color 0.2s ease;
+
+  &:hover {
+    background-color: ${({ clickable }) => (clickable ? '#d4e7f9' : '#e6f0fa')};
+    color: ${({ clickable }) => (clickable ? '#1d4ed8' : 'rgb(130, 132, 133)')};
+  }
+`;
+
+const Icon = styled.svg`
+  width: 14px;
+  height: 14px;
+  stroke: #888;
+  transition: stroke 0.2s ease;
+
+  ${Tag}:hover & {
+    stroke: #1d4ed8; /* vivid blue on hover */
+  }
 `;
 
 const ModalOverlay = styled.div`
@@ -437,14 +457,28 @@ const InterRaterPage = () => {
                         </p>
                         <p>
                           <Tag
-                            style={{ cursor: item.first_conversation_few_shot_template ? 'pointer' : 'default' }}
+                            clickable={!!item.first_conversation_few_shot_template}
                             onClick={() => {
                               if (item.first_conversation_few_shot_template) {
                                 openModal(item.first_conversation_few_shot_template);
                               }
                             }}
+                            title="Click to view few-shot template"
                           >
-                            Few Shot: {item.first_conversation_few_shot_template ? 'True' : 'False'}
+                            Few Shot: {item.first_conversation_few_shot_template ? 'True' : 'False'}{' '}
+                            {item.first_conversation_few_shot_template && (
+                              <Icon
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </Icon>
+                            )}
                           </Tag>
                           <Tag>RAG: False</Tag>
                           <Tag>CoT: False</Tag>
