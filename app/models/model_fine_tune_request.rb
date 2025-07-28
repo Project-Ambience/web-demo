@@ -18,7 +18,7 @@ class ModelFineTuneRequest < ApplicationRecord
 
   scope :by_status, ->(status) {
     if status.present? && status != "all"
-      statuses = status.split(',')
+      statuses = status.split(",")
       where(status: statuses)
     end
   }

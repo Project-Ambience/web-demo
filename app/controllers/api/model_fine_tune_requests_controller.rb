@@ -1,6 +1,6 @@
 class Api::ModelFineTuneRequestsController < Api::ApplicationController
   def index
-    sort_order = params[:sort_order] == 'asc' ? :asc : :desc
+    sort_order = params[:sort_order] == "asc" ? :asc : :desc
 
     requests = ModelFineTuneRequest.includes(:ai_model, :clinician_type)
       .by_status(params[:status])
@@ -14,7 +14,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
 
     render json: {
       requests: paginated_requests.as_json(
-        only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data],
+        only: [ :id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data ],
         methods: [ :status ],
         include: {
           ai_model: { only: [ :id, :name ] },
@@ -28,15 +28,15 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       }
     }
   end
-  
+
   def statistics
     counts = ModelFineTuneRequest.group(:status).count
-    
+
     render json: {
       waiting_for_validation: counts["waiting_for_validation"] || 0,
       validating: counts["validating"] || 0,
       waiting_for_fine_tune: counts["waiting_for_fine_tune"] || 0,
-      fine_tuning: counts["fine_tuning"] || 0,
+      fine_tuning: counts["fine_tuning"] || 0
     }
   end
 
@@ -120,7 +120,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     else
       return render json: { error: "Invalid status" }, status: :unprocessable_entity
     end
-    
+
     broadcast_status_update(request)
     render json: { message: "Status updated successfully" }, status: :ok
   end
@@ -133,11 +133,11 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       waiting_for_validation: counts["waiting_for_validation"] || 0,
       validating: counts["validating"] || 0,
       waiting_for_fine_tune: counts["waiting_for_fine_tune"] || 0,
-      fine_tuning: counts["fine_tuning"] || 0,
+      fine_tuning: counts["fine_tuning"] || 0
     }
-    
+
     updated_request_json = request.as_json(
-      only: [:id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data],
+      only: [ :id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data ],
       methods: [ :status ],
       include: {
         ai_model: { only: [ :id, :name ] },
