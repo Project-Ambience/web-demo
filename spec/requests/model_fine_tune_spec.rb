@@ -70,7 +70,7 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
     end
 
     it "updates the status of a fine-tune request" do
-      model_fine_tune_request.in_progress!
+      model_fine_tune_request.fine_tuning!
       post "/api/model_fine_tune_requests/update_status", params: update_params
       expect(response).to have_http_status(:ok)
       model_fine_tune_request.reload
@@ -78,20 +78,20 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
     end
 
     it "creates a new AI model when status is success" do
-      model_fine_tune_request.in_progress!
+      model_fine_tune_request.fine_tuning!
       expect {
         post "/api/model_fine_tune_requests/update_status", params: update_params
       }.to change(AiModel, :count).by(1)
     end
 
     it "updates new ai model" do
-      model_fine_tune_request.in_progress!
+      model_fine_tune_request.fine_tuning!
       post "/api/model_fine_tune_requests/update_status", params: update_params
       expect(model_fine_tune_request.reload.new_ai_model_id).to eq(AiModel.last.id)
     end
 
     it "create new ai model with correct attributes" do
-      model_fine_tune_request.in_progress!
+      model_fine_tune_request.fine_tuning!
       post "/api/model_fine_tune_requests/update_status", params: update_params
       new_ai_model = AiModel.last
       expect(new_ai_model.name).to eq(model_fine_tune_request.name)
@@ -107,7 +107,6 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
       expect(new_ai_model.fine_tuning_notes).to eq(model_fine_tune_request.fine_tuning_notes)
     end
 
-
     context "when status is fail" do
       let(:update_params) do
         {
@@ -117,11 +116,40 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
       end
 
       it "updates the status to failed" do
-        model_fine_tune_request.in_progress!
+        model_fine_tune_request.fine_tuning!
         post "/api/model_fine_tune_requests/update_status", params: update_params
         expect(response).to have_http_status(:ok)
         model_fine_tune_request.reload
         expect(model_fine_tune_request.status).to eq("failed")
+      end
+    end
+
+    context "with intermediate status updates" do
+      it "transitions from waiting_for_validation to validating" do
+        model_fine_tune_request.waiting_for_validation!
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "validation_started" }
+        expect(model_fine_tune_request.reload).to be_validating
+      end
+
+      it "transitions from validating to waiting_for_fine_tune" do
+        model_fine_tune_request.validating!
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "validation_succeeded" }
+        expect(model_fine_tune_request.reload).to be_waiting_for_fine_tune
+      end
+
+      it "transitions from validating to validation_failed" do
+        model_fine_tune_request.validating!
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "validation_failed", error: "Bad data" }
+        request = model_fine_tune_request.reload
+        expect(request).to be_validation_failed
+        expect(request.error_message).to eq("Bad data")
+      end
+    end
+
+    context "with an invalid status" do
+      it "returns an unprocessable_entity error" do
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "invalid_status" }
+        expect(response).to have_http_status(:unprocessable_entity)
       end
     end
   end
