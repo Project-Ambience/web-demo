@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import styled from 'styled-components';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   useGetAiModelByIdQuery, 
   useGetClinicianTypesQuery, 
@@ -13,12 +13,11 @@ import ErrorMessage from '../components/common/ErrorMessage';
 const PageWrapper = styled.div`
   display: grid;
   grid-template-columns: 1fr;
+  gap: 2rem;
 
   @media (min-width: 960px) {
     grid-template-columns: 2fr 1fr;
   }
-
-  gap: 2rem;
 `;
 
 const MainContent = styled.div`
@@ -99,6 +98,16 @@ const PrimaryButton = styled(ButtonBase)`
 
   &:hover:not(:disabled) {
     background-color: #003087;
+  }
+`;
+
+const SecondaryButton = styled(ButtonBase)`
+  background-color: white;
+  color: #005eb8;
+  border: 2px solid #005eb8;
+
+  &:hover:not(:disabled) {
+    background-color: #e8edee;
   }
 `;
 
@@ -197,47 +206,64 @@ const ModalButton = styled(ButtonBase)`
   padding: 0.5rem 1.25rem;
 `;
 
-const FileInputWrapper = styled.div`
-  position: relative;
-  display: inline-block;
-  width: 100%;
+const UploadButton = styled(PrimaryButton)`
+  border: 2px dashed transparent;
+  background-color: ${({ isDragging }) => (isDragging ? '#003087' : '#005eb8')};
+  border-color: ${({ isDragging }) => (isDragging ? '#fff' : 'transparent')};
+  margin-bottom: 0.5rem;
 `;
 
-const Tooltip = styled.div`
-  position: absolute;
-  bottom: 110%;
-  left: 0;
-  background-color: #333;
-  color: #fff;
-  padding: 4px 8px;
+const FileDisplay = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #eaf1f8;
+  padding: 0.75rem 1rem;
   border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+`;
+
+const FileErrorText = styled.p`
+  color: #c62828;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: -0.25rem;
+  margin-bottom: 1rem;
+  height: 1rem;
+`;
+
+const SuccessPanel = styled.div`
+  position: fixed;
+  top: 70px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #fff;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 1rem;
   
-  ${FileInputWrapper}:hover & {
-    opacity: 1;
+  h3 {
+    font-size: 1.75rem;
+    color: #003087;
+    margin-bottom: 0.75rem;
+  }
+
+  p {
+    font-size: 1rem;
+    color: #4c6272;
+    margin-bottom: 1.5rem;
   }
 `;
 
-const ErrorTooltip = styled.div`
-  position: absolute;
-  bottom: 110%;
-  left: 0;
-  background-color: #e53935;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  z-index: 10;
-`;
-
-
 const FineTunePage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data: model, isLoading, isError } = useGetAiModelByIdQuery(id);
 
   const {
@@ -246,7 +272,7 @@ const FineTunePage = () => {
     isError: isClinicianTypesError,
   } = useGetClinicianTypesQuery();
 
-  const [createFineTuneRequest, { isLoading: isSubmitting }] = useCreateFineTuneRequestMutation();
+  const [createFineTuneRequest] = useCreateFineTuneRequestMutation();
   
   const { data: stats } = useGetFineTuneStatisticsQuery(undefined, {
     pollingInterval: 15000,
@@ -262,9 +288,21 @@ const FineTunePage = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitParams, setSubmitParams] = useState(null);
   const [submissionError, setSubmissionError] = useState('');
-  const [submissionSuccess, setSubmissionSuccess] = useState(null);
   const [fileError, setFileError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const [showQueueWarning, setShowQueueWarning] = useState(false);
+  const [submissionState, setSubmissionState] = useState('idle');
+
+  const fileInputRef = useRef(null);
+  const redirectTimer = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (redirectTimer.current) {
+        clearTimeout(redirectTimer.current);
+      }
+    };
+  }, []);
 
   const calculatedStats = useMemo(() => {
     const waitingToStart = (stats?.waiting_for_validation ?? 0) + 
@@ -274,6 +312,59 @@ const FineTunePage = () => {
     return { waitingToStart, currentlyRunning };
   }, [stats]);
 
+  const resetForm = () => {
+    setModelName('');
+    setDescription('');
+    setFineTuningNotes('');
+    setTaskId('');
+    setClinicianTypeId('');
+    setFile(null);
+    setSubmissionError('');
+    setFileError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleFileSelection = (files) => {
+    if (!files || files.length === 0) {
+      return;
+    }
+    const uploaded = files[0];
+    const maxSizeMB = 100;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+
+    if (uploaded) {
+      if (uploaded.size > maxSizeBytes) {
+        setFile(null);
+        setFileError(`File size should not exceed ${maxSizeMB}MB`);
+        setTimeout(() => setFileError(''), 4000);
+      } else if (uploaded.type !== 'application/json') {
+        setFile(null);
+        setFileError('Please upload a .json file');
+        setTimeout(() => setFileError(''), 4000);
+      } else {
+        setFile(uploaded);
+        setFileError('');
+      }
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelection(e.dataTransfer.files);
+  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -301,6 +392,15 @@ const FineTunePage = () => {
       setShowConfirmModal(true);
     }
   };
+  
+  const handleRedirectNow = () => {
+    if (redirectTimer.current) {
+      clearTimeout(redirectTimer.current);
+    }
+    navigate('/fine-tune-status');
+    resetForm();
+    setSubmissionState('idle');
+  };
 
   const handleConfirmedSubmit = async () => {
     if (!submitParams) return;
@@ -313,15 +413,24 @@ const FineTunePage = () => {
     formData.append('clinician_type_id', clinicianTypeId);
     formData.append('file', file);
     formData.append('ai_model_id', model.id);
+    
+    setSubmissionState('submitting');
+    setShowConfirmModal(false);
   
     try {
       await createFineTuneRequest(formData).unwrap();
-      setSubmissionSuccess('Fine-tune request submitted successfully!');
-      setShowConfirmModal(false);
+      setSubmissionState('success');
+      
+      redirectTimer.current = setTimeout(() => {
+        navigate('/fine-tune-status');
+        resetForm();
+        setSubmissionState('idle');
+      }, 2500);
+
     } catch (err) {
       const message = err?.data?.error || 'Failed to submit fine-tune request.';
       setSubmissionError(message);
-      setShowConfirmModal(false);
+      setSubmissionState('idle');
     }
   };  
 
@@ -329,7 +438,17 @@ const FineTunePage = () => {
   if (isError || isClinicianTypesError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
+      {submissionState === 'success' && (
+        <SuccessPanel>
+          <h3>Submission Successful!</h3>
+          <p>Your fine-tuning request has been added to the queue.<br />You will be redirected shortly.</p>
+          <PrimaryButton onClick={handleRedirectNow} style={{ width: 'auto', margin: '0 auto' }}>
+            Go to Status Page Now
+          </PrimaryButton>
+        </SuccessPanel>
+      )}
+
       <BackLink to={`/ai-models/${model.id}`}>Back to model</BackLink>
       <PageWrapper>
         <MainContent>
@@ -346,19 +465,6 @@ const FineTunePage = () => {
                 marginBottom: '1rem',
               }}>
                 {submissionError}
-              </div>
-            )}
-
-            {submissionSuccess && (
-              <div style={{
-                backgroundColor: '#e6f4ea',
-                color: '#1e4620',
-                border: '1px solid #a5d6a7',
-                borderRadius: '4px',
-                padding: '1rem',
-                marginBottom: '1rem',
-              }}>
-                {submissionSuccess}
               </div>
             )}
 
@@ -420,8 +526,8 @@ const FineTunePage = () => {
                 placeholder="Note for this fine-tuned model"
               />
   
-              <PrimaryButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+              <PrimaryButton type="submit" disabled={submissionState === 'submitting'}>
+                {submissionState === 'submitting' ? 'Submitting...' : 'Submit'}
               </PrimaryButton>
             </form>
           </Section>
@@ -430,44 +536,38 @@ const FineTunePage = () => {
         <Sidebar>
           <Section>
             <h3>Fine-Tuning Data</h3>
-            <label htmlFor="file">Upload JSON file</label>
-            <FileInputWrapper>
-              <input
-                id="file"
-                type="file"
-                accept=".json"
-                onChange={(e) => {
-                  const uploaded = e.target.files[0];
-                  const maxSizeMB = 100;
-                  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-                  if (uploaded) {
-                    if (uploaded.size > maxSizeBytes) {
-                      setFile(null);
-                      setFileError(`File size should not exceed ${maxSizeMB}MB`);
-                      e.target.value = '';
-                      setTimeout(() => setFileError(''), 4000);
-                    } else if (uploaded.type !== 'application/json') {
-                      setFile(null);
-                      setFileError('Please upload a .json file');
-                      e.target.value = '';
-                      setTimeout(() => setFileError(''), 4000);
-                    } else {
-                      setFile(uploaded);
-                      setFileError('');
-                    }
-                  }
-                }}
-                required
-              />
-              <Tooltip>Max 1 file, 100MB</Tooltip>
-              {fileError && <ErrorTooltip>{fileError}</ErrorTooltip>}
-            </FileInputWrapper>
-
-            {file && (
-              <p>
-                <strong>Selected file:</strong> {file.name}
-              </p>
+            <label htmlFor="file-upload">Upload JSON file</label>
+            <input
+              id="file-upload"
+              type="file"
+              accept=".json"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileSelection(e.target.files)}
+            />
+            {!file ? (
+              <>
+                <UploadButton
+                  as="button"
+                  type="button"
+                  onClick={() => fileInputRef.current.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  isDragging={isDragging}
+                >
+                  Upload File
+                </UploadButton>
+                {fileError && <FileErrorText>{fileError}</FileErrorText>}
+              </>
+            ) : (
+              <FileDisplay>
+                <strong>{file.name}</strong>
+                <SecondaryButton
+                  onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  style={{ width: 'auto', padding: '0.2rem 0.8rem', fontSize: '0.8rem', marginBottom: 0 }}
+                >Remove</SecondaryButton>
+              </FileDisplay>
             )}
   
             <ToggleButton type="button" onClick={() => setShowFormat((prev) => !prev)}>
