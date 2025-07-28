@@ -6,6 +6,12 @@ import { createConsumer } from '@rails/actioncable';
 import { apiSlice, useGetFineTuneRequestsQuery, useGetTunableModelsQuery } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
+const InfoIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11 7H13V9H11V7ZM11 11H13V17H11V11ZM12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z"/>
+  </svg>
+);
+
 const SortArrowIcon = ({ direction }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
        style={{ 
@@ -23,7 +29,7 @@ const CheckmarkIcon = () => (
 );
 
 const DropdownArrow = ({ isOpen }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease-in-out' }}>
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease-in-out' }}>
     <path d="M7 10l5 5 5-5z" />
   </svg>
 );
@@ -226,6 +232,26 @@ const Td = styled.td`
     justify-content: flex-end;
     align-items: center;
     gap: 0.75rem;
+  }
+`;
+
+const HeaderWithIcon = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const InfoButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  &:hover {
+    color: #005eb8;
   }
 `;
 
@@ -466,6 +492,118 @@ const IconWrapper = styled.div`
   align-items: center;
 `;
 
+const LifecycleList = styled.ul`
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0;
+`;
+
+const LifecycleItem = styled.li`
+  position: relative;
+  padding-left: 2rem;
+  padding-bottom: 1.5rem;
+  
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 1px;
+    height: 100%;
+    background-color: #ced4da;
+  }
+
+  &:last-child::before {
+    height: 0;
+  }
+`;
+
+const LifecycleDot = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #005eb8;
+  background-color: #fff;
+  z-index: 1;
+`;
+
+const LifecycleContent = styled.div`
+  h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    color: #003087;
+  }
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #4c6272;
+  }
+`;
+
+const StatusLifecycleModal = ({ onClose }) => {
+  const modalRef = useRef();
+  useOnClickOutside(modalRef, onClose);
+  return (
+    <ModalOverlay>
+      <ModalContent ref={modalRef}>
+        <ModalHeader>
+          <h3>Status Lifecycle</h3>
+        </ModalHeader>
+        <ModalBody>
+          <p>This is the lifecycle of a fine-tuning request from submission to completion.</p>
+          <LifecycleList>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Waiting for Validation</h5>
+                <p>The request has been submitted and is in the queue waiting for the dataset to be validated.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Validating</h5>
+                <p>A worker has picked up the request and is actively checking the dataset for correct formatting and integrity.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Waiting for Fine-Tune</h5>
+                <p>The dataset has been successfully validated. The request is now in the queue waiting for a fine-tuning worker to become available.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Fine-Tuning</h5>
+                <p>A worker is actively training the base model with the provided dataset. This is the longest step.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot style={{ borderColor: '#2e7d32' }} />
+              <LifecycleContent>
+                <h5 style={{ color: '#2e7d32' }}>Done</h5>
+                <p>The model has been successfully fine-tuned and the new version is available in the Model Catalogue.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+          </LifecycleList>
+        </ModalBody>
+        <ModalFooter>
+          <CloseButton onClick={onClose}>Close</CloseButton>
+        </ModalFooter>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
 const getStatusText = (status) => {
     switch(status) {
         case 'failed':
@@ -597,6 +735,7 @@ const FineTuneStatusPage = () => {
   useOnClickOutside(baseModelRef, () => setIsBaseModelOpen(false));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isLifecycleModalOpen, setIsLifecycleModalOpen] = useState(false);
 
   const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
 
@@ -806,7 +945,14 @@ const FineTuneStatusPage = () => {
                             <Thead>
                                 <Tr>
                                     <Th>New Model Name</Th>
-                                    <Th>Status</Th>
+                                    <Th>
+                                      <HeaderWithIcon>
+                                        <span>Status</span>
+                                        <InfoButton onClick={() => setIsLifecycleModalOpen(true)}>
+                                          <InfoIcon />
+                                        </InfoButton>
+                                      </HeaderWithIcon>
+                                    </Th>
                                     <Th>Base Model</Th>
                                     <Th>Task</Th>
                                     <Th>
@@ -878,6 +1024,9 @@ const FineTuneStatusPage = () => {
       </div>
       {isModalOpen && selectedRequest && (
         <RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} />
+      )}
+      {isLifecycleModalOpen && (
+        <StatusLifecycleModal onClose={() => setIsLifecycleModalOpen(false)} />
       )}
     </>
   );
