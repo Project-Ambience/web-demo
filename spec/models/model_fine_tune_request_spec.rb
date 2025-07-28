@@ -13,7 +13,7 @@ RSpec.describe ModelFineTuneRequest, type: :model do
 
     context "when ai_model does not allow fine-tuning" do
       it "is not valid" do
-        request = build(:model_fine_tune_request) # Uses default non-tunable model
+        request = build(:model_fine_tune_request)
         expect(request).not_to be_valid
         expect(request.errors[:ai_model]).to include("not allow fine-tuning")
       end
@@ -84,11 +84,14 @@ RSpec.describe ModelFineTuneRequest, type: :model do
     let(:tunable_model_1) { create(:ai_model, allow_fine_tune: true) }
     let(:tunable_model_2) { create(:ai_model, allow_fine_tune: true) }
 
+    before do
+      allow_any_instance_of(ModelFineTuneRequest).to receive(:publish_fine_tune_request_to_rabbit_mq).and_return(true)
+    end
+
     let!(:done_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :done, created_at: 1.day.ago) }
     let!(:failed_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :failed, created_at: 2.days.ago) }
     let!(:tuning_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :fine_tuning, name: "Searchable Model") }
     let!(:other_model_request) { create(:model_fine_tune_request, ai_model: tunable_model_2, status: :done) }
-
 
     it ".by_status returns the correct requests" do
       expect(ModelFineTuneRequest.by_status("done")).to contain_exactly(done_request, other_model_request)

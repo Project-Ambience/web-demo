@@ -4,7 +4,7 @@ FactoryBot.define do
     description { "MyString" }
     association :ai_model, factory: :ai_model
     clinician_type
-    parameters { { learning_rate: 0.2 } }
+    parameters { { "learning_rate" => 0.2 } }
     status { :pending }
     fine_tuning_notes { "MyText" }
 
