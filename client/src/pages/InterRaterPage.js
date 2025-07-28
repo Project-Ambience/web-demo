@@ -26,7 +26,7 @@ const WhiteContainer = styled.div`
 const PageWrapper = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0.5rem;
 `;
 
 const PaginationWrapper = styled.div`
@@ -234,7 +234,106 @@ const ResponseBox = styled.div`
   }
 `;
 
-// --- Main Component ---
+const Tag = styled.span`
+  display: inline-block;
+  background-color: #e6f0fa;
+  color:rgb(130, 132, 133);
+  padding: 0.3rem 0.75rem;
+  margin-right: 0.5rem;
+  margin-top: 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 100vw;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+`;
+
+const ModalContainer = styled.div`
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 95%;
+  max-width: 700px;
+  max-height: 85vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 16px;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalContent = styled.div`
+  padding: 1.5rem 3rem 1.5rem 3rem;
+  flex: 1;
+
+  @media (max-width: 600px) {
+    padding: 1rem 1.25rem;
+  }
+`;
+
+const ModalHeader = styled.div`
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #ddd;
+  background-color: #f8f9fa;
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: #1f2d3d;
+`;
+
+const ExampleCard = styled.div`
+  background-color: #f1f6fa;
+  border: 1px solid #dce6ed;
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+
+  p {
+    margin: 0.3rem 0;
+    strong {
+      color: #2b3e50;
+    }
+  }
+`;
+
+const ModalFooter = styled.div`
+  position: sticky;
+  bottom: 0;
+  padding: 1rem 2rem;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  background-color: #f8f9fa;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  z-index: 2;
+
+  button {
+    background-color: #005eb8;
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+
+    &:hover {
+      background-color: #004199;
+    }
+  }
+`;
 
 const InterRaterPage = () => {
   const { id: ai_model_id } = useParams();
@@ -253,6 +352,20 @@ const InterRaterPage = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
+
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalData, setModalData] = useState(null);
+
+  const openModal = (template) => {
+    setModalData(template);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setModalData(null);
+  };
+
 
   const handleChange = (id, field, value) => {
     setFormState((prev) => ({
@@ -318,9 +431,70 @@ const InterRaterPage = () => {
                     <ResponseComparison>
                       <ResponseBox>
                         <h4>First Inference</h4>
+                        <p>
+                          <strong>Model:</strong>{' '}
+                          {item.first_conversation_ai_model_name}
+                        </p>
+                        <p>
+                          <Tag
+                            style={{ cursor: item.first_conversation_few_shot_template ? 'pointer' : 'default' }}
+                            onClick={() => {
+                              if (item.first_conversation_few_shot_template) {
+                                openModal(item.first_conversation_few_shot_template);
+                              }
+                            }}
+                          >
+                            Few Shot: {item.first_conversation_few_shot_template ? 'True' : 'False'}
+                          </Tag>
+                          <Tag>RAG: False</Tag>
+                          <Tag>CoT: False</Tag>
+                        </p>
+                        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
+                        <p><strong>Prompt:</strong> {item.first_conversation_base_prompt}</p>
+                        <p>
+                          <strong>File:</strong>{' '}
+                          {item.first_conversation_file_url && item.first_conversation_file_name ? (
+                            <a
+                              href={item.first_conversation_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Attached File 
+                            </a>
+                          ) : (
+                            'No file uploaded'
+                          )}
+                        </p>
+                        <p><strong>Response:</strong> {item.first_conversation_first_response}</p>
                       </ResponseBox>
                       <ResponseBox>
                         <h4>Second Inference</h4>
+                        <p>
+                          <strong>Model:</strong>{' '}
+                          {item.second_conversation_ai_model_name}
+                        </p>
+                        <p>
+                          <Tag>Few Shot: {item.second_conversation_few_shot_template ? 'True' : 'False'}</Tag>
+                          <Tag>RAG: False</Tag>
+                          <Tag>CoT: False</Tag>
+                        </p>
+                        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
+                        <p><strong>Prompt:</strong> {item.second_conversation_base_prompt}</p>
+                        <p>
+                          <strong>File:</strong>{' '}
+                          {item.second_conversation_file_url && item.second_conversation_file_name ? (
+                            <a
+                              href={item.second_conversation_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              {item.second_conversation_file_name}
+                            </a>
+                          ) : (
+                            'No file uploaded'
+                          )}
+                        </p>
+                        <p><strong>Response:</strong> {item.second_conversation_first_response}</p>
                       </ResponseBox>
                     </ResponseComparison>
                   </CardContent>
@@ -343,10 +517,10 @@ const InterRaterPage = () => {
                             />
                             <span>
                               {[
-                                'Strongly\nPrefer Fine-Tuned model',
-                                'Prefer\nFine-Tuned model',
-                                'Prefer\nBase Model',
-                                'Strongly\nPrefer Base Model',
+                                'Strongly\nPrefer First Inference',
+                                'Prefer\nFirst Inference',
+                                'Prefer\nSecond Inference',
+                                'Strongly\nPrefer Second Inference'
                               ][value]}
                             </span>
                           </label>
@@ -386,6 +560,37 @@ const InterRaterPage = () => {
           )}
         </PageWrapper>
       </WhiteContainer>
+      {isModalOpen && (
+        <>
+          <ModalOverlay onClick={closeModal} />
+          <ModalContainer>
+            <ModalHeader>📘 Few Shot Template</ModalHeader>
+            <ModalContent>
+              {modalData ? (
+                <>
+                  <p><strong>Name:</strong> {modalData.name}</p>
+                  <p><strong>Description:</strong> {modalData.description}</p>
+                  <div style={{ marginTop: '1.5rem' }}>
+                    <h4 style={{ marginBottom: '1rem', color: '#2b3e50' }}>Examples:</h4>
+                    {modalData.examples.map((example, idx) => (
+                      <ExampleCard key={idx}>
+                        <p><strong>Input:</strong> {example.input}</p>
+                        <p><strong>Output:</strong> {example.output}</p>
+                      </ExampleCard>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p>No template data available.</p>
+              )}
+            </ModalContent>
+            <ModalFooter>
+              <button onClick={closeModal}>Close</button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
+
     </PageLayout>
   );
 };

@@ -1,5 +1,7 @@
 class InterRater < ApplicationRecord
   belongs_to :ai_model
+  belongs_to :first_conversation, class_name: "Conversation"
+  belongs_to :second_conversation, class_name: "Conversation"
 
   enum :rating, {
     strongly_prefer_first_response: 0,

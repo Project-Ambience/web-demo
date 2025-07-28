@@ -139,17 +139,16 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
   end
 
   create_table "inter_raters", force: :cascade do |t|
-    t.string "prompt"
-    t.string "first_response"
-    t.text "second_response"
-    t.string "file_url"
-    t.bigint "ai_model_id", null: false
-    t.integer "evaluation_category"
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
+    t.bigint "first_conversation_id", null: false
+    t.bigint "second_conversation_id", null: false
     t.string "comment"
     t.integer "rating"
+    t.bigint "ai_model_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
     t.index ["ai_model_id"], name: "index_inter_raters_on_ai_model_id"
+    t.index ["first_conversation_id"], name: "index_inter_raters_on_first_conversation_id"
+    t.index ["second_conversation_id"], name: "index_inter_raters_on_second_conversation_id"
   end
 
   create_table "messages", force: :cascade do |t|
@@ -217,6 +216,8 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
   add_foreign_key "examples", "few_shot_templates"
   add_foreign_key "fine_tune_tasks", "ai_models"
   add_foreign_key "inter_raters", "ai_models"
+  add_foreign_key "inter_raters", "conversations", column: "first_conversation_id"
+  add_foreign_key "inter_raters", "conversations", column: "second_conversation_id"
   add_foreign_key "messages", "conversations"
   add_foreign_key "model_fine_tune_requests", "ai_models"
   add_foreign_key "model_fine_tune_requests", "clinician_types"
