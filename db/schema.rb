@@ -138,11 +138,18 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
     t.index ["ai_model_id"], name: "index_fine_tune_tasks_on_ai_model_id"
   end
 
+  create_table "inter_rater_feedbacks", force: :cascade do |t|
+    t.bigint "inter_rater_id", null: false
+    t.integer "rating", null: false
+    t.string "comment", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["inter_rater_id"], name: "index_inter_rater_feedbacks_on_inter_rater_id"
+  end
+
   create_table "inter_raters", force: :cascade do |t|
     t.bigint "first_conversation_id", null: false
     t.bigint "second_conversation_id", null: false
-    t.string "comment"
-    t.integer "rating"
     t.bigint "ai_model_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
@@ -215,6 +222,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
   add_foreign_key "conversations", "ai_models"
   add_foreign_key "examples", "few_shot_templates"
   add_foreign_key "fine_tune_tasks", "ai_models"
+  add_foreign_key "inter_rater_feedbacks", "inter_raters"
   add_foreign_key "inter_raters", "ai_models"
   add_foreign_key "inter_raters", "conversations", column: "first_conversation_id"
   add_foreign_key "inter_raters", "conversations", column: "second_conversation_id"

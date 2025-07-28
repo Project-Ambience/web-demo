@@ -5,6 +5,7 @@ import {
   useGetInterRaterResponsePairsQuery,
   useGetAiModelByIdQuery,
   useAddInterRaterMutation,
+  useAddInterRaterFeedbackMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -294,7 +295,7 @@ const ModalContainer = styled.div`
 `;
 
 const ModalContent = styled.div`
-  padding: 1.5rem 3rem 1.5rem 3rem;
+  padding: 1rem 2rem 1.5rem 2rem;
   flex: 1;
 
   @media (max-width: 600px) {
@@ -366,6 +367,7 @@ const InterRaterPage = () => {
   const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
+  const [createInterRaterFeedback] = useAddInterRaterFeedbackMutation();
   const totalItems = evaluations?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
   const paginatedEvaluations = evaluations?.slice(
@@ -398,19 +400,16 @@ const InterRaterPage = () => {
   };
 
   const handleSubmit = async (item) => {
+    const form = formState[item.id];
     const payload = {
-      ai_model_id: Number(ai_model_id),
-      prompt: item.prompt,
-      first_response: item.response,
-      second_response: item.response_base_model,
-      file_url: item.file_url,
-      rating: formState[item.id]?.rating,
-      comment: formState[item.id]?.comment,
-      evaluation_category: 0,
+      inter_rater_id: item.id,
+      rating: form?.rating,
+      comment: form?.comment,
     };
-
+  
     try {
-      await createInterRater(payload).unwrap();
+      await createInterRaterFeedback(payload).unwrap();
+  
       setFeedbackSent((prev) => ({
         ...prev,
         [item.id]: true,
@@ -419,7 +418,7 @@ const InterRaterPage = () => {
       console.error('Failed to submit feedback:', err);
     }
   };
-
+  
   return (
     <PageLayout>
       <BackLink to={`/ai-models/${ai_model_id}`}>Back to Model</BackLink>

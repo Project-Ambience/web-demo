@@ -28,6 +28,8 @@ Rails.application.routes.draw do
         get "response_pairs/:ai_model_id", action: :response_pairs
       end
     end
+
+    resources :inter_rater_feedbacks, only: [ :create ]
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

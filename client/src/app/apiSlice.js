@@ -172,6 +172,14 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['InterRater']
     }),
+    addInterRaterFeedback: builder.mutation({
+      query: (payload) => ({
+        url: `/inter_rater_feedbacks`,
+        method: 'POST',
+        body: { inter_rater_feedback: payload }
+      }),
+      invalidatesTags: ['InterRaterFeedback']
+    }),    
   }),
 });
 
@@ -197,4 +205,5 @@ export const {
   useDeleteFewShotTemplateMutation,
   useGetInterRaterResponsePairsQuery,
   useAddInterRaterMutation,
+  useAddInterRaterFeedbackMutation,
 } = apiSlice;
