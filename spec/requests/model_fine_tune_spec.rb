@@ -59,68 +59,59 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
   end
 
   describe "POST /api/model_fine_tune_requests/update_status" do
-    let(:ai_model) { create(:ai_model, allow_fine_tune: true) }
-    let!(:model_fine_tune_request) { create(:model_fine_tune_request, ai_model: ai_model, task: "summarise", fine_tuning_notes: "some note") }
-    let(:update_params) do
-      {
-        id: model_fine_tune_request.id,
-        status: "success",
-        adapter_path: "path/to/adapter"
-      }
-    end
+    let!(:model_fine_tune_request) { create(:model_fine_tune_request, :with_tunable_model, task: "summarise", fine_tuning_notes: "some note") }
 
-    it "updates the status of a fine-tune request" do
+    it "updates status, broadcasts via ActionCable, and returns a success message" do
       model_fine_tune_request.fine_tuning!
-      post "/api/model_fine_tune_requests/update_status", params: update_params
-      expect(response).to have_http_status(:ok)
-      model_fine_tune_request.reload
-      expect(model_fine_tune_request.status).to eq("done")
-    end
 
-    it "creates a new AI model when status is success" do
-      model_fine_tune_request.fine_tuning!
       expect {
-        post "/api/model_fine_tune_requests/update_status", params: update_params
-      }.to change(AiModel, :count).by(1)
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "success", adapter_path: "path/to/adapter" }
+      }.to have_broadcasted_to("fine_tune_status_channel")
+        .with(hash_including(:statistics, updated_request: hash_including("id" => model_fine_tune_request.id, "status" => "done")))
+
+      expect(response).to have_http_status(:ok)
+      expect(JSON.parse(response.body)).to eq({ "message" => "Status updated successfully" })
+      expect(model_fine_tune_request.reload.status).to eq("done")
     end
 
-    it "updates new ai model" do
-      model_fine_tune_request.fine_tuning!
-      post "/api/model_fine_tune_requests/update_status", params: update_params
-      expect(model_fine_tune_request.reload.new_ai_model_id).to eq(AiModel.last.id)
-    end
+    context "when creating a new AiModel on success" do
+      before { model_fine_tune_request.fine_tuning! }
 
-    it "create new ai model with correct attributes" do
-      model_fine_tune_request.fine_tuning!
-      post "/api/model_fine_tune_requests/update_status", params: update_params
-      new_ai_model = AiModel.last
-      expect(new_ai_model.name).to eq(model_fine_tune_request.name)
-      expect(new_ai_model.description).to eq(model_fine_tune_request.description)
-      expect(new_ai_model.clinician_type_id).to eq(model_fine_tune_request.clinician_type_id)
-      expect(new_ai_model.base_model_id).to eq(model_fine_tune_request.ai_model_id)
-      expect(new_ai_model.adapter_path).to eq("path/to/adapter")
-      expect(new_ai_model.path).to eq(model_fine_tune_request.ai_model.path)
-      expect(new_ai_model.keywords).to eq(model_fine_tune_request.ai_model.keywords)
-      expect(new_ai_model.speciality).to eq(model_fine_tune_request.task)
-      expect(new_ai_model.family).to eq(model_fine_tune_request.ai_model.family)
-      expect(new_ai_model.parameter_size).to eq(model_fine_tune_request.ai_model.parameter_size)
-      expect(new_ai_model.fine_tuning_notes).to eq(model_fine_tune_request.fine_tuning_notes)
+      it "creates a new AI model" do
+        expect {
+          post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "success", adapter_path: "path/to/adapter" }
+        }.to change(AiModel, :count).by(1)
+      end
+
+      it "links the new AiModel ID to the request" do
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "success", adapter_path: "path/to/adapter" }
+        expect(model_fine_tune_request.reload.new_ai_model_id).to eq(AiModel.last.id)
+      end
+
+      it "creates the new AI model with correct attributes" do
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "success", adapter_path: "path/to/adapter" }
+        new_ai_model = AiModel.last
+        request_ai_model = model_fine_tune_request.ai_model
+        expect(new_ai_model.name).to eq(model_fine_tune_request.name)
+        expect(new_ai_model.description).to eq(model_fine_tune_request.description)
+        expect(new_ai_model.clinician_type_id).to eq(model_fine_tune_request.clinician_type_id)
+        expect(new_ai_model.base_model_id).to eq(request_ai_model.id)
+        expect(new_ai_model.adapter_path).to eq("path/to/adapter")
+        expect(new_ai_model.path).to eq(request_ai_model.path)
+        expect(new_ai_model.keywords).to eq(request_ai_model.keywords)
+        expect(new_ai_model.speciality).to eq(model_fine_tune_request.task)
+        expect(new_ai_model.family).to eq(request_ai_model.family)
+        expect(new_ai_model.parameter_size).to eq(request_ai_model.parameter_size)
+        expect(new_ai_model.fine_tuning_notes).to eq(model_fine_tune_request.fine_tuning_notes)
+      end
     end
 
     context "when status is fail" do
-      let(:update_params) do
-        {
-          id: model_fine_tune_request.id,
-          status: "fail"
-        }
-      end
-
       it "updates the status to failed" do
         model_fine_tune_request.fine_tuning!
-        post "/api/model_fine_tune_requests/update_status", params: update_params
+        post "/api/model_fine_tune_requests/update_status", params: { id: model_fine_tune_request.id, status: "fail" }
         expect(response).to have_http_status(:ok)
-        model_fine_tune_request.reload
-        expect(model_fine_tune_request.status).to eq("failed")
+        expect(model_fine_tune_request.reload.status).to eq("failed")
       end
     end
 
