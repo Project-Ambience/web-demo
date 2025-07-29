@@ -282,11 +282,26 @@ const ModalFooter = styled.div`
 const NewInferencePairPage = () => {
   const { id: ai_model_id } = useParams();
 
+  const [firstFilter, setFirstFilter] = useState('');
+  const [secondFilter, setSecondFilter] = useState('');
+
   const { data: allFirstConversations = [], isLoading: isLoadingFirst } = useGetConversationsByAiModelQuery(ai_model_id);
   const { data: allSecondConversations = [], isLoading: isLoadingSecond } = useGetConversationsQuery();
 
-  const firstConversations = allFirstConversations.filter(c => c.base_prompt && c.first_response);
-  const secondConversations = allSecondConversations.filter(c => c.base_prompt && c.first_response);
+  const firstConversations = allFirstConversations
+  .filter(c => c.base_prompt && c.first_response)
+  .filter(c =>
+    c.id.toString().includes(firstFilter.trim()) ||
+    (c.ai_model?.name || '').toLowerCase().includes(firstFilter.toLowerCase())
+  );
+
+  const secondConversations = allSecondConversations
+    .filter(c => c.base_prompt && c.first_response)
+    .filter(c =>
+      c.id.toString().includes(secondFilter.trim()) ||
+      (c.ai_model?.name || '').toLowerCase().includes(secondFilter.toLowerCase())
+    );
+
 
   const { data: model } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
@@ -349,6 +364,13 @@ const NewInferencePairPage = () => {
         <WhiteContainer>
           <ComparisonWrapper>
             <ConversationColumn>
+              <input
+                type="text"
+                placeholder="Filter by model name or ID"
+                value={firstFilter}
+                onChange={(e) => setFirstFilter(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+              />
               <ResponseBox>
                 <h4>First Inference</h4>
                 <p><strong>ID:</strong> {convo1?.id}</p>
@@ -377,6 +399,13 @@ const NewInferencePairPage = () => {
             </ConversationColumn>
 
             <ConversationColumn>
+              <input
+                type="text"
+                placeholder="Filter by model name or ID"
+                value={secondFilter}
+                onChange={(e) => setSecondFilter(e.target.value)}
+                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
+              />
               <ResponseBox>
                 <h4>Second Inference</h4>
                 <p><strong>ID:</strong> {convo2?.id}</p>
