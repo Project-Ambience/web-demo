@@ -9,6 +9,13 @@ export const apiSlice = createApi({
       query: () => '/clinician_types',
       providesTags: ['ClinicianType'],
     }),
+    getAiModels: builder.query({
+      query: () => '/ai_models',
+      providesTags: (result = []) => [
+        ...result.map(({ id }) => ({ type: 'Model', id })),
+        { type: 'Model', id: 'LIST' },
+      ],
+    }),
     getAiModelById: builder.query({
       query: id => `/ai_models/${id}`,
       providesTags: (result, error, id) => [{ type: 'Model', id }],
@@ -192,6 +199,7 @@ export const apiSlice = createApi({
 
 export const {
   useGetClinicianTypesQuery,
+  useGetAiModelsQuery,
   useGetAiModelByIdQuery,
   useAddRatingMutation,
   useAddCommentMutation,

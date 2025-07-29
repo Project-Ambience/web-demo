@@ -1,4 +1,10 @@
 class Api::AiModelsController < Api::ApplicationController
+  def index
+    @ai_models = AiModel.all
+
+    render json: @ai_models
+  end
+
   def show
     @ai_model = AiModel.includes(:comments, :ratings, :clinician_type, :fine_tune_tasks, :model_fine_tune_requests).find(params[:id])
 

@@ -6,6 +6,8 @@ import {
   useGetAiModelByIdQuery,
   useAddInterRaterMutation,
   useGetConversationsQuery,
+  useGetAiModelsQuery,
+  useCreateConversationMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -95,7 +97,7 @@ const ResponseBox = styled.div`
   p {
     white-space: pre-line;
     color: #444;
-    line-height: 1.5;
+    line-height: 1;
     font-size: 0.95rem;
   }
 `;
@@ -166,7 +168,6 @@ const Tag = styled.span`
   color: rgb(130, 132, 133);
   padding: 0.3rem 0.75rem;
   margin-right: 0.5rem;
-  margin-top: 0.5rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -299,6 +300,22 @@ const FilterInput = styled.input`
   }
 `;
 
+const MakeInferenceLink = styled.button`
+  background: none;
+  border: none;
+  color: #005eb8;
+  font-weight: bold;
+  font-size: 0.95rem;
+  text-decoration: underline;
+  cursor: pointer;
+  align-self: flex-end;
+  margin-top: 2rem;
+
+  &:hover {
+    color: #004199;
+  }
+`;
+
 const NewInferencePairPage = () => {
   const { id: ai_model_id } = useParams();
 
@@ -340,10 +357,37 @@ const NewInferencePairPage = () => {
   const { data: model } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
-  const [showModal, setShowModal] = useState(false);
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState(null);
+
+  const [showModelSelection, setShowModelSelection] = useState(false);
+  const [selectedModelId, setSelectedModelId] = useState('');
+
+  const { data: allModels = [], isLoading: isLoadingModels } = useGetAiModelsQuery();
+
+  const [showChatModal, setShowChatModal] = useState(false);
+  const [chatConversationId, setChatConversationId] = useState(null);
+
+  const [createConversation] = useCreateConversationMutation();
+
+  const handleModelSelect = async (modelId) => {
+    const model = allModels.find((m) => m.id.toString() === modelId.toString());
+    try {
+      const convo = await createConversation({
+        conversation: {
+          ai_model_id: model.id,
+          title: `Chat with ${model.name}`,
+        },
+      }).unwrap();
+  
+      setChatConversationId(convo.id);
+      setShowModelSelection(false);
+      setShowChatModal(true);
+    } catch (error) {
+      alert('Failed to create conversation.');
+      console.error(error);
+    }
+  };
 
   const openModal = (template) => {
     setModalData(template);
@@ -479,6 +523,11 @@ const NewInferencePairPage = () => {
               </Navigation>
             </ConversationColumn>
           </ComparisonWrapper>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <MakeInferenceLink onClick={() => setShowModelSelection(true)}>
+              + Make New Inference
+            </MakeInferenceLink>
+          </div>
         </WhiteContainer>
 
         <SubmitButton
@@ -518,6 +567,120 @@ const NewInferencePairPage = () => {
           </ModalContainer>
         </>
       )}
+
+      {showModelSelection && (
+        <>
+          <ModalOverlay onClick={() => setShowModelSelection(false)} />
+          <ModalContainer>
+            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>Select Model</span>
+              <button
+                onClick={() => setShowModelSelection(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </ModalHeader>
+
+            <ModalContent>
+              {isLoadingModels ? (
+                <p>Loading models...</p>
+              ) : (
+                <>
+                  <select
+                    value={selectedModelId}
+                    onChange={(e) => setSelectedModelId(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.6rem',
+                      borderRadius: '6px',
+                      border: '1px solid #ccc',
+                      marginBottom: '1rem',
+                    }}
+                  >
+                    <option value="">Select a model</option>
+                    {allModels
+                      .map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.name}
+                        </option>
+                      ))}
+                  </select>
+                </>
+              )}
+            </ModalContent>
+            <ModalFooter>
+              <button
+                onClick={() => setShowModelSelection(false)}
+                style={{
+                  backgroundColor: '#e0e0e0',
+                  color: '#333',
+                  marginRight: '1rem',
+                  padding: '0.6rem 1.5rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                onClick={() => {
+                  if (selectedModelId) {
+                    handleModelSelect(selectedModelId);
+                  }
+                }}
+                disabled={!selectedModelId}
+                style={{
+                  backgroundColor: selectedModelId ? '#005eb8' : '#c8d3e0',
+                  color: '#fff',
+                  padding: '0.6rem 1.5rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  cursor: selectedModelId ? 'pointer' : 'not-allowed',
+                  fontWeight: 'bold',
+                }}
+              >
+                Confirm
+              </button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
+
+      {showChatModal && chatConversationId && (
+        <>
+          <ModalOverlay onClick={() => setShowChatModal(false)} />
+          <ModalContainer style={{ maxWidth: '900px', padding: 0 }}>
+            <ModalHeader>
+              Inference Chat
+            </ModalHeader>
+            <ModalContent style={{ padding: 0 }}>
+              <iframe
+                src={`/chat/${chatConversationId}?inferenceOnly=true`}
+                style={{
+                  border: 'none',
+                  width: '100%',
+                  height: '70vh',
+                  borderBottomLeftRadius: '16px',
+                  borderBottomRightRadius: '16px',
+                }}
+              />
+            </ModalContent>
+          </ModalContainer>
+        </>
+      )}
+
     </PageLayout>
   );
 };
