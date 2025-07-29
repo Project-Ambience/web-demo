@@ -285,6 +285,9 @@ const NewInferencePairPage = () => {
   const [firstFilter, setFirstFilter] = useState('');
   const [secondFilter, setSecondFilter] = useState('');
 
+  const [firstIndex, setFirstIndex] = useState(0);
+  const [secondIndex, setSecondIndex] = useState(1);
+
   const { data: allFirstConversations = [], isLoading: isLoadingFirst } = useGetConversationsByAiModelQuery(ai_model_id);
   const { data: allSecondConversations = [], isLoading: isLoadingSecond } = useGetConversationsQuery();
 
@@ -302,12 +305,21 @@ const NewInferencePairPage = () => {
       (c.ai_model?.name || '').toLowerCase().includes(secondFilter.toLowerCase())
     );
 
+  React.useEffect(() => {
+    if (firstIndex >= firstConversations.length) {
+      setFirstIndex(0);
+    }
+  }, [firstConversations.length]);
+
+  React.useEffect(() => {
+    if (secondIndex >= secondConversations.length) {
+      setSecondIndex(0);
+    }
+  }, [secondConversations.length]);
 
   const { data: model } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
-  const [firstIndex, setFirstIndex] = useState(0);
-  const [secondIndex, setSecondIndex] = useState(1);
   const [showModal, setShowModal] = useState(false);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -373,27 +385,35 @@ const NewInferencePairPage = () => {
               />
               <ResponseBox>
                 <h4>First Inference</h4>
-                <p><strong>ID:</strong> {convo1?.id}</p>
-                <p><strong>Model:</strong> {convo1?.ai_model?.name}</p>
-                <p>
-                  <Tag
-                    clickable={convo1?.few_shot_template?.examples?.length > 0}
-                    onClick={() => convo1?.few_shot_template && openModal(convo1.few_shot_template)}
-                    title="Click to view few-shot template"
-                  >
-                    Few Shot: {convo1?.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
-                  </Tag>
-                  <Tag>RAG: False</Tag>
-                  <Tag>CoT: False</Tag>
-                </p>
-                <hr style={{ margin: '1rem 0' }} />
-                <p><strong>Prompt:</strong> {convo1?.base_prompt}</p>
-                <p><strong>File:</strong> {convo1?.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                <p><strong>Response:</strong> {convo1?.first_response}</p>
+                {convo1 ? (
+                  <>
+                    <p><strong>ID:</strong> {convo1.id}</p>
+                    <p><strong>Model:</strong> {convo1.ai_model?.name}</p>
+                    <p>
+                      <Tag
+                        clickable={convo1.few_shot_template?.examples?.length > 0}
+                        onClick={() => convo1.few_shot_template && openModal(convo1.few_shot_template)}
+                        title="Click to view few-shot template"
+                      >
+                        Few Shot: {convo1.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
+                      </Tag>
+                      <Tag>RAG: False</Tag>
+                      <Tag>CoT: False</Tag>
+                    </p>
+                    <hr style={{ margin: '1rem 0' }} />
+                    <p><strong>Prompt:</strong> {convo1.base_prompt}</p>
+                    <p><strong>File:</strong> {convo1.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
+                    <p><strong>Response:</strong> {convo1.first_response}</p>
+                  </>
+                ) : (
+                  <p style={{ color: '#888' }}>No matching conversation found.</p>
+                )}
               </ResponseBox>
               <Navigation>
                 <NavButton onClick={() => handleNavigate(setFirstIndex, firstIndex, -1, firstConversations)} disabled={firstIndex === 0}>Prev</NavButton>
-                <PageIndicator>{firstIndex + 1} / {firstConversations.length}</PageIndicator>
+                <PageIndicator>
+                  {firstConversations.length === 0 ? '0 / 0' : `${firstIndex + 1} / ${firstConversations.length}`}
+                </PageIndicator>
                 <NavButton onClick={() => handleNavigate(setFirstIndex, firstIndex, 1, firstConversations)} disabled={firstIndex >= firstConversations.length - 1}>Next</NavButton>
               </Navigation>
             </ConversationColumn>
@@ -408,27 +428,35 @@ const NewInferencePairPage = () => {
               />
               <ResponseBox>
                 <h4>Second Inference</h4>
-                <p><strong>ID:</strong> {convo2?.id}</p>
-                <p><strong>Model:</strong> {convo2?.ai_model?.name}</p>
-                <p>
-                  <Tag
-                    clickable={convo2?.few_shot_template?.examples?.length > 0}
-                    onClick={() => convo2?.few_shot_template && openModal(convo2.few_shot_template)}
-                    title="Click to view few-shot template"
-                  >
-                    Few Shot: {convo2?.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
-                  </Tag>
-                  <Tag>RAG: False</Tag>
-                  <Tag>CoT: False</Tag>
-                </p>
-                <hr style={{ margin: '1rem 0' }} />
-                <p><strong>Prompt:</strong> {convo2?.base_prompt}</p>
-                <p><strong>File:</strong> {convo2?.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                <p><strong>Response:</strong> {convo2?.first_response}</p>
+                {convo2 ? (
+                  <>
+                    <p><strong>ID:</strong> {convo2.id}</p>
+                    <p><strong>Model:</strong> {convo2.ai_model?.name}</p>
+                    <p>
+                      <Tag
+                        clickable={convo2.few_shot_template?.examples?.length > 0}
+                        onClick={() => convo2.few_shot_template && openModal(convo2.few_shot_template)}
+                        title="Click to view few-shot template"
+                      >
+                        Few Shot: {convo2.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
+                      </Tag>
+                      <Tag>RAG: False</Tag>
+                      <Tag>CoT: False</Tag>
+                    </p>
+                    <hr style={{ margin: '1rem 0' }} />
+                    <p><strong>Prompt:</strong> {convo2.base_prompt}</p>
+                    <p><strong>File:</strong> {convo2.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
+                    <p><strong>Response:</strong> {convo2.first_response}</p>
+                  </>
+                ) : (
+                  <p style={{ color: '#888' }}>No matching conversation found.</p>
+                )}
               </ResponseBox>
               <Navigation>
                 <NavButton onClick={() => handleNavigate(setSecondIndex, secondIndex, -1, secondConversations)} disabled={secondIndex === 0}>Prev</NavButton>
-                <PageIndicator>{secondIndex + 1} / {secondConversations.length}</PageIndicator>
+                <PageIndicator>
+                  {secondConversations.length === 0 ? '0 / 0' : `${secondIndex + 1} / ${secondConversations.length}`}
+                </PageIndicator>
                 <NavButton onClick={() => handleNavigate(setSecondIndex, secondIndex, 1, secondConversations)} disabled={secondIndex >= secondConversations.length - 1}>Next</NavButton>
               </Navigation>
             </ConversationColumn>
