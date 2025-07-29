@@ -41,9 +41,7 @@ class Api::InterRatersController < Api::ApplicationController
     params.require(:inter_rater).permit(
       :first_conversation_id,
       :second_conversation_id,
-      :ai_model_id,
-      :comment,
-      :rating
+      :ai_model_id
     )
   end
 end

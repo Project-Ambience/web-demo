@@ -42,6 +42,13 @@ export const apiSlice = createApi({
         { type: 'Conversation', id: 'LIST' },
       ],
     }),
+    getConversationsByAiModel: builder.query({
+      query: (ai_model_id) => `/conversations/by_ai_model/${ai_model_id}`,
+      providesTags: (result = []) => [
+        ...result.map(({ id }) => ({ type: 'Conversation', id })),
+        { type: 'Conversation', id: 'BY_AI_MODEL' },
+      ],
+    }),
     getConversation: builder.query({
       query: id => `/conversations/${id}`,
       providesTags: (result, error, id) => [{ type: 'Conversation', id }],
@@ -189,6 +196,7 @@ export const {
   useAddRatingMutation,
   useAddCommentMutation,
   useGetConversationsQuery,
+  useGetConversationsByAiModelQuery,
   useGetConversationQuery,
   useCreateConversationMutation,
   useUpdateConversationMutation,

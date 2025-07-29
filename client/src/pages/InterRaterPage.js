@@ -91,15 +91,21 @@ const BackLink = styled(Link)`
 `;
 
 const PageHeader = styled.div`
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
   h2 {
     font-size: 2rem;
     color: #333;
     margin: 0;
+    margin-bottom: 1rem;
   }
 
   p {
     color: #4c6272;
-    margin-top: 0.5rem;
+    margin-top: 0.2rem;
   }
 `;
 
@@ -356,6 +362,18 @@ const ModalFooter = styled.div`
   }
 `;
 
+const HeaderRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+`;
+
 const InterRaterPage = () => {
   const { id: ai_model_id } = useParams();
   const [formState, setFormState] = useState({});
@@ -387,7 +405,6 @@ const InterRaterPage = () => {
     setIsModalOpen(false);
     setModalData(null);
   };
-
 
   const handleChange = (id, field, value) => {
     setFormState((prev) => ({
@@ -424,16 +441,20 @@ const InterRaterPage = () => {
       <BackLink to={`/ai-models/${ai_model_id}`}>Back to Model</BackLink>
       <WhiteContainer>
         <PageWrapper>
-          <PageHeader>
-            <h2>Model Evaluation</h2>
-            <p></p>
-            {model && (
-              <>
-                <p><strong>Model:</strong> {model.name}</p>
-                {model.base_model && <p><strong>Base Model:</strong> {model.base_model.name}</p>}
-              </>
-            )}
-          </PageHeader>
+          <HeaderRow>
+            <PageHeader>
+              <h2>Model Evaluation</h2>
+              {model && (
+                <>
+                  <p><strong>Model:</strong> {model.name}</p>
+                  {model.base_model && <p><strong>Base Model:</strong> {model.base_model.name}</p>}
+                </>
+              )}
+            </PageHeader>
+            <Link to={`/ai-models/${ai_model_id}/new/inference-pair`} style={{ textDecoration: 'none' }}>
+              <SubmitButton>New Inference Pair</SubmitButton>
+            </Link>
+          </HeaderRow>
 
           {isLoading || isModelLoading ? (
             <Spinner />

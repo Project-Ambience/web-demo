@@ -11,8 +11,37 @@ class Api::ConversationsController < Api::ApplicationController
         status: convo.status,
         updated_at: convo.updated_at,
         ai_model: {
-          name: convo.ai_model.name
-        }
+          name: convo.ai_model.name,
+          base_model: convo.ai_model.base_model
+        },
+        base_prompt: convo.base_prompt,
+        first_response: convo.first_response,
+        file_url: convo.file_url,
+        file_name: convo.file_name,
+        few_shot_template: convo.few_shot_template
+      }
+    end
+    render json: response_data
+  end
+
+  def conversation_by_ai_model
+    @conversations = Conversation.where(ai_model_id: params[:ai_model_id])
+
+    response_data = @conversations.map do |convo|
+      {
+        id: convo.id,
+        title: convo.title,
+        status: convo.status,
+        updated_at: convo.updated_at,
+        ai_model: {
+          name: convo.ai_model.name,
+          base_model: convo.ai_model.base_model
+        },
+        base_prompt: convo.base_prompt,
+        first_response: convo.first_response,
+        file_url: convo.file_url,
+        file_name: convo.file_name,
+        few_shot_template: convo.few_shot_template
       }
     end
     render json: response_data
