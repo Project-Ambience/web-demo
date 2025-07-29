@@ -279,6 +279,26 @@ const ModalFooter = styled.div`
   }
 `;
 
+const FilterInput = styled.input`
+  width: 100%;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  border: 1px solid #dce3e8;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #005eb8;
+    box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.2);
+  }
+
+  &::placeholder {
+    color: #999;
+  }
+`;
+
 const NewInferencePairPage = () => {
   const { id: ai_model_id } = useParams();
 
@@ -376,12 +396,11 @@ const NewInferencePairPage = () => {
         <WhiteContainer>
           <ComparisonWrapper>
             <ConversationColumn>
-              <input
+              <FilterInput
                 type="text"
                 placeholder="Filter by model name or ID"
                 value={firstFilter}
                 onChange={(e) => setFirstFilter(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
               />
               <ResponseBox>
                 <h4>First Inference</h4>
@@ -419,12 +438,11 @@ const NewInferencePairPage = () => {
             </ConversationColumn>
 
             <ConversationColumn>
-              <input
+              <FilterInput
                 type="text"
                 placeholder="Filter by model name or ID"
                 value={secondFilter}
                 onChange={(e) => setSecondFilter(e.target.value)}
-                style={{ width: '100%', padding: '0.5rem', marginBottom: '1rem' }}
               />
               <ResponseBox>
                 <h4>Second Inference</h4>
