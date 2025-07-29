@@ -679,7 +679,12 @@ const RequestDetailsModal = ({ request, onClose }) => {
                   View Dataset
                 </DataViewButton>
               )}
-              <DataViewButton onClick={() => openJsonInNewTab(request.parameters)}>
+              <DataViewButton onClick={() => {
+                try {
+                  const jsonString = request.parameters.replace(/'/g, '"');
+                  openJsonInNewTab(JSON.parse(jsonString));
+                } catch (e) { openJsonInNewTab({ error: "Could not parse parameters", original_data: request.parameters }); }
+              }}>
                 View Parameters
               </DataViewButton>
             </div>
