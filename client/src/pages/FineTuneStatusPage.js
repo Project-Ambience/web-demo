@@ -626,14 +626,19 @@ const RequestDetailsModal = ({ request, onClose }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
 
-  const openJsonInNewTab = (jsonData) => {
-    const newWindow = window.open("", "_blank");
-    if (newWindow) {
-      newWindow.document.write('<pre>' + JSON.stringify(jsonData, null, 2) + '</pre>');
-      newWindow.document.close();
-    } else {
-      alert("Please allow pop-ups for this site to view the data.");
-    }
+  const sanitizeFilename = (name) => name.replace(/\s+/g, '-');
+
+  const downloadJson = (jsonData, filename) => {
+    const jsonString = JSON.stringify(jsonData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -676,17 +681,17 @@ const RequestDetailsModal = ({ request, onClose }) => {
             <h4>Data & Parameters</h4>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
               {request.fine_tune_data && (
-                <DataViewButton onClick={() => openJsonInNewTab(request.fine_tune_data)}>
-                  View Dataset
+                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
+                  Download Dataset
                 </DataViewButton>
               )}
               <DataViewButton onClick={() => {
                 try {
                   const jsonString = request.parameters.replace(/'/g, '"');
-                  openJsonInNewTab(JSON.parse(jsonString));
-                } catch (e) { openJsonInNewTab({ error: "Could not parse parameters", original_data: request.parameters }); }
+                  downloadJson(JSON.parse(jsonString), `${sanitizeFilename(request.name)}_parameters.json`);
+                } catch (e) { downloadJson({ error: "Could not parse parameters", original_data: request.parameters }, `${sanitizeFilename(request.name)}_parameters-error.json`); }
               }}>
-                View Parameters
+                Download Parameters
               </DataViewButton>
             </div>
           </DetailSection>
@@ -727,7 +732,7 @@ const INITIAL_FILTERS = {
   base_model_id: '',
   time_period: 'all',
   status: 'all',
-  sort_order: 'desc',
+  sort_order: 'asc',
 };
 
 const FineTuneStatusPage = () => {
@@ -914,7 +919,7 @@ const FineTuneStatusPage = () => {
               </OptionList>
             </FilterSection>
             <FilterSection>
-              <FilterSectionTitle>Time Period</FilterSectionTitle>
+              <FilterSectionTitle>Submitted Time</FilterSectionTitle>
               <OptionList>
                 {Object.entries(TIME_PERIODS).map(([key, value]) => (
                   <React.Fragment key={key}>
