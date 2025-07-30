@@ -504,7 +504,9 @@ const InterRaterPage = () => {
                             )}
                           </Tag>
                           <Tag>RAG: False</Tag>
-                          <Tag>CoT: False</Tag>
+                          <Tag highlight={!!item.first_conversation_cot}>
+                            CoT: {item.first_conversation_cot ? 'True' : 'False'}
+                          </Tag>
                         </p>
                         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
                         <p><strong>Prompt:</strong> {item.first_conversation_base_prompt}</p>
@@ -557,7 +559,9 @@ const InterRaterPage = () => {
                             )}
                           </Tag>
                           <Tag>RAG: False</Tag>
-                          <Tag>CoT: False</Tag>
+                          <Tag highlight={!!item.second_conversation_cot}>
+                            CoT: {item.second_conversation_cot ? 'True' : 'False'}
+                          </Tag>
                         </p>
                         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
                         <p><strong>Prompt:</strong> {item.second_conversation_base_prompt}</p>

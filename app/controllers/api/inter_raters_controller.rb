@@ -22,13 +22,15 @@ class Api::InterRatersController < Api::ApplicationController
         first_conversation_file_url: inter_rater.first_conversation.file_url,
         first_conversation_file_name: inter_rater.first_conversation.file_name,
         first_conversation_few_shot_template: inter_rater.first_conversation.few_shot_template,
+        first_conversation_cot: inter_rater.first_conversation.cot,
         second_conversation_id: inter_rater.second_conversation_id,
         second_conversation_ai_model_name: inter_rater.second_conversation.ai_model.name,
         second_conversation_base_prompt: inter_rater.second_conversation.base_prompt,
         second_conversation_first_response: inter_rater.second_conversation.first_response,
         second_conversation_file_url: inter_rater.second_conversation.file_url,
         second_conversation_file_name: inter_rater.second_conversation.file_name,
-        second_conversation_few_shot_template: inter_rater.second_conversation.few_shot_template
+        second_conversation_few_shot_template: inter_rater.second_conversation.few_shot_template,
+        second_conversation_cot: inter_rater.second_conversation.cot
       }
     end
 

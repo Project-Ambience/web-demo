@@ -18,7 +18,8 @@ class Api::ConversationsController < Api::ApplicationController
         first_response: convo.first_response,
         file_url: convo.file_url,
         file_name: convo.file_name,
-        few_shot_template: convo.few_shot_template
+        few_shot_template: convo.few_shot_template,
+        cot: convo.cot
       }
     end
     render json: response_data
@@ -41,7 +42,8 @@ class Api::ConversationsController < Api::ApplicationController
         first_response: convo.first_response,
         file_url: convo.file_url,
         file_name: convo.file_name,
-        few_shot_template: convo.few_shot_template
+        few_shot_template: convo.few_shot_template,
+        cot: convo.cot
       }
     end
     render json: response_data
