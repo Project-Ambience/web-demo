@@ -333,7 +333,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
         setIsEditing(false);
       } else {
         const newTemplate = await createTemplate(payload).unwrap();
-        onSaveComplete(newTemplate.id);
+        onSelectTemplate(newTemplate.id);
       }
     } catch (err) {
       if (err.data) {
@@ -403,7 +403,7 @@ const FewShotTemplateDetail = ({ templateId, isReadOnly, templateData, onSaveCom
             <>
               <SecondaryButton onClick={handleCancelEdit}>Cancel</SecondaryButton>
               <PrimaryButton onClick={handleSubmit} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Save Changes'}
+                {isSaving ? 'Saving...' : (templateId ? 'Save Changes' : 'Save & Select')}
               </PrimaryButton>
             </>
           ) : (
