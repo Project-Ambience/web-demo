@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
+ActiveRecord::Schema[8.0].define(version: 2025_07_23_202408) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -109,6 +109,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
     t.datetime "updated_at", null: false
     t.integer "status", default: 0, null: false
     t.jsonb "few_shot_template"
+    t.boolean "cot", default: false, null: false
     t.index ["ai_model_id"], name: "index_conversations_on_ai_model_id"
   end
 
@@ -135,6 +136,20 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["ai_model_id"], name: "index_fine_tune_tasks_on_ai_model_id"
+  end
+
+  create_table "inter_raters", force: :cascade do |t|
+    t.string "prompt"
+    t.string "first_response"
+    t.text "second_response"
+    t.string "file_url"
+    t.bigint "ai_model_id", null: false
+    t.integer "evaluation_category"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.string "comment"
+    t.integer "rating"
+    t.index ["ai_model_id"], name: "index_inter_raters_on_ai_model_id"
   end
 
   create_table "messages", force: :cascade do |t|
@@ -201,6 +216,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_07_23_120836) do
   add_foreign_key "conversations", "ai_models"
   add_foreign_key "examples", "few_shot_templates"
   add_foreign_key "fine_tune_tasks", "ai_models"
+  add_foreign_key "inter_raters", "ai_models"
   add_foreign_key "messages", "conversations"
   add_foreign_key "model_fine_tune_requests", "ai_models"
   add_foreign_key "model_fine_tune_requests", "clinician_types"

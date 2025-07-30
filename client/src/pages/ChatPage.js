@@ -51,12 +51,6 @@ const EmptySuggestionIcon = () => (
   </svg>
 );
 
-const PaperclipIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
-  </svg>
-);
-
 const bounce = keyframes`
   0%, 80%, 100% {
     transform: scale(0);
@@ -487,6 +481,13 @@ const SelectedItemWrapper = styled.div`
   padding: 0.4rem 0.75rem;
 `;
 
+const BubbleText = styled.span`
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+`;
+
 const ItemActionButton = styled.button`
   background: none;
   border: none;
@@ -681,6 +682,10 @@ const AttachmentBubble = styled.div`
 const AttachmentLink = styled.a`
   color: #005eb8;
   text-decoration: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
   &:hover { text-decoration: underline; }
 `;
 
@@ -690,10 +695,55 @@ const AttachmentButton = styled.button`
   color: #005eb8;
   cursor: pointer;
   padding: 0;
-  display: flex;
-  align-items: center;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
   &:hover { text-decoration: underline; }
+`;
+
+const Modal = styled.div`
+  background-color: white;
+  padding: 2.5rem;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 90%;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  position: relative;
+
+  h3 {
+    margin-top: 0;
+    color: #003087;
+  }
+
+  p, li {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #4c6272;
+  }
+
+  ul {
+    padding-left: 1.2rem;
+  }
+
+  strong {
+    color: #333;
+  }
+
+  a {
+    color: #005eb8;
+    text-decoration: none;
+    font-weight: 600;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
+const ModalCloseButton = styled(CloseButton)`
+  top: 0.75rem;
+  right: 0.75rem;
 `;
 
 const ChatPage = () => {
@@ -707,6 +757,9 @@ const ChatPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [isCoTEnabled, setIsCoTEnabled] = useState(false);
+  const [showCoTInfoModal, setShowCoTInfoModal] = useState(false);
+  const [showFewShotInfoModal, setShowFewShotInfoModal] = useState(false);
 
   const [fileError, setFileError] = useState('');
   const [viewMode, setViewMode] = useState('chat');
@@ -755,6 +808,12 @@ const ChatPage = () => {
     setIsTemplateViewReadOnly(false);
     setShowAddContentPanel(false);
   }, [activeConversationId]);
+
+  useEffect(() => {
+    if (activeConversation) {
+      setIsCoTEnabled(activeConversation.cot);
+    }
+  }, [activeConversation]);
 
   const sortedMessages = useMemo(() =>
     [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
@@ -845,6 +904,7 @@ const ChatPage = () => {
           content: input,
           file: selectedFile,
           few_shot_template_id: selectedTemplateId,
+          enable_cot: isCoTEnabled,
         },
       });
       setInput('');
@@ -906,6 +966,10 @@ const ChatPage = () => {
     }, 0);
   };
 
+  const handleToggleCoT = () => {
+    setIsCoTEnabled(prevState => !prevState);
+  };
+
   const renderInputArea = () => {
     if (!activeConversation) return null;
 
@@ -939,9 +1003,17 @@ const ChatPage = () => {
                 <MessageInputContainer>
                     {fileError && <FileErrorText>{fileError}</FileErrorText>}
                     <SelectionBubblesContainer>
+                      {activeConversation.status === 'awaiting_prompt' && isCoTEnabled && (
+                        <SelectedItemWrapper>
+                          💭 Thinking
+                          <RemoveItemButton type="button" onClick={() => setIsCoTEnabled(false)}>
+                            ✕
+                          </RemoveItemButton>
+                        </SelectedItemWrapper>
+                      )}
                       {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
                           <SelectedItemWrapper>
-                              ✨ {selectedTemplate.name}
+                              ✨ <BubbleText>{selectedTemplate.name}</BubbleText>
                               <ItemActionButton type="button" onClick={() => {
                                 setViewingTemplateData(selectedTemplate);
                                 setIsTemplateViewReadOnly(true);
@@ -956,7 +1028,7 @@ const ChatPage = () => {
                       )}
                       {activeConversation.status === 'awaiting_prompt' && selectedFile && (
                           <SelectedItemWrapper>
-                              📎 {selectedFile.name}
+                              📎 <BubbleText>{selectedFile.name}</BubbleText>
                               <ItemActionButton as="a" href={tempFileUrl} target="_blank" rel="noopener noreferrer">
                                 <ViewIcon />
                               </ItemActionButton>
@@ -1017,6 +1089,16 @@ const ChatPage = () => {
                                     }}
                                     onAddFewShot={() => {
                                       setViewMode('templateList');
+                                      setShowAddContentPanel(false);
+                                    }}
+                                    isCoTEnabled={isCoTEnabled}
+                                    onToggleCoT={handleToggleCoT}
+                                    onShowCoTInfo={() => {
+                                      setShowCoTInfoModal(true);
+                                      setShowAddContentPanel(false);
+                                    }}
+                                    onShowFewShotInfo={() => {
+                                      setShowFewShotInfoModal(true);
                                       setShowAddContentPanel(false);
                                     }}
                                   />
@@ -1082,10 +1164,64 @@ const ChatPage = () => {
       default:
         return null;
     }
-  }
+  };
+
+  const renderCoTInfoModal = () => (
+    <OverlayContainer onClick={() => setShowCoTInfoModal(false)}>
+      <Modal onClick={(e) => e.stopPropagation()}>
+        <ModalCloseButton onClick={() => setShowCoTInfoModal(false)}>×</ModalCloseButton>
+        <h3>What is Thinking?</h3>
+        <p>
+	  Enabling "Thinking" uses a technique called <strong>Chain-of-Thought (CoT)</strong>. It prompts the AI to "think out loud" by explaining its reasoning step-by-step before providing a final answer. This makes the response more transparent and easier to verify.
+        </p>
+        <h4>When to use it:</h4>
+        <ul>
+          <li><strong>For Complex Problems:</strong> When you need the AI to solve multi-step or logical reasoning tasks.</li>
+          <li><strong>For Fact-Checking:</strong> To see <em>how</em> the AI reached a conclusion, helping you spot potential errors in its logic.</li>
+          <li><strong>For Creative Tasks:</strong> To generate more detailed and structured content by having it outline its thought process first.</li>
+        </ul>
+        <h4>Keep in Mind:</h4>
+        <ul>
+            <li>Responses may take slightly longer to generate.</li>
+            <li>The output will be more verbose.</li>
+        </ul>
+        <p>
+          For a more technical explanation, you can read this article from IBM: <a href="https://www.ibm.com/think/topics/chain-of-thoughts" target="_blank" rel="noopener noreferrer">Learn more about CoT prompting</a>.
+        </p>
+      </Modal>
+    </OverlayContainer>
+  );
+
+  const renderFewShotInfoModal = () => (
+    <OverlayContainer onClick={() => setShowFewShotInfoModal(false)}>
+      <Modal onClick={(e) => e.stopPropagation()}>
+        <ModalCloseButton onClick={() => setShowFewShotInfoModal(false)}>×</ModalCloseButton>
+        <h3>What is Few-Shot Prompting?</h3>
+        <p>
+          Few-shot prompting is a technique where you provide the AI with a few examples of the task you want it to perform. Instead of just asking a question, you first show it a pattern of inputs and desired outputs. The AI then uses these examples to generate a better, more accurate response for your actual prompt.
+        </p>
+        <h4>When to use it:</h4>
+        <ul>
+          <li><strong>To get responses in a specific format</strong> (e.g., JSON, a numbered list, or a specific sentence structure).</li>
+          <li><strong>To guide the AI's tone or style</strong> (e.g., formal, clinical, casual).</li>
+          <li><strong>For complex classification or data extraction tasks</strong> where simple instructions are not enough.</li>
+        </ul>
+        <h4>Keep in Mind:</h4>
+        <ul>
+            <li>Providing too many examples (usually more than 5) can sometimes confuse the model.</li>
+            <li>The quality and consistency of your examples directly impacts the quality of the response.</li>
+        </ul>
+        <p>
+          For a more technical explanation, you can read this article from IBM: <a href="https://www.ibm.com/think/topics/few-shot-prompting" target="_blank" rel="noopener noreferrer">Learn more about few-shot prompting</a>.
+        </p>
+      </Modal>
+    </OverlayContainer>
+  );
 
   return (
     <ChatPageWrapper>
+      {showCoTInfoModal && renderCoTInfoModal()}
+      {showFewShotInfoModal && renderFewShotInfoModal()}
       <ChatLayout>
         <Sidebar>
           <SidebarTitle>Prompt History</SidebarTitle>
@@ -1145,6 +1281,11 @@ const ChatPage = () => {
 
                         {index === 0 && msg.role === 'user' && (
                           <MessageAttachmentContainer>
+                            {activeConversation.cot && (
+                              <AttachmentBubble>
+                                💭 <AttachmentButton as="span" style={{ cursor: 'default', textDecoration: 'none' }}>Thinking</AttachmentButton>
+                              </AttachmentBubble>
+                            )}
                             {activeConversation.few_shot_template?.name && (
                               <AttachmentBubble>
                                 ✨

@@ -54,7 +54,8 @@ RSpec.describe "MessageRequests", type: :request do
             input: expected_input_history,
             base_model_path: "some path",
             adapter_path: "some adapter path",
-            speciality: "summarise"
+            speciality: "summarise",
+            cot: false
           }
           expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
         end
@@ -98,11 +99,45 @@ RSpec.describe "MessageRequests", type: :request do
             input: expected_input_history,
             base_model_path: "some path",
             adapter_path: "some adapter path",
-            speciality: "summarise"
+            speciality: "summarise",
+            cot: false
           }
 
           expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
           expect(conversation.few_shot_template).to eq(expected_snapshot)
+        end
+      end
+
+      context "when enable_cot is true" do
+        let(:params_with_cot) do
+          {
+            conversation_id: conversation.id,
+            message: {
+              content: "Hello, think about this deeply.",
+              enable_cot: "true"
+            }
+          }
+        end
+
+        it "publishes the message with cot set to true" do
+          post "/api/conversations/#{conversation.id}/messages", params: params_with_cot
+          conversation.reload
+
+          expected_input_history = conversation.messages.order(created_at: :asc).map do |msg|
+            { role: msg.role, content: msg.content }
+          end
+
+          expected_payload = {
+            conversation_id: conversation.id,
+            file_url: conversation.file_url,
+            few_shot_template: nil,
+            input: expected_input_history,
+            base_model_path: "some path",
+            adapter_path: "some adapter path",
+            speciality: "summarise",
+            cot: true
+          }
+          expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
         end
       end
     end

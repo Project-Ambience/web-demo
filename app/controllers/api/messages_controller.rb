@@ -9,6 +9,9 @@ class Api::MessagesController < Api::ApplicationController
     @message = @conversation.messages.new(content: params[:message][:content], role: "user")
 
     if @message.save
+      cot_enabled_for_this_prompt = params.dig(:message, :enable_cot) == "true"
+      @conversation.update(cot: cot_enabled_for_this_prompt)
+
       uploaded_file = params[:message][:file]
       if uploaded_file.present? && !@conversation.file.attached?
         @conversation.file.attach(uploaded_file)
@@ -27,7 +30,8 @@ class Api::MessagesController < Api::ApplicationController
         input: input_history,
         base_model_path: @conversation.ai_model.path,
         adapter_path: @conversation.ai_model.adapter_path,
-        speciality: @conversation.ai_model.speciality
+        speciality: @conversation.ai_model.speciality,
+        cot: @conversation.cot
       }, ENV["USER_PROMPT_QUEUE_NAME"])
 
       @conversation.awaiting_feedback!

@@ -27,25 +27,9 @@ const Header = styled.div`
   border-top-right-radius: 8px;
 `;
 
-const TitleContainer = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-`;
-
 const Title = styled.h2`
   margin: 0;
   color: #343a40;
-`;
-
-const InfoLink = styled.a`
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #005eb8;
-  text-decoration: none;
-  &:hover {
-    text-decoration: underline;
-  }
 `;
 
 const WarningContainer = styled.div`
@@ -157,12 +141,7 @@ const FewShotTemplateList = ({ onViewTemplate, onCreateNew }) => {
   return (
     <ListContainer>
       <Header>
-        <TitleContainer>
-          <Title>Few-Shot Templates</Title>
-          <InfoLink href="https://www.ibm.com/think/topics/few-shot-prompting" target="_blank" rel="noopener noreferrer">
-            What is Few-Shot?
-          </InfoLink>
-        </TitleContainer>
+        <Title>Few-Shot Templates</Title>
         <PrimaryButton onClick={onCreateNew}>Create New Template</PrimaryButton>
       </Header>
 
