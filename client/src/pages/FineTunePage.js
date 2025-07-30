@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
   useGetAiModelByIdQuery, 
@@ -9,6 +9,20 @@ import {
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
+
+const spinAnimation = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const InlineSpinner = styled.div`
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: ${spinAnimation} 1s linear infinite;
+`;
 
 const PageWrapper = styled.div`
   display: grid;
@@ -292,6 +306,7 @@ const FineTunePage = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [showQueueWarning, setShowQueueWarning] = useState(false);
   const [submissionState, setSubmissionState] = useState('idle');
+  const [isValidatingFile, setIsValidatingFile] = useState(false);
 
   const fileInputRef = useRef(null);
   const redirectTimer = useRef(null);
@@ -325,28 +340,86 @@ const FineTunePage = () => {
       fileInputRef.current.value = '';
     }
   };
-
-  const handleFileSelection = (files) => {
-    if (!files || files.length === 0) {
-      return;
+  
+  const parseCsvToJson = (csvText) => {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue;
+        const obj = {};
+        const currentline = lines[i].split(',');
+        for (let j = 0; j < headers.length; j++) {
+            obj[headers[j]] = currentline[j] ? currentline[j].trim().replace(/^"|"$/g, '') : '';
+        }
+        result.push(obj);
     }
+    return result;
+  };
+
+  const validateJsonData = (data) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      return { isValid: false, message: 'Dataset must be a non-empty array of objects.' };
+    }
+    for (const [index, item] of data.entries()) {
+      if (typeof item !== 'object' || item === null) {
+        return { isValid: false, message: `Record ${index + 1} is not a valid object.` };
+      }
+      for (const key in item) {
+        const value = item[key];
+        if (value == null || (typeof value === 'string' && value.trim() === '')) {
+          const lineNumber = index + 2;
+          return { isValid: false, message: `Record ${index + 1} (line ${lineNumber}) has an empty value for field "${key}".` };
+        }
+      }
+    }
+    return { isValid: true };
+  };
+
+  const handleFileSelection = async (files) => {
+    if (!files || files.length === 0) return;
+    setIsValidatingFile(true);
     const uploaded = files[0];
     const maxSizeMB = 100;
     const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-    if (uploaded) {
+    const fileExtension = uploaded.name.substring(uploaded.name.lastIndexOf('.'));
+  
+    try {
+      if (!uploaded) throw new Error("No file selected.");
       if (uploaded.size > maxSizeBytes) {
-        setFile(null);
-        setFileError(`File size should not exceed ${maxSizeMB}MB`);
-        setTimeout(() => setFileError(''), 4000);
-      } else if (uploaded.type !== 'application/json') {
-        setFile(null);
-        setFileError('Please upload a .json file');
-        setTimeout(() => setFileError(''), 4000);
-      } else {
-        setFile(uploaded);
-        setFileError('');
+        throw new Error(`File size should not exceed ${maxSizeMB}MB`);
       }
+      
+      const fileText = await uploaded.text();
+      let jsonData;
+
+      if (fileExtension.toLowerCase() === '.json') {
+          jsonData = JSON.parse(fileText);
+      } else {
+          jsonData = parseCsvToJson(fileText);
+      }
+      
+      const validationResult = validateJsonData(jsonData);
+      if (!validationResult.isValid) {
+        throw new Error(validationResult.message);
+      }
+
+      const jsonString = JSON.stringify(jsonData);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const newFileName = uploaded.name.replace(/\.[^/.]+$/, "") + ".json";
+      const jsonFile = new File([blob], newFileName, { type: 'application/json' });
+      
+      setFile(jsonFile);
+      setFileError('');
+    } catch (e) {
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      const errorMessage = e instanceof SyntaxError ? 'Invalid JSON syntax. Please check the file content.' : e.message;
+      setFileError(errorMessage);
+      setTimeout(() => setFileError(''), 4000);
+    } finally {
+      setIsValidatingFile(false);
     }
   };
 
@@ -370,7 +443,7 @@ const FineTunePage = () => {
     e.preventDefault();
   
     if (!file) {
-      setSubmissionError('Please upload a fine-tuning .json file.');
+      setSubmissionError('Please upload a fine-tuning dataset file.');
       return;
     }
     
@@ -536,11 +609,11 @@ const FineTunePage = () => {
         <Sidebar>
           <Section>
             <h3>Fine-Tuning Data</h3>
-            <label htmlFor="file-upload">Upload JSON file</label>
+            <label htmlFor="file-upload">Upload Dataset File</label>
             <input
               id="file-upload"
               type="file"
-              accept=".json"
+              accept=".json,.csv,.txt"
               ref={fileInputRef}
               style={{ display: 'none' }}
               onChange={(e) => handleFileSelection(e.target.files)}
@@ -555,8 +628,16 @@ const FineTunePage = () => {
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   isDragging={isDragging}
+                  disabled={isValidatingFile}
                 >
-                  Upload File
+                  {isValidatingFile ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <InlineSpinner />
+                      Validating...
+                    </span>
+                  ) : (
+                    'Upload File'
+                  )}
                 </UploadButton>
                 {fileError && <FileErrorText>{fileError}</FileErrorText>}
               </>
