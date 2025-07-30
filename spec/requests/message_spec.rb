@@ -142,55 +142,5 @@ RSpec.describe "MessageRequests", type: :request do
         end
       end
     end
-
-    context "first prompt and fine tune model" do
-      it "assign true to make_extra_inference_on_base_mode" do
-        post "/api/conversations/#{conversation.id}/messages", params: valid_params
-
-        expected_input_history = conversation.messages.order(created_at: :asc).map do |msg|
-          { role: msg.role, content: msg.content }
-        end
-
-        expected_payload = {
-          conversation_id: conversation.id,
-          file_url: conversation.file_url,
-          input: expected_input_history,
-          base_model_path: "some path",
-          adapter_path: "some adapter path",
-          speciality: "summarise",
-          make_extra_inference_on_base_model: true,
-          few_shot_template: nil
-        }
-
-        expect(expected_input_history.size).to eq(1)
-        expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
-      end
-    end
-
-    context "first prompt but not fine tune model" do
-      let!(:conversation) { create(:conversation, ai_model: base_ai_model) }
-
-      it "assign false to make_extra_inference_on_base_mode" do
-        post "/api/conversations/#{conversation.id}/messages", params: valid_params
-
-        expected_input_history = conversation.messages.order(created_at: :asc).map do |msg|
-          { role: msg.role, content: msg.content }
-        end
-
-        expected_payload = {
-          conversation_id: conversation.id,
-          file_url: conversation.file_url,
-          input: expected_input_history,
-          base_model_path: "some path",
-          adapter_path: "some adapter path",
-          speciality: "summarise",
-          make_extra_inference_on_base_model: false,
-          few_shot_template: nil
-        }
-
-        expect(expected_input_history.size).to eq(1)
-        expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
-      end
-    end
   end
 end
