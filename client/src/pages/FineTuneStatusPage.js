@@ -96,13 +96,14 @@ const FilterSectionTitle = styled.h4`
 `;
 
 const SearchContainer = styled.div`
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #e8edee;
   position: relative;
-  margin: 0 1.5rem;
   
   svg {
     position: absolute;
     top: 50%;
-    left: 0.75rem;
+    left: 2.25rem;
     transform: translateY(-50%);
     color: #5f6368;
   }
@@ -848,19 +849,16 @@ const FineTuneStatusPage = () => {
         <PageLayout>
           <Sidebar>
             <SidebarTitle>Refine by</SidebarTitle>
-            <FilterSection>
-              <FilterSectionTitle>New Model Name</FilterSectionTitle>
-              <SearchContainer>
-                <SearchIcon />
-                <SearchInput
-                  type="text"
-                  name="search"
-                  placeholder="Filter by name..."
-                  value={filters.search}
-                  onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
-                />
-              </SearchContainer>
-            </FilterSection>
+            <SearchContainer>
+              <SearchIcon />
+              <SearchInput
+                type="text"
+                name="search"
+                placeholder="Search new models..."
+                value={filters.search}
+                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
+              />
+            </SearchContainer>
             <FilterSection ref={baseModelRef}>
               <FilterSectionTitle>Base Model</FilterSectionTitle>
               <div style={{ position: 'relative' }}>
@@ -949,7 +947,7 @@ const FineTuneStatusPage = () => {
                         <StyledTable>
                             <Thead>
                                 <Tr>
-                                    <Th>New Model Name</Th>
+                                    <Th>New Model</Th>
                                     <Th>
                                       <HeaderWithIcon>
                                         <span>Status</span>
