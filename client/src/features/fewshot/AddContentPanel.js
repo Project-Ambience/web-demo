@@ -146,15 +146,14 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
     <PanelContainer>
       <ButtonWrapper>
         <PanelButton onClick={onFileUpload}>
-          <MaterialIcon iconName="attachment" /> Upload File
+          📎 Upload File
         </PanelButton>
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
 
       <Row onClick={onToggleCoT}>
         <LabelWrapper>
-          <MaterialIcon iconName="lightbulb_2" />
-          <span>Enable Thinking</span>
+          <span>💭 Enable Thinking</span>
         </LabelWrapper>
         <ControlsWrapper>
           <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowCoTInfo(); }}>
@@ -166,8 +165,7 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
 
       <ClickableRow onClick={onAddFewShot}>
         <LabelWrapper>
-            <MaterialIcon iconName="content_copy" /> 
-            <span>Add Few-Shot</span>
+            <span>✨ Add Few-Shot</span>
             <InfoIcon onClick={(e) => { e.stopPropagation(); onShowFewShotInfo(); }}>
                 <MaterialIcon iconName="help_outline" />
             </InfoIcon>
