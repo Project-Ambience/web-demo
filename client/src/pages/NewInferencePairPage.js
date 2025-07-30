@@ -4,6 +4,7 @@ import { useRef, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
 import { apiSlice } from '../app/apiSlice';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import {
   useGetConversationsByAiModelQuery,
@@ -377,6 +378,8 @@ const NewInferencePairPage = () => {
   const cable = useRef(null);
   const dispatch = useDispatch();
 
+  const navigate = useNavigate();
+
   const handleModelSelect = async (modelId) => {
     const model = allModels.find((m) => m.id.toString() === modelId.toString());
     try {
@@ -412,21 +415,25 @@ const NewInferencePairPage = () => {
       setIndex(newIndex);
     }
   };
-
+  
   const handleSubmit = async () => {
+    const confirmed = window.confirm("Are you sure you want to submit this Inference Pair?");
+    if (!confirmed) return;
+  
     try {
       await createInterRater({
         ai_model_id,
         first_conversation_id: convo1.id,
         second_conversation_id: convo2.id,
       }).unwrap();
-      setShowModal(false);
-      alert('✅ InterRater created successfully!');
+  
+      navigate(`/ai-models/${ai_model_id}/evaluate`);
     } catch (e) {
-      alert('❌ Error creating InterRater');
+      alert("❌ Error creating InterRater");
+      console.error(e);
     }
-  };
-
+  };  
+  
   const convo1 = firstConversations[firstIndex];
   const convo2 = secondConversations[secondIndex];
 
@@ -575,9 +582,7 @@ const NewInferencePairPage = () => {
           </div>
         </WhiteContainer>
 
-        <SubmitButton
-          onClick={() => setShowModal(true)}
-        >
+        <SubmitButton onClick={handleSubmit}>
           Submit
         </SubmitButton>
       </WhiteContainer>

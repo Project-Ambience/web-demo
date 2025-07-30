@@ -10,7 +10,7 @@ class Api::InterRatersController < Api::ApplicationController
   end
 
   def response_pairs
-    @inter_raters = InterRater.where(ai_model_id: params[:ai_model_id])
+    @inter_raters = InterRater.where(ai_model_id: params[:ai_model_id]).order(created_at: :desc)
 
     response_data = @inter_raters.map do |inter_rater|
       {
