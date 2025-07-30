@@ -72,6 +72,7 @@ const ComparisonWrapper = styled.div`
   display: flex;
   gap: 2rem;
   flex-wrap: wrap;
+  align-items: stretch;
   margin-top: 0.2rem;
 
   @media (max-width: 768px) {
@@ -82,6 +83,27 @@ const ComparisonWrapper = styled.div`
 const ConversationColumn = styled.div`
   flex: 1;
   min-width: 300px;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ResponseScrollArea = styled.div`
+  max-height: 400px;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+  padding-right: 0.5rem;
+
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 6px;
+  }
 `;
 
 const ResponseBox = styled.div`
@@ -89,6 +111,9 @@ const ResponseBox = styled.div`
   padding: 1rem;
   border: 1px solid #dce3e8;
   border-radius: 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 
   h4 {
     margin-top: 0;
@@ -102,10 +127,18 @@ const ResponseBox = styled.div`
   p {
     white-space: pre-line;
     color: #444;
-    line-height: 1;
+    line-height: 1.4;
     font-size: 0.95rem;
+    margin: 0.25rem 0;
+  }
+
+  strong {
+    font-weight: 600;
+    display: inline-block;
+    margin-right: 0.25rem;
   }
 `;
+
 
 const Navigation = styled.div`
   display: flex;
@@ -169,8 +202,8 @@ const Tag = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background-color: #e6f0fa;
-  color: rgb(130, 132, 133);
+  background-color: ${({ highlight }) => (highlight ? '#d1f7c4' : '#e6f0fa')};
+  color: ${({ highlight }) => (highlight ? '#1a5e20' : 'rgb(130, 132, 133)')};
   padding: 0.3rem 0.75rem;
   margin-right: 0.5rem;
   border-radius: 999px;
@@ -180,8 +213,10 @@ const Tag = styled.span`
   transition: background-color 0.2s ease, color 0.2s ease;
 
   &:hover {
-    background-color: ${({ clickable }) => (clickable ? '#d4e7f9' : '#e6f0fa')};
-    color: ${({ clickable }) => (clickable ? '#1d4ed8' : 'rgb(130, 132, 133)')};
+    background-color: ${({ clickable, highlight }) =>
+      clickable ? (highlight ? '#b2e9a4' : '#d4e7f9') : (highlight ? '#d1f7c4' : '#e6f0fa')};
+    color: ${({ clickable, highlight }) =>
+      clickable ? (highlight ? '#145a1a' : '#1d4ed8') : (highlight ? '#1a5e20' : 'rgb(130, 132, 133)')};
   }
 `;
 
@@ -192,7 +227,7 @@ const Icon = styled.svg`
   transition: stroke 0.2s ease;
 
   ${Tag}:hover & {
-    stroke: #1d4ed8; /* vivid blue on hover */
+    stroke: #145a1a;
   }
 `;
 
@@ -354,9 +389,7 @@ const NewInferencePairPage = () => {
   }, [firstConversations.length]);
 
   React.useEffect(() => {
-    if (secondIndex >= secondConversations.length) {
-      setSecondIndex(0);
-    }
+    setSecondIndex(0);
   }, [secondConversations.length]);
 
   const { data: model } = useGetAiModelByIdQuery(ai_model_id);
@@ -439,7 +472,7 @@ const NewInferencePairPage = () => {
 
   useEffect(() => {
     if (!chatConversationId || !showChatModal) {
-      return () => {}; // ✅ always return a cleanup function
+      return () => {};
     }
   
     if (!cable.current) {
@@ -507,10 +540,24 @@ const NewInferencePairPage = () => {
                     <p>
                       <Tag
                         clickable={convo1.few_shot_template?.examples?.length > 0}
+                        highlight={convo1.few_shot_template?.examples?.length > 0}
                         onClick={() => convo1.few_shot_template && openModal(convo1.few_shot_template)}
                         title="Click to view few-shot template"
                       >
                         Few Shot: {convo1.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
+                        {convo1.few_shot_template && (
+                          <Icon
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </Icon>
+                        )}
                       </Tag>
                       <Tag>RAG: False</Tag>
                       <Tag>CoT: False</Tag>
@@ -518,7 +565,9 @@ const NewInferencePairPage = () => {
                     <hr style={{ margin: '1rem 0' }} />
                     <p><strong>Prompt:</strong> {convo1.base_prompt}</p>
                     <p><strong>File:</strong> {convo1.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                    <p><strong>Response:</strong> {convo1.first_response}</p>
+                    <ResponseScrollArea>
+                      <p><strong>Response:</strong> {convo1.first_response}</p>
+                    </ResponseScrollArea>
                   </>
                 ) : (
                   <p style={{ color: '#888' }}>No matching conversation found.</p>
@@ -549,10 +598,24 @@ const NewInferencePairPage = () => {
                     <p>
                       <Tag
                         clickable={convo2.few_shot_template?.examples?.length > 0}
+                        highlight={convo2.few_shot_template?.examples?.length > 0}
                         onClick={() => convo2.few_shot_template && openModal(convo2.few_shot_template)}
                         title="Click to view few-shot template"
                       >
                         Few Shot: {convo2.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
+                        {convo2.few_shot_template && (
+                          <Icon
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </Icon>
+                        )}
                       </Tag>
                       <Tag>RAG: False</Tag>
                       <Tag>CoT: False</Tag>
@@ -560,7 +623,9 @@ const NewInferencePairPage = () => {
                     <hr style={{ margin: '1rem 0' }} />
                     <p><strong>Prompt:</strong> {convo2.base_prompt}</p>
                     <p><strong>File:</strong> {convo2.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                    <p><strong>Response:</strong> {convo2.first_response}</p>
+                    <ResponseScrollArea>
+                      <p><strong>Response:</strong> {convo2.first_response}</p>
+                    </ResponseScrollArea>
                   </>
                 ) : (
                   <p style={{ color: '#888' }}>No matching conversation found.</p>

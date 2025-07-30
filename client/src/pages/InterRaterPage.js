@@ -245,8 +245,8 @@ const Tag = styled.span`
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  background-color: #e6f0fa;
-  color: rgb(130, 132, 133);
+  background-color: ${({ highlight }) => (highlight ? '#d1f7c4' : '#e6f0fa')};
+  color: ${({ highlight }) => (highlight ? '#1a5e20' : 'rgb(130, 132, 133)')};
   padding: 0.3rem 0.75rem;
   margin-right: 0.5rem;
   margin-top: 0.5rem;
@@ -257,8 +257,10 @@ const Tag = styled.span`
   transition: background-color 0.2s ease, color 0.2s ease;
 
   &:hover {
-    background-color: ${({ clickable }) => (clickable ? '#d4e7f9' : '#e6f0fa')};
-    color: ${({ clickable }) => (clickable ? '#1d4ed8' : 'rgb(130, 132, 133)')};
+    background-color: ${({ clickable, highlight }) =>
+      clickable ? (highlight ? '#b2e9a4' : '#d4e7f9') : (highlight ? '#d1f7c4' : '#e6f0fa')};
+    color: ${({ clickable, highlight }) =>
+      clickable ? (highlight ? '#145a1a' : '#1d4ed8') : (highlight ? '#1a5e20' : 'rgb(130, 132, 133)')};
   }
 `;
 
@@ -269,7 +271,7 @@ const Icon = styled.svg`
   transition: stroke 0.2s ease;
 
   ${Tag}:hover & {
-    stroke: #1d4ed8; /* vivid blue on hover */
+    stroke: #145a1a;
   }
 `;
 
@@ -478,6 +480,7 @@ const InterRaterPage = () => {
                         <p>
                           <Tag
                             clickable={!!item.first_conversation_few_shot_template}
+                            highlight={!!item.first_conversation_few_shot_template}
                             onClick={() => {
                               if (item.first_conversation_few_shot_template) {
                                 openModal(item.first_conversation_few_shot_template);
@@ -528,7 +531,31 @@ const InterRaterPage = () => {
                           {item.second_conversation_ai_model_name}
                         </p>
                         <p>
-                          <Tag>Few Shot: {item.second_conversation_few_shot_template ? 'True' : 'False'}</Tag>
+                        <Tag
+                            clickable={!!item.second_conversation_few_shot_template}
+                            highlight={!!item.second_conversation_few_shot_template}
+                            onClick={() => {
+                              if (item.second_conversation_few_shot_template) {
+                                openModal(item.second_conversation_few_shot_template);
+                              }
+                            }}
+                            title="Click to view few-shot template"
+                          >
+                            Few Shot: {item.second_conversation_few_shot_template ? 'True' : 'False'}{' '}
+                            {item.second_conversation_few_shot_template && (
+                              <Icon
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </Icon>
+                            )}
+                          </Tag>
                           <Tag>RAG: False</Tag>
                           <Tag>CoT: False</Tag>
                         </p>
@@ -542,7 +569,7 @@ const InterRaterPage = () => {
                               target="_blank"
                               rel="noopener noreferrer"
                             >
-                              {item.second_conversation_file_name}
+                              Attached File
                             </a>
                           ) : (
                             'No file uploaded'
