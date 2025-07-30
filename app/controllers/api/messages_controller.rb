@@ -9,10 +9,8 @@ class Api::MessagesController < Api::ApplicationController
     @message = @conversation.messages.new(content: params[:message][:content], role: "user")
 
     if @message.save
-      if params[:message].key?(:enable_cot)
-        cot_enabled_for_this_prompt = params.dig(:message, :enable_cot) == "true"
-        @conversation.update(cot: cot_enabled_for_this_prompt)
-      end
+      cot_enabled_for_this_prompt = params.dig(:message, :enable_cot) == "true"
+      @conversation.update(cot: cot_enabled_for_this_prompt)
 
       uploaded_file = params[:message][:file]
       if uploaded_file.present? && !@conversation.file.attached?
