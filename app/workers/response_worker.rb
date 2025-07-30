@@ -19,6 +19,11 @@ class ResponseWorker
       { message: { id: message.id, role: message.role, content: message.content }, status: conversation.status }
     )
 
+    ActionCable.server.broadcast(
+      "inference_#{message.conversation.id}",
+      { message: { id: message.id, role: message.role, content: message.content }, status: conversation.status }
+    )
+
     ack!
   rescue => e
     reject!

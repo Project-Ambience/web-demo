@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useRef, useEffect } from 'react';
+import { useDispatch } from 'react-redux';
+import { createConsumer } from '@rails/actioncable';
+import { apiSlice } from '../app/apiSlice';
 import styled from 'styled-components';
 import {
   useGetConversationsByAiModelQuery,
@@ -370,6 +374,9 @@ const NewInferencePairPage = () => {
 
   const [createConversation] = useCreateConversationMutation();
 
+  const cable = useRef(null);
+  const dispatch = useDispatch();
+
   const handleModelSelect = async (modelId) => {
     const model = allModels.find((m) => m.id.toString() === modelId.toString());
     try {
@@ -420,11 +427,49 @@ const NewInferencePairPage = () => {
     }
   };
 
-  if (isLoadingFirst || isLoadingSecond || !model) return <Spinner />;
-
   const convo1 = firstConversations[firstIndex];
   const convo2 = secondConversations[secondIndex];
 
+  useEffect(() => {
+    if (!chatConversationId || !showChatModal) {
+      return () => {}; // ✅ always return a cleanup function
+    }
+  
+    if (!cable.current) {
+      cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
+    }
+  
+    const subscription = cable.current.subscriptions.create(
+      {
+        channel: 'InferenceChannel',
+        conversation_id: chatConversationId,
+      },
+      {
+        received(data) {
+          console.log('📡 InferenceChannel received:', data);
+  
+          dispatch(apiSlice.util.invalidateTags([
+            { type: 'Conversation', id: chatConversationId },
+            { type: 'Conversation', id: 'BY_AI_MODEL' }
+          ]));
+        },
+        connected() {
+          console.log(`✅ Connected to InferenceChannel ${chatConversationId}`);
+        },
+        disconnected() {
+          console.log(`❌ Disconnected from InferenceChannel ${chatConversationId}`);
+        },
+      }
+    );
+  
+    return () => {
+      console.log(`🧹 Unsubscribed from InferenceChannel ${chatConversationId}`);
+      subscription.unsubscribe();
+    };
+  }, [chatConversationId, showChatModal, dispatch]);
+
+  if (isLoadingFirst || isLoadingSecond || !model) return <Spinner />;
+  
   return (
     <PageLayout>
       <BackLink to={`/ai-models/${ai_model_id}/evaluate`}>
