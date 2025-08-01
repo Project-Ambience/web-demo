@@ -478,6 +478,14 @@ const InterRaterPage = () => {
                           {item.first_conversation_ai_model_name}
                         </p>
                         <p>
+                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          {item.first_conversation_ai_model_speciality || "-"}
+                        </p>
+                        <p>
+                          <strong>Base Model:</strong>{' '}
+                          {item.first_conversation_base_model_name || "-"}
+                        </p>
+                        <p>
                           <Tag
                             clickable={!!item.first_conversation_few_shot_template}
                             highlight={!!item.first_conversation_few_shot_template}
@@ -531,6 +539,14 @@ const InterRaterPage = () => {
                         <p>
                           <strong>Model:</strong>{' '}
                           {item.second_conversation_ai_model_name}
+                        </p>
+                        <p>
+                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          {item.second_conversation_ai_model_speciality || "-"}
+                        </p>
+                        <p>
+                          <strong>Base Model:</strong>{' '}
+                          {item.second_conversation_base_model_name || "-"}
                         </p>
                         <p>
                         <Tag

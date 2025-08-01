@@ -12,7 +12,9 @@ class Api::ConversationsController < Api::ApplicationController
         updated_at: convo.updated_at,
         ai_model: {
           name: convo.ai_model.name,
-          base_model: convo.ai_model.base_model
+          base_model: convo.ai_model.base_model,
+          base_model_name: convo.ai_model.base_model&.name,
+          speciality: convo.ai_model.speciality
         },
         base_prompt: convo.base_prompt,
         first_response: convo.first_response,
@@ -36,7 +38,9 @@ class Api::ConversationsController < Api::ApplicationController
         updated_at: convo.updated_at,
         ai_model: {
           name: convo.ai_model.name,
-          base_model: convo.ai_model.base_model
+          base_model: convo.ai_model.base_model,
+          base_model_name: convo.ai_model.base_model&.name,
+          speciality: convo.ai_model.speciality
         },
         base_prompt: convo.base_prompt,
         first_response: convo.first_response,

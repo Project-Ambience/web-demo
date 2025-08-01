@@ -206,6 +206,7 @@ const Tag = styled.span`
   color: ${({ highlight }) => (highlight ? '#1a5e20' : 'rgb(130, 132, 133)')};
   padding: 0.3rem 0.75rem;
   margin-right: 0.5rem;
+  margin-top: 0.5rem;
   border-radius: 999px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -538,6 +539,12 @@ const NewInferencePairPage = () => {
                     <p><strong>ID:</strong> {convo1.id}</p>
                     <p><strong>Model:</strong> {convo1.ai_model?.name}</p>
                     <p>
+                      <strong>Fine-tuned Speciality:</strong> {convo1?.ai_model?.speciality || "-"}
+                    </p>
+                    <p>
+                      <strong>Base Model:</strong> {convo1?.ai_model?.base_model_name || "-"}
+                    </p>
+                    <p>
                       <Tag
                         clickable={convo1.few_shot_template?.examples?.length > 0}
                         highlight={convo1.few_shot_template?.examples?.length > 0}
@@ -566,7 +573,7 @@ const NewInferencePairPage = () => {
                     </p>
                     <hr style={{ margin: '1rem 0' }} />
                     <p><strong>Prompt:</strong> {convo1.base_prompt}</p>
-                    <p><strong>File:</strong> {convo1.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
+                    <p><strong>Files:</strong> {convo1.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
                     <ResponseScrollArea>
                       <p><strong>Response:</strong> {convo1.first_response}</p>
                     </ResponseScrollArea>
@@ -598,6 +605,12 @@ const NewInferencePairPage = () => {
                     <p><strong>ID:</strong> {convo2.id}</p>
                     <p><strong>Model:</strong> {convo2.ai_model?.name}</p>
                     <p>
+                      <strong>Fine-tuned Speciality:</strong> {convo2?.ai_model?.speciality || "-"}
+                    </p>
+                    <p>
+                      <strong>Base Model:</strong> {convo2?.ai_model?.base_model_name || "-"}
+                    </p>
+                    <p>
                       <Tag
                         clickable={convo2.few_shot_template?.examples?.length > 0}
                         highlight={convo2.few_shot_template?.examples?.length > 0}
@@ -626,7 +639,7 @@ const NewInferencePairPage = () => {
                     </p>
                     <hr style={{ margin: '1rem 0' }} />
                     <p><strong>Prompt:</strong> {convo2.base_prompt}</p>
-                    <p><strong>File:</strong> {convo2.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
+                    <p><strong>Files:</strong> {convo2.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
                     <ResponseScrollArea>
                       <p><strong>Response:</strong> {convo2.first_response}</p>
                     </ResponseScrollArea>
