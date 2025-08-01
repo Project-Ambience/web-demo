@@ -1,6 +1,17 @@
 class Conversation < ApplicationRecord
   belongs_to :ai_model
   has_many :messages, -> { order(created_at: :asc) }, dependent: :destroy
+
+  has_many :first_inter_raters,
+  class_name: "InterRater",
+  foreign_key: "first_conversation_id",
+  dependent: :destroy
+
+  has_many :second_inter_raters,
+    class_name: "InterRater",
+    foreign_key: "second_conversation_id",
+    dependent: :destroy
+
   has_one_attached :file
 
   enum :status, {
@@ -16,5 +27,13 @@ class Conversation < ApplicationRecord
 
   def file_name
     self.file.attached? ? self.file.filename.to_s : nil
+  end
+
+  def base_prompt
+    self.messages&.first&.content
+  end
+
+  def first_response
+    self.messages&.second&.content
   end
 end

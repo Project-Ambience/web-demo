@@ -1,7 +1,8 @@
 require "rails_helper"
 
 RSpec.describe "MessageRequests", type: :request do
-  let!(:ai_model) { create(:ai_model, path: "some path", adapter_path: "some adapter path", speciality: "summarise") }
+  let!(:base_ai_model) { create(:ai_model, path: "some path", adapter_path: "some adapter path", speciality: "summarise") }
+  let!(:ai_model) { create(:ai_model, path: "some path", adapter_path: "some adapter path", speciality: "summarise", base_model_id: base_ai_model.id) }
   let!(:conversation) { create(:conversation, ai_model: ai_model) }
 
   describe "POST /api/conversations/:conversation_id/messages" do

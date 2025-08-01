@@ -16,12 +16,23 @@ Rails.application.routes.draw do
         post :accept_feedback
         post :reject_feedback
       end
+      collection do
+        get "by_ai_model/:ai_model_id", to: "conversations#conversation_by_ai_model"
+      end
       resources :messages, only: [ :create ]
     end
 
     post "/model_install_requests/update_status", to: "model_install_requests#update_status"
     post "/model_fine_tune_requests/update_status", to: "model_fine_tune_requests#update_status"
     get "/rabbitmq/traffic", to: "rabbitmq#traffic"
+
+    resources :inter_raters, only: [ :create ] do
+      collection do
+        get "response_pairs/:ai_model_id", action: :response_pairs
+      end
+    end
+
+    resources :inter_rater_feedbacks, only: [ :create ]
   end
 
   get "up" => "rails/health#show", as: :rails_health_check

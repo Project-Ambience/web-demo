@@ -7,6 +7,8 @@ import ModelCataloguePage from './pages/ModelCataloguePage';
 import AiModelPage from './pages/AiModelPage';
 import FineTunePage from './pages/FineTunePage';
 import ChatPage from './pages/ChatPage';
+import InterRaterPage from './pages/InterRaterPage';
+import NewInferencePairPage from './pages/NewInferencePairPage';
 
 const AppContainer = styled.div`
   display: flex;
@@ -37,6 +39,8 @@ function App() {
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/chat/:conversationId" element={<ChatPage />} />
           <Route path="/fine-tune/:id" element={<FineTunePage />} />
+          <Route path="/ai-models/:id/evaluate" element={<InterRaterPage />} />
+          <Route path="/ai-models/:id/new/inference-pair" element={<NewInferencePairPage />} />
         </Routes>
       </MainContent>
     </AppContainer>

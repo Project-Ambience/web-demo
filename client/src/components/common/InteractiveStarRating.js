@@ -39,7 +39,7 @@ const InteractiveStarRating = ({ onRate }) => {
 
   return (
     <RatingContainer>
-      <h5>Rate this AI Model:</h5>
+      <h4>Rate this AI Model:</h4>
       <StarsWrapper>
         {[...Array(5)].map((_, index) => {
           const starValue = index + 1;

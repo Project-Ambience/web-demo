@@ -9,6 +9,13 @@ export const apiSlice = createApi({
       query: () => '/clinician_types',
       providesTags: ['ClinicianType'],
     }),
+    getAiModels: builder.query({
+      query: () => '/ai_models',
+      providesTags: (result = []) => [
+        ...result.map(({ id }) => ({ type: 'Model', id })),
+        { type: 'Model', id: 'LIST' },
+      ],
+    }),
     getAiModelById: builder.query({
       query: id => `/ai_models/${id}`,
       providesTags: (result, error, id) => [{ type: 'Model', id }],
@@ -40,6 +47,13 @@ export const apiSlice = createApi({
       providesTags: (result = []) => [
         ...result.map(({ id }) => ({ type: 'Conversation', id })),
         { type: 'Conversation', id: 'LIST' },
+      ],
+    }),
+    getConversationsByAiModel: builder.query({
+      query: (ai_model_id) => `/conversations/by_ai_model/${ai_model_id}`,
+      providesTags: (result = []) => [
+        ...result.map(({ id }) => ({ type: 'Conversation', id })),
+        { type: 'Conversation', id: 'BY_AI_MODEL' },
       ],
     }),
     getConversation: builder.query({
@@ -160,15 +174,37 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: [{ type: 'FewShotTemplate', id: 'LIST' }],
     }),
+    getInterRaterResponsePairs: builder.query({
+      query: (ai_model_id) => `/inter_raters/response_pairs/${ai_model_id}`,
+      providesTags: ['InterRater']
+    }),
+    addInterRater: builder.mutation({
+      query: (payload) => ({
+        url: '/inter_raters',
+        method: 'POST',
+        body: { inter_rater: payload }
+      }),
+      invalidatesTags: ['InterRater']
+    }),
+    addInterRaterFeedback: builder.mutation({
+      query: (payload) => ({
+        url: `/inter_rater_feedbacks`,
+        method: 'POST',
+        body: { inter_rater_feedback: payload }
+      }),
+      invalidatesTags: ['InterRaterFeedback']
+    }),    
   }),
 });
 
 export const {
   useGetClinicianTypesQuery,
+  useGetAiModelsQuery,
   useGetAiModelByIdQuery,
   useAddRatingMutation,
   useAddCommentMutation,
   useGetConversationsQuery,
+  useGetConversationsByAiModelQuery,
   useGetConversationQuery,
   useCreateConversationMutation,
   useUpdateConversationMutation,
@@ -183,4 +219,7 @@ export const {
   useCreateFewShotTemplateMutation,
   useUpdateFewShotTemplateMutation,
   useDeleteFewShotTemplateMutation,
+  useGetInterRaterResponsePairsQuery,
+  useAddInterRaterMutation,
+  useAddInterRaterFeedbackMutation,
 } = apiSlice;

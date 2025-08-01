@@ -1255,7 +1255,7 @@ const ChatPage = () => {
                      </EditForm>
                   ) : (
                     <>
-                      <ConversationTitle>{convo.title}</ConversationTitle>
+                      <ConversationTitle>ID: {convo.id} {convo.title}</ConversationTitle>
                       <MenuButton onClick={(e) => { e.stopPropagation(); setMenuOpenFor(menuOpenFor === convo.id ? null : convo.id); }}>⋮</MenuButton>
                       {menuOpenFor === convo.id && (
                         <DropdownMenu ref={menuRef}>
