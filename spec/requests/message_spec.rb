@@ -9,7 +9,7 @@ RSpec.describe "MessageRequests", type: :request do
     let(:valid_params) do
       {
         conversation_id: conversation.id,
-        message: { content: "Hello, this is a test message." }
+        message: { content: "Hello, this is a test message.", enable_cot: "false", enable_rag: "false" }
       }
     end
 
@@ -56,7 +56,8 @@ RSpec.describe "MessageRequests", type: :request do
             base_model_path: "some path",
             adapter_path: "some adapter path",
             speciality: "summarise",
-            cot: false
+            cot: false,
+            rag: false
           }
           expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
         end
@@ -71,7 +72,9 @@ RSpec.describe "MessageRequests", type: :request do
             conversation_id: conversation.id,
             message: {
               content: "Hello, this is a test message with a template.",
-              few_shot_template_id: template.id
+              few_shot_template_id: template.id,
+              enable_cot: "false",
+              enable_rag: "false"
             }
           }
         end
@@ -101,7 +104,8 @@ RSpec.describe "MessageRequests", type: :request do
             base_model_path: "some path",
             adapter_path: "some adapter path",
             speciality: "summarise",
-            cot: false
+            cot: false,
+            rag: false
           }
 
           expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
@@ -115,7 +119,8 @@ RSpec.describe "MessageRequests", type: :request do
             conversation_id: conversation.id,
             message: {
               content: "Hello, think about this deeply.",
-              enable_cot: "true"
+              enable_cot: "true",
+              enable_rag: "false"
             }
           }
         end
@@ -136,7 +141,43 @@ RSpec.describe "MessageRequests", type: :request do
             base_model_path: "some path",
             adapter_path: "some adapter path",
             speciality: "summarise",
-            cot: true
+            cot: true,
+            rag: false
+          }
+          expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
+        end
+      end
+
+      context "when enable_rag is true" do
+        let(:params_with_rag) do
+          {
+            conversation_id: conversation.id,
+            message: {
+              content: "Hello, think about this deeply.",
+              enable_cot: "false",
+              enable_rag: "true"
+            }
+          }
+        end
+
+        it "publishes the message with rag set to true" do
+          post "/api/conversations/#{conversation.id}/messages", params: params_with_rag
+          conversation.reload
+
+          expected_input_history = conversation.messages.order(created_at: :asc).map do |msg|
+            { role: msg.role, content: msg.content }
+          end
+
+          expected_payload = {
+            conversation_id: conversation.id,
+            file_url: conversation.file_url,
+            few_shot_template: nil,
+            input: expected_input_history,
+            base_model_path: "some path",
+            adapter_path: "some adapter path",
+            speciality: "summarise",
+            cot: false,
+            rag: true
           }
           expect(MessagePublisher).to have_received(:publish).with(expected_payload, "user_prompts")
         end

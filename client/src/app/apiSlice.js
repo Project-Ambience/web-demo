@@ -103,6 +103,10 @@ export const apiSlice = createApi({
             formData.append('message[enable_cot]', message.enable_cot);
         }
 
+        if (message.enable_rag !== undefined && message.enable_rag !== null) {
+          formData.append('message[enable_rag]', message.enable_rag);
+        }
+
         return {
           url: `/conversations/${conversation_id}/messages`,
           method: 'POST',

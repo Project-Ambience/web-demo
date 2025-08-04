@@ -758,7 +758,9 @@ const ChatPage = () => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [selectedTemplateId, setSelectedTemplateId] = useState(null);
   const [isCoTEnabled, setIsCoTEnabled] = useState(false);
+  const [isRAGEnabled, setIsRAGEnabled] = useState(false);
   const [showCoTInfoModal, setShowCoTInfoModal] = useState(false);
+  const [showRAGInfoModal, setShowRAGInfoModal] = useState(false);
   const [showFewShotInfoModal, setShowFewShotInfoModal] = useState(false);
 
   const [fileError, setFileError] = useState('');
@@ -783,6 +785,7 @@ const ChatPage = () => {
       skip: !activeConversation?.ai_model_id,
     }
   );
+  
   const { data: templates } = useGetFewShotTemplatesQuery();
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
@@ -812,8 +815,13 @@ const ChatPage = () => {
   useEffect(() => {
     if (activeConversation) {
       setIsCoTEnabled(activeConversation.cot);
+      setIsRAGEnabled(activeConversation.rag);
     }
   }, [activeConversation]);
+
+  const handleToggleRAG = () => {
+    setIsRAGEnabled(prev => !prev);
+  };
 
   const sortedMessages = useMemo(() =>
     [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
@@ -905,6 +913,7 @@ const ChatPage = () => {
           file: selectedFile,
           few_shot_template_id: selectedTemplateId,
           enable_cot: isCoTEnabled,
+          enable_rag: isRAGEnabled,
         },
       });
       setInput('');
@@ -1011,6 +1020,14 @@ const ChatPage = () => {
                           </RemoveItemButton>
                         </SelectedItemWrapper>
                       )}
+                      {activeConversation.status === 'awaiting_prompt' && isRAGEnabled && (
+                        <SelectedItemWrapper>
+                          📚 RAG
+                          <RemoveItemButton type="button" onClick={() => setIsRAGEnabled(false)}>
+                            ✕
+                          </RemoveItemButton>
+                        </SelectedItemWrapper>
+                      )}
                       {activeConversation.status === 'awaiting_prompt' && selectedTemplate && (
                           <SelectedItemWrapper>
                               ✨ <BubbleText>{selectedTemplate.name}</BubbleText>
@@ -1093,14 +1110,21 @@ const ChatPage = () => {
                                     }}
                                     isCoTEnabled={isCoTEnabled}
                                     onToggleCoT={handleToggleCoT}
+                                    isRAGEnabled={isRAGEnabled}
+                                    onToggleRAG={handleToggleRAG}
                                     onShowCoTInfo={() => {
                                       setShowCoTInfoModal(true);
+                                      setShowAddContentPanel(false);
+                                    }}
+                                    onShowRagInfo={() => {
+                                      setShowRAGInfoModal(true);
                                       setShowAddContentPanel(false);
                                     }}
                                     onShowFewShotInfo={() => {
                                       setShowFewShotInfoModal(true);
                                       setShowAddContentPanel(false);
                                     }}
+                                    supportsRAG={modelDetails?.support_rag}
                                   />
                                 )}
                             </AddContentWrapper>
@@ -1169,7 +1193,7 @@ const ChatPage = () => {
   const renderCoTInfoModal = () => (
     <OverlayContainer onClick={() => setShowCoTInfoModal(false)}>
       <Modal onClick={(e) => e.stopPropagation()}>
-        <ModalCloseButton onClick={() => setShowCoTInfoModal(false)}>×</ModalCloseButton>
+        <ModalCloseButton onClick={() => setShowRAGInfoModal(false)}>×</ModalCloseButton>
         <h3>What is Thinking?</h3>
         <p>
 	  Enabling "Thinking" uses a technique called <strong>Chain-of-Thought (CoT)</strong>. It prompts the AI to "think out loud" by explaining its reasoning step-by-step before providing a final answer. This makes the response more transparent and easier to verify.
@@ -1187,6 +1211,26 @@ const ChatPage = () => {
         </ul>
         <p>
           For a more technical explanation, you can read this article from IBM: <a href="https://www.ibm.com/think/topics/chain-of-thoughts" target="_blank" rel="noopener noreferrer">Learn more about CoT prompting</a>.
+        </p>
+      </Modal>
+    </OverlayContainer>
+  );
+
+  const renderRAGInfoModal = () => (
+    <OverlayContainer onClick={() => setShowRAGInfoModal(false)}>
+      <Modal onClick={(e) => e.stopPropagation()}>
+        <h3>What is RAG?</h3>
+        <p>
+          <strong>Retrieval augmented generation (RAG)</strong> is an architecture for optimizing the performance of an artificial intelligence (AI) model by connecting it with external knowledge bases. RAG helps large language models (LLMs) deliver more relevant responses at a higher quality.
+        </p>
+        <h4>When to use it:</h4>
+        <ul>
+          <li><strong>For Knowledge-Heavy Questions:</strong> When you need the AI to pull in accurate, up-to-date information from documents, databases, or other external sources.</li>
+          <li><strong>For Domain-Specific Queries:</strong> When your task depends on specialized knowledge (e.g., legal, medical, technical) that the AI might not know by default.</li>
+          <li><strong>For Reducing Hallucinations:</strong> To ground the AI’s responses in factual references rather than relying solely on its internal training.</li>
+        </ul>
+        <p>
+          For a more technical explanation, you can read this article from IBM: <a href="https://www.ibm.com/think/topics/retrieval-augmented-generation" target="_blank" rel="noopener noreferrer">Learn more about RAG</a>.
         </p>
       </Modal>
     </OverlayContainer>
@@ -1221,6 +1265,7 @@ const ChatPage = () => {
   return (
     <ChatPageWrapper>
       {showCoTInfoModal && renderCoTInfoModal()}
+      {showRAGInfoModal && renderRAGInfoModal()}
       {showFewShotInfoModal && renderFewShotInfoModal()}
       <ChatLayout>
         <Sidebar>
@@ -1284,6 +1329,11 @@ const ChatPage = () => {
                             {activeConversation.cot && (
                               <AttachmentBubble>
                                 💭 <AttachmentButton as="span" style={{ cursor: 'default', textDecoration: 'none' }}>Thinking</AttachmentButton>
+                              </AttachmentBubble>
+                            )}
+                            {activeConversation.rag && (
+                              <AttachmentBubble>
+                                📚 <AttachmentButton as="span">RAG</AttachmentButton>
                               </AttachmentBubble>
                             )}
                             {activeConversation.few_shot_template?.name && (

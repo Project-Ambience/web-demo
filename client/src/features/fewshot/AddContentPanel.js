@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import MaterialIcon from '../../components/common/MaterialIcon';
 import ToggleSwitch from '../../components/common/ToggleSwitch';
@@ -7,7 +7,7 @@ const PanelContainer = styled.div`
   position: absolute;
   bottom: 100%;
   left: 50%;
-  transform: translateX(-70%);
+  transform: translateX(-80%);
   margin-bottom: 0.5rem;
   background: white;
   border-radius: 8px;
@@ -107,6 +107,22 @@ const ClickableRow = styled.div`
   }
 `;
 
+const RAGWrapper = styled.div`
+  position: relative;
+`;
+
+const SubMenuRight = styled.div`
+  position: absolute;
+  top: 0;
+  left: 100%;
+  margin-left: 0.25rem;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 20;
+  min-width: 180px;
+`;
+
 const LabelWrapper = styled.div`
   display: flex;
   align-items: center;
@@ -141,7 +157,16 @@ const InfoIcon = styled.span`
   }
 `;
 
-const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT, onShowCoTInfo, onShowFewShotInfo }) => {
+const DisabledRow = styled(Row)`
+  opacity: 0.5;
+  pointer-events: none;
+  cursor: not-allowed;
+`;
+
+const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT, onShowCoTInfo, onShowFewShotInfo, onShowRagInfo, isRAGEnabled, onToggleRAG, supportsRAG }) => {
+
+  const [isRAGOpen, setIsRAGOpen] = useState(false);
+
   return (
     <PanelContainer>
       <ButtonWrapper>
@@ -151,25 +176,71 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
 
+      <RAGWrapper>
+        {supportsRAG ? (
+          <Row onClick={() => setIsRAGOpen(!isRAGOpen)}>
+            <LabelWrapper>
+              <span>📚 RAG</span>
+            </LabelWrapper>
+            <MaterialIcon iconName="chevron_right" />
+          </Row>
+        ) : (
+          <DisabledRow>
+            <LabelWrapper>
+              <span>📚 RAG (Not Supported)</span>
+            </LabelWrapper>
+          </DisabledRow>
+        )}
+
+        {supportsRAG && isRAGOpen && (
+          <SubMenuRight>
+            <Row onClick={onToggleRAG}>
+              <LabelWrapper>
+                <span>Enable</span>
+              </LabelWrapper>
+              <ControlsWrapper>
+                <ToggleSwitch isOn={isRAGEnabled} handleToggle={onToggleRAG} />
+                <InfoIcon
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onShowRagInfo();
+                  }}
+                >
+                  <MaterialIcon iconName="help_outline" />
+                </InfoIcon>
+              </ControlsWrapper>
+            </Row>
+          </SubMenuRight>
+        )}
+      </RAGWrapper>
+
       <Row onClick={onToggleCoT}>
         <LabelWrapper>
           <span>💭 Enable Thinking</span>
         </LabelWrapper>
         <ControlsWrapper>
+          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
           <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowCoTInfo(); }}>
             <MaterialIcon iconName="help_outline" />
           </InfoIcon>
-          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
         </ControlsWrapper>
       </Row>
 
       <ClickableRow onClick={onAddFewShot}>
         <LabelWrapper>
-            <span>✨ Add Few-Shot</span>
-            <InfoIcon onClick={(e) => { e.stopPropagation(); onShowFewShotInfo(); }}>
-                <MaterialIcon iconName="help_outline" />
-            </InfoIcon>
+          <span>✨ Add Few-Shot</span>
         </LabelWrapper>
+        <ControlsWrapper>
+          <InfoIcon
+            onClick={(e) => {
+              e.stopPropagation();
+              onShowFewShotInfo();
+            }}
+          >
+            <MaterialIcon iconName="help_outline" />
+          </InfoIcon>
+        </ControlsWrapper>
       </ClickableRow>
     </PanelContainer>
   );
