@@ -1,11 +1,11 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { 
-  useGetAiModelByIdQuery, 
-  useGetClinicianTypesQuery, 
+import {
+  useGetAiModelByIdQuery,
+  useGetClinicianTypesQuery,
   useCreateFineTuneRequestMutation,
-  useGetFineTuneStatisticsQuery
+  useGetQueueTrafficQuery,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -286,9 +286,9 @@ const FineTunePage = () => {
     isError: isClinicianTypesError,
   } = useGetClinicianTypesQuery();
 
-  const [createFineTuneRequest] = useCreateFineTuneRequestMutation();
+  const [createFineTuneRequest, { isLoading: isSubmitting }] = useCreateFineTuneRequestMutation();
   
-  const { data: stats } = useGetFineTuneStatisticsQuery(undefined, {
+  const { data: trafficData, isLoading: isTrafficLoading, isError: isTrafficError } = useGetQueueTrafficQuery(undefined, {
     pollingInterval: 15000,
   });
 
@@ -318,14 +318,6 @@ const FineTunePage = () => {
       }
     };
   }, []);
-
-  const calculatedStats = useMemo(() => {
-    const waitingToStart = (stats?.waiting_for_validation ?? 0) + 
-                           (stats?.validating ?? 0) + 
-                           (stats?.waiting_for_fine_tune ?? 0);
-    const currentlyRunning = stats?.fine_tuning ?? 0;
-    return { waitingToStart, currentlyRunning };
-  }, [stats]);
 
   const resetForm = () => {
     setModelName('');
@@ -459,7 +451,7 @@ const FineTunePage = () => {
       fileName: file.name,
     });
   
-    if (calculatedStats.waitingToStart > 5) {
+    if (trafficData?.formatting?.messages_ready > 5) {
       setShowQueueWarning(true);
     } else {
       setShowConfirmModal(true);
@@ -515,7 +507,7 @@ const FineTunePage = () => {
       {submissionState === 'success' && (
         <SuccessPanel>
           <h3>Submission Successful!</h3>
-          <p>Your fine-tuning request has been added to the queue.<br />You will be redirected shortly.</p>
+          <p>Your formatting request has been added to the queue.<br />You will be redirected shortly.</p>
           <PrimaryButton onClick={handleRedirectNow} style={{ width: 'auto', margin: '0 auto' }}>
             Go to Status Page Now
           </PrimaryButton>
@@ -670,7 +662,10 @@ const FineTunePage = () => {
           </Section>
           <Section>
             <h3>Queue Status</h3>
-            <div style={{
+            {isTrafficLoading && <p>Loading traffic...</p>}
+            {isTrafficError && <p style={{ color: 'red' }}>Error loading traffic.</p>}
+            {trafficData && (
+              <div style={{
                 background: '#fff',
                 border: '1px solid #cdd4d8',
                 borderRadius: '4px',
@@ -678,12 +673,13 @@ const FineTunePage = () => {
                 fontSize: '0.95rem',
               }}>
                 <p>
-                  <strong>Waiting to Start:</strong> {calculatedStats.waitingToStart}
+                  <strong>Formatting Queue:</strong> {trafficData.formatting?.messages_ready || 0}
                 </p>
                 <p>
-                  <strong>Currently Running:</strong> {calculatedStats.currentlyRunning}
+                  <strong>Fine-Tuning Queue:</strong> {trafficData.fine_tuning?.messages_ready || 0}
                 </p>
               </div>
+            )}
           </Section>
         </Sidebar>
       </PageWrapper>
@@ -697,24 +693,12 @@ const FineTunePage = () => {
               <strong>{model.name}</strong>?
             </p>
             <ParamList>
-              <li>
-                <strong>Model name:</strong> {submitParams.modelName}
-              </li>
-              <li>
-                <strong>Description:</strong> {submitParams.description}
-              </li>
-              <li>
-                <strong>Task:</strong> {submitParams.task}
-              </li>
-              <li>
-                <strong>Clinician type:</strong> {submitParams.clinicianType}
-              </li>
-              <li>
-                <strong>Fine Tuning Notes:</strong> {submitParams.fine_tuning_notes}
-              </li>
-              <li>
-                <strong>File:</strong> {submitParams.fileName}
-              </li>
+              <li><strong>Model name:</strong> {submitParams.modelName}</li>
+              <li><strong>Description:</strong> {submitParams.description}</li>
+              <li><strong>Task:</strong> {submitParams.task}</li>
+              <li><strong>Clinician type:</strong> {submitParams.clinicianType}</li>
+              <li><strong>Fine Tuning Notes:</strong> {submitParams.fine_tuning_notes}</li>
+              <li><strong>File:</strong> {submitParams.fileName}</li>
             </ParamList>
             <ModalButtonGroup>
               <ModalButton onClick={() => setShowConfirmModal(false)}>Cancel</ModalButton>
@@ -728,18 +712,13 @@ const FineTunePage = () => {
           <ModalBox>
             <ModalTitle>High Queue Notice</ModalTitle>
             <p>
-              There are currently <strong>{calculatedStats.waitingToStart}</strong> fine-tune requests waiting to be processed.
+              There are currently <strong>{trafficData?.formatting?.messages_ready || 0}</strong> requests waiting to be processed.
               Your request will be added to the queue and may take longer than usual.
             </p>
             <p>Do you still want to continue?</p>
             <ModalButtonGroup>
               <ModalButton onClick={() => setShowQueueWarning(false)}>Cancel</ModalButton>
-              <PrimaryButton
-                onClick={() => {
-                  setShowQueueWarning(false);
-                  setShowConfirmModal(true);
-                }}
-              >
+              <PrimaryButton onClick={() => { setShowQueueWarning(false); setShowConfirmModal(true); }}>
                 Continue
               </PrimaryButton>
             </ModalButtonGroup>

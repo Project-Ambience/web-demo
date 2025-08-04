@@ -10,17 +10,25 @@ class Api::RabbitmqController < Api::ApplicationController
       vhost: "/"
     )
     connection.start
-
     channel = connection.create_channel
-    queue = channel.queue("model_fine_tune_requests", durable: true)
 
-    queue_status = queue.status
+    formatting_queue = channel.queue(ENV["MODEL_FORMATTING_REQUEST_QUEUE_NAME"], durable: true)
+    fine_tuning_queue = channel.queue(ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"], durable: true)
+
+    formatting_status = formatting_queue.status
+    fine_tuning_status = fine_tuning_queue.status
 
     connection.close
 
     render json: {
-      messages_ready: queue_status[:message_count],
-      messages_unacknowledged: queue_status[:consumer_count]
+      formatting: {
+        messages_ready: formatting_status[:message_count],
+        messages_unacknowledged: formatting_status[:consumer_count]
+      },
+      fine_tuning: {
+        messages_ready: fine_tuning_status[:message_count],
+        messages_unacknowledged: fine_tuning_status[:consumer_count]
+      }
     }
   end
 end

@@ -7,13 +7,12 @@ class ModelFineTuneRequest < ApplicationRecord
 
   enum :status, {
     pending: 0,
-    waiting_for_validation: 1,
-    validating: 2,
-    validation_failed: 3,
+    waiting_for_formatting: 1,
+    formatting_failed: 2,
+    awaiting_confirmation: 3,
     waiting_for_fine_tune: 4,
-    fine_tuning: 5,
-    failed: 6,
-    done: 7
+    failed: 5,
+    done: 6
   }
 
   scope :by_status, ->(status) {
@@ -28,7 +27,7 @@ class ModelFineTuneRequest < ApplicationRecord
   scope :search_by_name, ->(term) { where("name ILIKE ?", "%#{term}%") if term.present? }
 
   after_initialize :set_default_status, if: :new_record?
-  after_create :publish_fine_tune_request_to_rabbit_mq
+  after_create :publish_formatting_request
 
   private
 
@@ -36,20 +35,20 @@ class ModelFineTuneRequest < ApplicationRecord
     self.status ||= :pending
   end
 
-  def publish_fine_tune_request_to_rabbit_mq
+  def publish_formatting_request
     payload = {
       fine_tune_request_id: self.id,
       ai_model_path: self.ai_model.path,
       parameters: self.parameters,
       fine_tune_data: self.fine_tune_data,
-      callback_url: ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"]
+      callback_url: ENV["MODEL_FORMATTING_COMPLETE_CALLBACK_PATH"]
     }
 
     begin
-      MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
-      self.waiting_for_validation!
+      MessagePublisher.publish(payload, ENV["MODEL_FORMATTING_REQUEST_QUEUE_NAME"])
+      self.waiting_for_formatting!
     rescue => e
-      self.failed!
+      self.update(status: :formatting_failed, error_message: e.message)
     end
   end
 

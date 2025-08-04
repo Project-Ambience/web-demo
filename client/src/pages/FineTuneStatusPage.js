@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
-import { Link } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { createConsumer } from '@rails/actioncable';
-import { apiSlice, useGetFineTuneRequestsQuery, useGetTunableModelsQuery } from '../app/apiSlice';
+import {
+  useGetFineTuneRequestsQuery,
+  useGetTunableModelsQuery,
+  useGetQueueTrafficQuery,
+  useConfirmAndStartFineTuneMutation,
+} from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
 const InfoIcon = () => (
@@ -279,13 +281,13 @@ const StatusText = styled.span`
       case 'done':
         return '#2e7d32';
       case 'failed':
-      case 'validation_failed':
+      case 'formatting_failed':
         return '#c62828';
-      case 'fine_tuning':
-      case 'validating':
+      case 'in_progress':
         return '#005eb8';
-      case 'pending':
-      case 'waiting_for_validation':
+      case 'awaiting_confirmation':
+        return '#ff8f00';
+      case 'waiting_for_formatting':
       case 'waiting_for_fine_tune':
       default:
         return '#5f6368';
@@ -417,6 +419,7 @@ const ModalFooter = styled.footer`
   border-top: 1px solid #e8edee;
   display: flex;
   justify-content: flex-end;
+  gap: 0.75rem;
 `;
 
 const CloseButton = styled.button`
@@ -430,6 +433,14 @@ const CloseButton = styled.button`
   cursor: pointer;
   &:hover {
     background-color: #dde3ea;
+  }
+`;
+
+const ConfirmButton = styled(ActionButton)`
+  border: none;
+  &:disabled {
+    background-color: #ced4da;
+    cursor: not-allowed;
   }
 `;
 
@@ -563,29 +574,22 @@ const StatusLifecycleModal = ({ onClose }) => {
             <LifecycleItem>
               <LifecycleDot />
               <LifecycleContent>
-                <h5>Waiting for Validation</h5>
-                <p>The request has been submitted and is in the queue waiting for the dataset to be validated.</p>
+                <h5>Waiting for Formatting</h5>
+                <p>The request is in the queue waiting for the dataset to be formatted and validated.</p>
               </LifecycleContent>
             </LifecycleItem>
             <LifecycleItem>
               <LifecycleDot />
               <LifecycleContent>
-                <h5>Validating</h5>
-                <p>A worker has picked up the request and is actively checking the dataset for correct formatting and integrity.</p>
+                <h5>Awaiting Confirmation</h5>
+                <p>The dataset has been successfully formatted. The request is now waiting for user review and confirmation.</p>
               </LifecycleContent>
             </LifecycleItem>
             <LifecycleItem>
               <LifecycleDot />
               <LifecycleContent>
                 <h5>Waiting for Fine-Tune</h5>
-                <p>The dataset has been successfully validated. The request is now in the queue waiting for a fine-tuning worker to become available.</p>
-              </LifecycleContent>
-            </LifecycleItem>
-            <LifecycleItem>
-              <LifecycleDot />
-              <LifecycleContent>
-                <h5>Fine-Tuning</h5>
-                <p>A worker is actively training the base model with the provided dataset. This is the longest step.</p>
+                <p>The user has confirmed the formatted data. The request is now in the queue for fine-tuning.</p>
               </LifecycleContent>
             </LifecycleItem>
             <LifecycleItem>
@@ -605,24 +609,7 @@ const StatusLifecycleModal = ({ onClose }) => {
   );
 };
 
-const getStatusText = (status) => {
-    switch(status) {
-        case 'failed':
-            return 'Fine-Tune Failed';
-        case 'waiting_for_validation':
-            return 'Waiting for Validation';
-        case 'waiting_for_fine_tune':
-            return 'Waiting for Fine Tune';
-        case 'validation':
-             return 'Validation';
-        case 'fine_tune':
-            return 'Fine Tune'
-        default:
-            return status.replace(/_/g, ' ');
-    }
-};
-
-const RequestDetailsModal = ({ request, onClose }) => {
+const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
 
@@ -646,7 +633,6 @@ const RequestDetailsModal = ({ request, onClose }) => {
       <ModalContent ref={modalRef}>
         <ModalHeader>
           <h3>{request.name}</h3>
-          <StatusText status={request.status}>{getStatusText(request.status)}</StatusText>
         </ModalHeader>
         <ModalBody>
           <DetailSection>
@@ -657,26 +643,12 @@ const RequestDetailsModal = ({ request, onClose }) => {
             <h4>Fine-Tuning Notes</h4>
             <p>{request.fine_tuning_notes || 'N/A'}</p>
           </DetailSection>
-
           <DetailGrid>
-            <DetailItem>
-              <h4>Base Model</h4>
-              <p>{request.ai_model.name}</p>
-            </DetailItem>
-            <DetailItem>
-              <h4>Clinician Type</h4>
-              <p>{request.clinician_type.name}</p>
-            </DetailItem>
-            <DetailItem>
-              <h4>Task</h4>
-              <p>{request.task}</p>
-            </DetailItem>
-            <DetailItem>
-              <h4>Submitted At</h4>
-              <p>{new Date(request.created_at).toLocaleString()}</p>
-            </DetailItem>
+            <DetailItem><h4>Base Model</h4><p>{request.ai_model.name}</p></DetailItem>
+            <DetailItem><h4>Clinician Type</h4><p>{request.clinician_type.name}</p></DetailItem>
+            <DetailItem><h4>Task</h4><p>{request.task}</p></DetailItem>
+            <DetailItem><h4>Submitted At</h4><p>{new Date(request.created_at).toLocaleString()}</p></DetailItem>
           </DetailGrid>
-
           <DetailSection>
             <h4>Data & Parameters</h4>
             <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
@@ -685,26 +657,19 @@ const RequestDetailsModal = ({ request, onClose }) => {
                   Download Dataset
                 </DataViewButton>
               )}
-              <DataViewButton onClick={() => {
-                try {
-                  const jsonString = request.parameters.replace(/'/g, '"');
-                  downloadJson(JSON.parse(jsonString), `${sanitizeFilename(request.name)}_parameters.json`);
-                } catch (e) { downloadJson({ error: "Could not parse parameters", original_data: request.parameters }, `${sanitizeFilename(request.name)}_parameters-error.json`); }
-              }}>
-                Download Parameters
-              </DataViewButton>
             </div>
           </DetailSection>
-          
           {request.error_message && (
-            <DetailSection>
-              <h4>Error Message</h4>
-              <ErrorBlock>{request.error_message}</ErrorBlock>
-            </DetailSection>
+            <DetailSection><h4>Error Message</h4><ErrorBlock>{request.error_message}</ErrorBlock></DetailSection>
           )}
         </ModalBody>
         <ModalFooter>
           <CloseButton onClick={onClose}>Close</CloseButton>
+          {request.status === 'awaiting_confirmation' && (
+            <ConfirmButton onClick={onConfirm} disabled={isConfirming}>
+              {isConfirming ? 'Starting...' : 'Confirm & Start Fine-Tune'}
+            </ConfirmButton>
+          )}
         </ModalFooter>
       </ModalContent>
     </ModalOverlay>
@@ -713,10 +678,11 @@ const RequestDetailsModal = ({ request, onClose }) => {
 
 const STATUSES = [
     { label: 'All', value: 'all' },
-    { label: 'Validation', value: 'waiting_for_validation,validating' },
-    { label: 'Fine Tune', value: 'waiting_for_fine_tune,fine_tuning' },
+    { label: 'Formatting', value: 'waiting_for_formatting' },
+    { label: 'Awaiting Confirmation', value: 'awaiting_confirmation' },
+    { label: 'Fine-Tuning', value: 'waiting_for_fine_tune' },
     { label: 'Done', value: 'done' },
-    { label: 'Failed', value: 'validation_failed,failed' },
+    { label: 'Failed', value: 'formatting_failed,failed' },
 ];
 
 const TIME_PERIODS = {
@@ -732,27 +698,25 @@ const INITIAL_FILTERS = {
   base_model_id: '',
   time_period: 'all',
   status: 'all',
-  sort_order: 'asc',
+  sort_order: 'desc',
 };
 
 const FineTuneStatusPage = () => {
-  const dispatch = useDispatch();
-  const cable = useRef();
   const [filters, setFilters] = useState(INITIAL_FILTERS);
   const [customDates, setCustomDates] = useState({ start: '', end: '' });
-  const [apiParams, setApiParams] = useState({ page: 1 });
+  const [apiParams, setApiParams] = useState({ page: 1, ...INITIAL_FILTERS });
   const [isBaseModelOpen, setIsBaseModelOpen] = useState(false);
   const baseModelRef = useRef();
   useOnClickOutside(baseModelRef, () => setIsBaseModelOpen(false));
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isLifecycleModalOpen, setIsLifecycleModalOpen] = useState(false);
 
   const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
-
+  const { data: trafficData } = useGetQueueTrafficQuery(undefined, { pollingInterval: 5000 });
+  const [confirmAndStart, { isLoading: isConfirming }] = useConfirmAndStartFineTuneMutation();
+  
   useEffect(() => {
     const params = {
-      page: 1,
       search: filters.search,
       base_model_id: filters.base_model_id,
       status: filters.status,
@@ -760,186 +724,65 @@ const FineTuneStatusPage = () => {
     };
     const now = new Date();
     switch (filters.time_period) {
-      case 'day':
-        params.start_date = new Date(now.setDate(now.getDate() - 1)).toISOString().split('T')[0];
-        break;
-      case 'week':
-        params.start_date = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0];
-        break;
-      case 'month':
-        params.start_date = new Date(now.setMonth(now.getMonth() - 1)).toISOString().split('T')[0];
-        break;
-      case 'custom':
-        params.start_date = customDates.start;
-        params.end_date = customDates.end;
-        break;
-      default:
-        break;
+      case 'day': params.start_date = new Date(now.setDate(now.getDate() - 1)).toISOString().split('T')[0]; break;
+      case 'week': params.start_date = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0]; break;
+      case 'month': params.start_date = new Date(now.setMonth(now.getMonth() - 1)).toISOString().split('T')[0]; break;
+      case 'custom': params.start_date = customDates.start; params.end_date = customDates.end; break;
+      default: break;
     }
-    setApiParams(prev => ({ ...params, page: prev.page }));
+    setApiParams(prev => ({ ...prev, ...params, page: 1 }));
   }, [filters, customDates]);
-
-  useEffect(() => {
-    if (!cable.current) {
-      cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
-    }
-
-    const channelParams = { channel: 'FineTuneStatusChannel' };
-
-    const channelHandlers = {
-      received: (data) => {
-        dispatch(
-          apiSlice.util.updateQueryData('getFineTuneRequests', apiParams, (draft) => {
-            if (!draft || !draft.requests) return;
-            const index = draft.requests.findIndex(req => req.id === data.updated_request.id);
-            if (index !== -1) {
-              draft.requests[index] = data.updated_request;
-            } else {
-              draft.requests.unshift(data.updated_request);
-            }
-          })
-        );
-      },
-      connected: () => {
-      },
-      disconnected: () => {
-      }
-    };
-
-    const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [dispatch, apiParams]);
 
   const { data, isLoading, isFetching } = useGetFineTuneRequestsQuery(apiParams);
   const requests = data?.requests || [];
   const pagination = data?.pagination || {};
   const selectedModelName = tunableModels?.find(m => m.id === filters.base_model_id)?.name || 'All Models';
-  const hasActiveFilters = useMemo(() => {
-    return filters.search !== '' ||
-           filters.base_model_id !== '' ||
-           filters.status !== 'all' ||
-           filters.time_period !== 'all';
-  }, [filters]);
+  const hasActiveFilters = useMemo(() => JSON.stringify(filters) !== JSON.stringify(INITIAL_FILTERS), [filters]);
 
-  const handleOpenModal = (request) => {
-    setSelectedRequest(request);
-    setIsModalOpen(true);
+  const handleOpenModal = (request) => setSelectedRequest(request);
+  const handleCloseModal = () => setSelectedRequest(null);
+
+  const handleConfirm = async () => {
+    if (selectedRequest) {
+      await confirmAndStart(selectedRequest.id).unwrap();
+      handleCloseModal();
+    }
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedRequest(null);
-  };
-
-  const handleTimePeriodClick = (key) => {
-    setFilters(prev => ({ ...prev, time_period: key, sort_order: 'desc' }));
-  };
-
-  const handleSortClick = () => {
-    setFilters(prev => ({ ...prev, sort_order: prev.sort_order === 'desc' ? 'asc' : 'desc' }));
+  const getDisplayStatus = (request) => {
+    if (request.status === 'waiting_for_formatting' && (trafficData?.formatting?.messages_unacknowledged > 0 || trafficData?.formatting?.messages_ready > 0)) {
+      return { text: 'Formatting in Progress', status: 'in_progress' };
+    }
+    if (request.status === 'waiting_for_fine_tune' && (trafficData?.fine_tuning?.messages_unacknowledged > 0 || trafficData?.fine_tuning?.messages_ready > 0)) {
+      return { text: 'Fine-Tuning in Progress', status: 'in_progress' };
+    }
+    return { text: request.status.replace(/_/g, ' '), status: request.status };
   };
 
   return (
     <>
-      <div style={{
-          position: 'fixed',
-          top: '70px',
-          left: '0',
-          width: '100vw',
-          height: 'calc(100vh - 70px)',
-      }}>
+      <div style={{ position: 'fixed', top: '70px', left: '0', width: '100vw', height: 'calc(100vh - 70px)' }}>
         <PageLayout>
           <Sidebar>
             <SidebarTitle>Refine by</SidebarTitle>
             <SearchContainer>
               <SearchIcon />
-              <SearchInput
-                type="text"
-                name="search"
-                placeholder="Search new models..."
-                value={filters.search}
-                onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))}
-              />
+              <SearchInput type="text" placeholder="Search new models..." value={filters.search} onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))} />
             </SearchContainer>
             <FilterSection ref={baseModelRef}>
               <FilterSectionTitle>Base Model</FilterSectionTitle>
               <div style={{ position: 'relative' }}>
-                <OptionList>
-                  <OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(prev => !prev)}>
-                    <span>{selectedModelName}</span>
-                    <IconWrapper isVisible={true}>
-                      <DropdownArrow isOpen={isBaseModelOpen} />
-                    </IconWrapper>
-                  </OptionListItem>
-                </OptionList>
-                {isBaseModelOpen && (
-                  <DropdownMenu>
-                    <OptionList>
-                      <OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}>
-                        <span>All Models</span>
-                        <IconWrapper isVisible={!filters.base_model_id}>
-                          <CheckmarkIcon />
-                        </IconWrapper>
-                      </OptionListItem>
-                      {isLoadingModels ? <Spinner /> : tunableModels?.map(model => (
-                        <OptionListItem
-                          key={model.id}
-                          isActive={filters.base_model_id === model.id}
-                          onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}
-                        >
-                          <span>{model.name}</span>
-                           <IconWrapper isVisible={filters.base_model_id === model.id}>
-                            <CheckmarkIcon />
-                          </IconWrapper>
-                        </OptionListItem>
-                      ))}
-                    </OptionList>
-                  </DropdownMenu>
-                )}
+                <OptionList><OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(p => !p)}><span>{selectedModelName}</span><IconWrapper isVisible={true}><DropdownArrow isOpen={isBaseModelOpen} /></IconWrapper></OptionListItem></OptionList>
+                {isBaseModelOpen && (<DropdownMenu><OptionList><OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}><span>All Models</span><IconWrapper isVisible={!filters.base_model_id}><CheckmarkIcon /></IconWrapper></OptionListItem>{isLoadingModels ? <Spinner /> : tunableModels?.map(model => (<OptionListItem key={model.id} isActive={filters.base_model_id === model.id} onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}><span>{model.name}</span><IconWrapper isVisible={filters.base_model_id === model.id}><CheckmarkIcon /></IconWrapper></OptionListItem>))}</OptionList></DropdownMenu>)}
               </div>
             </FilterSection>
             <FilterSection>
               <FilterSectionTitle>Status</FilterSectionTitle>
-              <OptionList>
-                {STATUSES.map(status => (
-                  <OptionListItem
-                    key={status.value}
-                    isActive={filters.status === status.value}
-                    onClick={() => setFilters(f => ({ ...f, status: status.value }))}
-                  >
-                    <span>{status.label}</span>
-                    <IconWrapper isVisible={filters.status === status.value}>
-                        <CheckmarkIcon />
-                    </IconWrapper>
-                  </OptionListItem>
-                ))}
-              </OptionList>
+              <OptionList>{STATUSES.map(s => (<OptionListItem key={s.value} isActive={filters.status === s.value} onClick={() => setFilters(f => ({ ...f, status: s.value }))}><span>{s.label}</span><IconWrapper isVisible={filters.status === s.value}><CheckmarkIcon /></IconWrapper></OptionListItem>))}</OptionList>
             </FilterSection>
             <FilterSection>
               <FilterSectionTitle>Submitted Time</FilterSectionTitle>
-              <OptionList>
-                {Object.entries(TIME_PERIODS).map(([key, value]) => (
-                  <React.Fragment key={key}>
-                    <OptionListItem isActive={filters.time_period === key} onClick={() => handleTimePeriodClick(key)}>
-                      <span>{value}</span>
-                      <IconWrapper isVisible={filters.time_period === key}>
-                        <CheckmarkIcon />
-                      </IconWrapper>
-                    </OptionListItem>
-                    {filters.time_period === 'custom' && key === 'custom' && (
-                      <CustomDateWrapper>
-                        <label htmlFor="start_date">From</label>
-                        <input type="date" id="start_date" value={customDates.start} onChange={e => setCustomDates(d => ({ ...d, start: e.target.value }))} />
-                        <label htmlFor="end_date">To</label>
-                        <input type="date" id="end_date" value={customDates.end} onChange={e => setCustomDates(d => ({ ...d, end: e.target.value }))} />
-                      </CustomDateWrapper>
-                    )}
-                  </React.Fragment>
-                ))}
-              </OptionList>
+              <OptionList>{Object.entries(TIME_PERIODS).map(([key, value]) => (<React.Fragment key={key}><OptionListItem isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}><span>{value}</span><IconWrapper isVisible={filters.time_period === key}><CheckmarkIcon /></IconWrapper></OptionListItem>{filters.time_period === 'custom' && key === 'custom' && (<CustomDateWrapper><label htmlFor="start_date">From</label><input type="date" id="start_date" value={customDates.start} onChange={e => setCustomDates(d => ({ ...d, start: e.target.value }))} /><label htmlFor="end_date">To</label><input type="date" id="end_date" value={customDates.end} onChange={e => setCustomDates(d => ({ ...d, end: e.target.value }))} /></CustomDateWrapper>)}</React.Fragment>))}</OptionList>
             </FilterSection>
           </Sidebar>
           <MainContent>
@@ -949,93 +792,44 @@ const FineTuneStatusPage = () => {
                 {requests.length > 0 ? (
                   <>
                     <TableWrapper>
-                        <StyledTable>
-                            <Thead>
-                                <Tr>
-                                    <Th>New Model</Th>
-                                    <Th>
-                                      <HeaderWithIcon>
-                                        <span>Status</span>
-                                        <InfoButton onClick={() => setIsLifecycleModalOpen(true)}>
-                                          <InfoIcon />
-                                        </InfoButton>
-                                      </HeaderWithIcon>
-                                    </Th>
-                                    <Th>Base Model</Th>
-                                    <Th>Task</Th>
-                                    <Th>
-                                      <SortHeader onClick={handleSortClick}>
-                                        <span>Submitted Time</span>
-                                        <SortArrowIcon direction={filters.sort_order} />
-                                      </SortHeader>
-                                    </Th>
-                                    <Th></Th>
-                                </Tr>
-                            </Thead>
-                            <Tbody>
-                                {requests.map(req => (
-                                    <Tr key={req.id}>
-                                        <Td><strong>{req.name}</strong></Td>
-                                        <Td>
-                                          <StatusText status={req.status}>
-                                            {getStatusText(req.status)}
-                                          </StatusText>
-                                        </Td>
-                                        <Td>{req.ai_model.name}</Td>
-                                        <Td>{req.task}</Td>
-                                        <Td>{new Date(req.created_at).toLocaleString()}</Td>
-                                        <Td className="actions">
-                                            <DetailsButton onClick={() => handleOpenModal(req)}>Details</DetailsButton>
-                                            {req.status === 'done' && req.new_ai_model_id && (
-                                                <ActionButton
-                                                  href={`/ai-models/${req.new_ai_model_id}`}
-                                                  target="_blank"
-                                                  rel="noopener noreferrer"
-                                                >View Model</ActionButton>
-                                            )}
-                                        </Td>
-                                    </Tr>
-                                ))}
-                            </Tbody>
-                        </StyledTable>
+                      <StyledTable>
+                        <Thead><Tr><Th>New Model</Th><Th><HeaderWithIcon><span>Status</span><InfoButton onClick={() => setIsLifecycleModalOpen(true)}><InfoIcon /></InfoButton></HeaderWithIcon></Th><Th>Base Model</Th><Th>Task</Th><Th><SortHeader onClick={() => setFilters(f => ({...f, sort_order: f.sort_order === 'desc' ? 'asc' : 'desc'}))}><span>Submitted Time</span><SortArrowIcon direction={filters.sort_order} /></SortHeader></Th><Th></Th></Tr></Thead>
+                        <Tbody>
+                          {requests.map(req => {
+                            const display = getDisplayStatus(req);
+                            return (
+                            <Tr key={req.id}>
+                              <Td><strong>{req.name}</strong></Td>
+                              <Td><StatusText status={display.status}>{display.text}</StatusText></Td>
+                              <Td>{req.ai_model.name}</Td>
+                              <Td>{req.task}</Td>
+                              <Td>{new Date(req.created_at).toLocaleString()}</Td>
+                              <Td className="actions">
+                                <DetailsButton onClick={() => handleOpenModal(req)}>
+                                  {req.status === 'awaiting_confirmation' ? 'Review & Confirm' : 'Details'}
+                                </DetailsButton>
+                                {req.status === 'done' && req.new_ai_model_id && (<ActionButton href={`/ai-models/${req.new_ai_model_id}`} target="_blank" rel="noopener noreferrer">View Model</ActionButton>)}
+                              </Td>
+                            </Tr>
+                          )})}
+                        </Tbody>
+                      </StyledTable>
                     </TableWrapper>
                     <PaginationControls>
-                      <button
-                        onClick={() => setApiParams(p => ({ ...p, page: p.page - 1 }))}
-                        disabled={!pagination.current_page || pagination.current_page === 1}
-                      >
-                        Previous
-                      </button>
-                      <button
-                        onClick={() => setApiParams(p => ({ ...p, page: p.page + 1 }))}
-                        disabled={!pagination.total_pages || pagination.current_page === pagination.total_pages}
-                      >
-                        Next
-                      </button>
+                      <button onClick={() => setApiParams(p => ({ ...p, page: p.page - 1 }))} disabled={!pagination.current_page || pagination.current_page === 1}>Previous</button>
+                      <button onClick={() => setApiParams(p => ({ ...p, page: p.page + 1 }))} disabled={!pagination.total_pages || pagination.current_page === pagination.total_pages}>Next</button>
                     </PaginationControls>
                   </>
                 ) : (
-                  <EmptyStateWrapper>
-                    <h3>{hasActiveFilters ? 'No Results Found' : 'No Tasks Submitted'}</h3>
-                    <p>
-                      {hasActiveFilters 
-                        ? 'Try adjusting your filters to find what you are looking for.' 
-                        : 'There are no fine-tuning tasks to display yet.'
-                      }
-                    </p>
-                  </EmptyStateWrapper>
+                  <EmptyStateWrapper><h3>{hasActiveFilters ? 'No Results Found' : 'No Tasks Submitted'}</h3><p>{hasActiveFilters ? 'Try adjusting your filters.' : 'There are no fine-tuning tasks to display.'}</p></EmptyStateWrapper>
                 )}
               </>
             )}
           </MainContent>
         </PageLayout>
       </div>
-      {isModalOpen && selectedRequest && (
-        <RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} />
-      )}
-      {isLifecycleModalOpen && (
-        <StatusLifecycleModal onClose={() => setIsLifecycleModalOpen(false)} />
-      )}
+      {selectedRequest && (<RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} onConfirm={handleConfirm} isConfirming={isConfirming} />)}
+      {isLifecycleModalOpen && (<StatusLifecycleModal onClose={() => setIsLifecycleModalOpen(false)} />)}
     </>
   );
 };

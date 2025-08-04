@@ -6,8 +6,13 @@ Rails.application.routes.draw do
     resources :clinician_types, only: [ :index ]
     resources :few_shot_templates, only: [ :index, :show, :create, :update, :destroy ]
     resources :model_fine_tune_requests, only: [ :index, :create ] do
+      member do
+        post :confirm_and_start_fine_tune
+      end
       collection do
         get :statistics
+        post :update_status
+        post :formatting_complete
       end
     end
     resources :ai_models, only: [ :index, :show ] do
@@ -30,7 +35,6 @@ Rails.application.routes.draw do
     end
 
     post "/model_install_requests/update_status", to: "model_install_requests#update_status"
-    post "/model_fine_tune_requests/update_status", to: "model_fine_tune_requests#update_status"
     get "/rabbitmq/traffic", to: "rabbitmq#traffic"
 
     resources :inter_raters, only: [ :create ] do

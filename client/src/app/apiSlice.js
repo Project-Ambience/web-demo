@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate', 'FineTuneRequest'],
+  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate', 'FineTuneRequest', 'QueueTraffic'],
   endpoints: builder => ({
     getClinicianTypes: builder.query({
       query: () => '/clinician_types',
@@ -132,9 +132,16 @@ export const apiSlice = createApi({
       },
       providesTags: ['FineTuneRequest'],
     }),
-    getFineTuneStatistics: builder.query({
-        query: () => '/model_fine_tune_requests/statistics',
-        providesTags: ['FineTuneRequest'],
+    getQueueTraffic: builder.query({
+        query: () => '/rabbitmq/traffic',
+        providesTags: ['QueueTraffic'],
+    }),
+    confirmAndStartFineTune: builder.mutation({
+      query: (id) => ({
+        url: `/model_fine_tune_requests/${id}/confirm_and_start_fine_tune`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['FineTuneRequest', 'QueueTraffic']
     }),
     acceptFeedback: builder.mutation({
       query: (id) => ({
@@ -226,7 +233,8 @@ export const {
   useAddMessageMutation,
   useCreateFineTuneRequestMutation,
   useGetFineTuneRequestsQuery,
-  useGetFineTuneStatisticsQuery,
+  useGetQueueTrafficQuery,
+  useConfirmAndStartFineTuneMutation,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
   useGetFewShotTemplatesQuery,
