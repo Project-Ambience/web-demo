@@ -31,13 +31,12 @@ RSpec.describe ModelFineTuneRequest, type: :model do
     it do
       is_expected.to define_enum_for(:status).with_values(
         pending: 0,
-        waiting_for_validation: 1,
-        validating: 2,
-        validation_failed: 3,
+        waiting_for_formatting: 1,
+        formatting_failed: 2,
+        awaiting_confirmation: 3,
         waiting_for_fine_tune: 4,
-        fine_tuning: 5,
-        failed: 6,
-        done: 7
+        failed: 5,
+        done: 6
       )
     end
   end
@@ -46,8 +45,8 @@ RSpec.describe ModelFineTuneRequest, type: :model do
     let(:fine_tune_request) { build(:model_fine_tune_request, :with_tunable_model) }
 
     before do
-      ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"] = "http://example.com/callback"
-      ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"] = "fine_tune_requests"
+      ENV["MODEL_FORMATTING_COMPLETE_CALLBACK_PATH"] = "http://example.com/formatting_callback"
+      ENV["MODEL_FORMATTING_REQUEST_QUEUE_NAME"] = "formatting_requests"
     end
 
     it "sets default status to pending on initialization" do
@@ -55,28 +54,28 @@ RSpec.describe ModelFineTuneRequest, type: :model do
       expect(new_request.status).to eq("pending")
     end
 
-    it "publishes fine-tune request to RabbitMQ after creation" do
+    it "publishes formatting request to RabbitMQ after creation" do
       allow(MessagePublisher).to receive(:publish)
       fine_tune_request.save
       expect(MessagePublisher).to have_received(:publish).with(
         hash_including(
           fine_tune_request_id: fine_tune_request.id,
-          callback_url: "http://example.com/callback"
+          callback_url: "http://example.com/formatting_callback"
         ),
-        "fine_tune_requests"
+        "formatting_requests"
       )
     end
 
-    it "updates status to waiting_for_validation after publishing" do
+    it "updates status to waiting_for_formatting after publishing" do
       allow(MessagePublisher).to receive(:publish)
       fine_tune_request.save
-      expect(fine_tune_request.reload.status).to eq("waiting_for_validation")
+      expect(fine_tune_request.reload.status).to eq("waiting_for_formatting")
     end
 
-    it "updates status to failed if publishing raises an error" do
+    it "updates status to formatting_failed if publishing raises an error" do
       allow(MessagePublisher).to receive(:publish).and_raise("SOME ERROR")
       fine_tune_request.save
-      expect(fine_tune_request.reload.status).to eq("failed")
+      expect(fine_tune_request.reload.status).to eq("formatting_failed")
     end
   end
 
@@ -85,31 +84,31 @@ RSpec.describe ModelFineTuneRequest, type: :model do
     let(:tunable_model_2) { create(:ai_model, allow_fine_tune: true) }
 
     before do
-      allow_any_instance_of(ModelFineTuneRequest).to receive(:publish_fine_tune_request_to_rabbit_mq).and_return(true)
+      allow_any_instance_of(ModelFineTuneRequest).to receive(:publish_formatting_request).and_return(true)
     end
 
     let!(:done_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :done, created_at: 1.day.ago) }
     let!(:failed_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :failed, created_at: 2.days.ago) }
-    let!(:tuning_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :fine_tuning, name: "Searchable Model") }
+    let!(:waiting_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :waiting_for_fine_tune, name: "Searchable Model") }
     let!(:other_model_request) { create(:model_fine_tune_request, ai_model: tunable_model_2, status: :done) }
 
     it ".by_status returns the correct requests" do
       expect(ModelFineTuneRequest.by_status("done")).to contain_exactly(done_request, other_model_request)
-      expect(ModelFineTuneRequest.by_status("failed,validation_failed")).to contain_exactly(failed_request)
+      expect(ModelFineTuneRequest.by_status("failed,formatting_failed")).to contain_exactly(failed_request)
     end
 
     it ".by_base_model returns requests for a specific model" do
-      expect(ModelFineTuneRequest.by_base_model(tunable_model_1.id)).to contain_exactly(done_request, failed_request, tuning_request)
+      expect(ModelFineTuneRequest.by_base_model(tunable_model_1.id)).to contain_exactly(done_request, failed_request, waiting_request)
       expect(ModelFineTuneRequest.by_base_model(tunable_model_2.id)).to contain_exactly(other_model_request)
     end
 
     it ".search_by_name finds requests by name" do
-      expect(ModelFineTuneRequest.search_by_name("Searchable")).to contain_exactly(tuning_request)
+      expect(ModelFineTuneRequest.search_by_name("Searchable")).to contain_exactly(waiting_request)
       expect(ModelFineTuneRequest.search_by_name("NonExistent")).to be_empty
     end
 
     it ".created_after and .created_before filter by date" do
-      expect(ModelFineTuneRequest.created_after(1.5.days.ago)).to contain_exactly(done_request, tuning_request, other_model_request)
+      expect(ModelFineTuneRequest.created_after(1.5.days.ago)).to contain_exactly(done_request, waiting_request, other_model_request)
       expect(ModelFineTuneRequest.created_before(1.5.days.ago)).to contain_exactly(failed_request)
     end
   end

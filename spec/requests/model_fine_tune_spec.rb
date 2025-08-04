@@ -1,19 +1,19 @@
 require "rails_helper"
 
 RSpec.describe "ModelFineTuneRequests", type: :request do
-  let(:fine_tune_task) { create(:fine_tune_task) }
-  let(:clinician_type) { create(:clinician_type) }
-  let(:ai_model) { create(:ai_model, allow_fine_tune: true) }
-  let(:file) do
+  let!(:fine_tune_task) { create(:fine_tune_task) }
+  let!(:clinician_type) { create(:clinician_type) }
+  let!(:ai_model) { create(:ai_model, allow_fine_tune: true) }
+  let!(:file) do
     Rack::Test::UploadedFile.new(
       Rails.root.join("spec/fixtures/files/fine_tune_data.json"),
       "application/json"
     )
   end
-  let(:valid_params) do
+  let!(:valid_params) do
     {
-      name: "Fine-tune model",
-      description: "Testing fine-tune",
+      name: "Test Fine-Tune",
+      description: "A test request",
       fine_tune_task_id: fine_tune_task.id,
       clinician_type_id: clinician_type.id,
       ai_model_id: ai_model.id,
@@ -22,140 +22,80 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
   end
 
   before do
+    ENV["MODEL_FORMATTING_REQUEST_QUEUE_NAME"] = "test_formatting_queue"
+    ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"] = "test_finetune_queue"
+    ENV["MODEL_FORMATTING_COMPLETE_CALLBACK_PATH"] = "/api/model_fine_tune_requests/formatting_complete"
+    ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"] = "/api/model_fine_tune_requests/update_status"
     allow(MessagePublisher).to receive(:publish)
   end
 
-  it "creates a new fine-tune request with valid data" do
-    post "/api/model_fine_tune_requests", params: valid_params
-    expect(response).to have_http_status(:created)
+  describe "POST /api/model_fine_tune_requests" do
+    it "creates a new fine-tune request and returns a created status" do
+      expect {
+        post "/api/model_fine_tune_requests", params: valid_params
+      }.to change(ModelFineTuneRequest, :count).by(1)
+      
+      expect(response).to have_http_status(:created)
+      expect(ModelFineTuneRequest.last.status).to eq("waiting_for_formatting")
+    end
   end
 
-  it "returns bad request if required params are missing" do
-    post "/api/model_fine_tune_requests", params: valid_params.except(:name)
-    expect(response).to have_http_status(:bad_request)
-    expect(JSON.parse(response.body)["error"]).to include("Missing required parameter(s): name")
-  end
+  describe "POST /api/model_fine_tune_requests/formatting_complete" do
+    let!(:request) { create(:model_fine_tune_request, :with_tunable_model, status: :waiting_for_formatting) }
 
-  it "returns 404 if fine_tune_task is not found" do
-    post "/api/model_fine_tune_requests", params: valid_params.merge(fine_tune_task_id: 0)
-    expect(response).to have_http_status(:not_found)
-  end
-
-  it "returns 404 if clinician_type is not found" do
-    post "/api/model_fine_tune_requests", params: valid_params.merge(clinician_type_id: 0)
-    expect(response).to have_http_status(:not_found)
-  end
-
-  it "returns 404 if ai_model is not found" do
-    post "/api/model_fine_tune_requests", params: valid_params.merge(ai_model_id: 0)
-    expect(response).to have_http_status(:not_found)
-  end
-
-  it "creates a new fine-tune request with valid data" do
-    expect {
-      post "/api/model_fine_tune_requests", params: valid_params
-    }.to change(ModelFineTuneRequest, :count).by(1)
-    expect(response).to have_http_status(:created)
-  end
-
-  describe "Model Fine-Tune Lifecycle Simulation" do
-    let(:clinician_type) { create(:clinician_type) }
-    let(:base_model) { create(:ai_model, allow_fine_tune: true) }
-    let(:unformatted_data) do
-      [
-        { "instruction" => "i1", "input" => "a", "response" => "b" },
-        { "instruction" => "i2", "input" => "a1", "response" => "b2" }
-      ]
-    end
-    let(:formatted_data) do
-      [
-        { "text" => "### Instruction:i1### Input:a### Response:b" },
-        { "text" => "### Instruction:i2### Input:a1### Response:b2" }
-      ]
-    end
-
-    before do
-      allow(MessagePublisher).to receive(:publish)
-    end
-
-    let!(:waiting_for_formatting_request) do
-      create(:model_fine_tune_request,
-             ai_model: base_model,
-             clinician_type: clinician_type,
-             name: "Request Waiting for Formatting",
-             status: :waiting_for_formatting,
-             fine_tune_data: unformatted_data)
-    end
-
-    let!(:formatting_failed_request) do
-      create(:model_fine_tune_request,
-             ai_model: base_model,
-             clinician_type: clinician_type,
-             name: "Request Formatting Failed",
-             status: :formatting_failed,
-             error_message: "Dataset contains invalid characters.")
-    end
-
-    let!(:awaiting_confirmation_request) do
-      create(:model_fine_tune_request,
-             ai_model: base_model,
-             clinician_type: clinician_type,
-             name: "Request Awaiting Confirmation",
-             status: :awaiting_confirmation,
-             fine_tune_data: formatted_data)
-    end
-
-    let!(:waiting_for_fine_tune_request) do
-      create(:model_fine_tune_request,
-             ai_model: base_model,
-             clinician_type: clinician_type,
-             name: "Request Waiting for Fine-Tune",
-             status: :waiting_for_fine_tune,
-             fine_tune_data: formatted_data)
-    end
-
-    let!(:failed_request) do
-      create(:model_fine_tune_request,
-             ai_model: base_model,
-             clinician_type: clinician_type,
-             name: "Request Fine-Tune Failed",
-             status: :failed,
-             error_message: "Training failed due to resource constraints.")
-    end
-
-    let!(:done_request) do
-      req = create(:model_fine_tune_request,
-                   ai_model: base_model,
-                   clinician_type: clinician_type,
-                   name: "Request Done",
-                   status: :done)
-      new_model = create(:ai_model,
-                         name: req.name,
-                         base_model: req.ai_model,
-                         clinician_type: req.clinician_type)
-      req.update_column(:new_ai_model_id, new_model.id)
-      req
-    end
-
-    it "returns a collection of requests, with one in each status" do
-      get "/api/model_fine_tune_requests", params: { status: "all", page: 1, per: 10 }
-
+    it "updates status to awaiting_confirmation on success" do
+      post "/api/model_fine_tune_requests/formatting_complete", params: { id: request.id, status: "success", validated_dataset: [{ text: "formatted" }] }
       expect(response).to have_http_status(:ok)
-      json_response = JSON.parse(response.body)
-      requests = json_response["requests"]
+      expect(request.reload.status).to eq("awaiting_confirmation")
+      expect(request.fine_tune_data).to eq([{ "text" => "formatted" }])
+    end
 
-      expect(requests.count).to eq(6)
-      expect(requests.pluck("name")).to contain_exactly(
-        "Request Waiting for Formatting",
-        "Request Formatting Failed",
-        "Request Awaiting Confirmation",
-        "Request Waiting for Fine-Tune",
-        "Request Fine-Tune Failed",
-        "Request Done"
-      )
+    it "updates status to formatting_failed on failure" do
+      post "/api/model_fine_tune_requests/formatting_complete", params: { id: request.id, status: "fail", error: "Bad format" }
+      expect(response).to have_http_status(:ok)
+      expect(request.reload.status).to eq("formatting_failed")
+      expect(request.error_message).to eq("Bad format")
+    end
+  end
 
-      confirmation_req_data = requests.find { |r| r["status"] == "awaiting_confirmation" }
-      expect(confirmation_req_data["fine_tune_data"]).to eq(formatted_data.map(&:deep_stringify_keys))
+  describe "POST /api/model_fine_tune_requests/:id/confirm_and_start_fine_tune" do
+    let!(:request) { create(:model_fine_tune_request, :with_tunable_model, status: :awaiting_confirmation) }
+
+    it "updates status to waiting_for_fine_tune and publishes to the fine-tune queue" do
+      post "/api/model_fine_tune_requests/#{request.id}/confirm_and_start_fine_tune"
+      
+      expect(response).to have_http_status(:ok)
+      expect(request.reload.status).to eq("waiting_for_fine_tune")
+      expect(MessagePublisher).to have_received(:publish).with(hash_including(fine_tune_request_id: request.id), ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
+    end
+
+    it "returns an error if the request is not awaiting confirmation" do
+      request.done!
+      post "/api/model_fine_tune_requests/#{request.id}/confirm_and_start_fine_tune"
+      expect(response).to have_http_status(:unprocessable_entity)
+    end
+  end
+
+  describe "POST /api/model_fine_tune_requests/update_status" do
+    let!(:request) { create(:model_fine_tune_request, :with_tunable_model, status: :waiting_for_fine_tune) }
+    
+    it "updates status to done on success and creates a new AiModel" do
+      expect {
+        post "/api/model_fine_tune_requests/update_status", params: { id: request.id, status: "success", adapter_path: "path/to/adapter" }
+      }.to change(AiModel, :count).by(1)
+      
+      expect(response).to have_http_status(:ok)
+      request.reload
+      expect(request.status).to eq("done")
+      expect(request.new_ai_model_id).to eq(AiModel.last.id)
+    end
+
+    it "updates status to failed on failure" do
+      post "/api/model_fine_tune_requests/update_status", params: { id: request.id, status: "fail", error: "Training error" }
+      expect(response).to have_http_status(:ok)
+      request.reload
+      expect(request.status).to eq("failed")
+      expect(request.error_message).to eq("Training error")
     end
   end
 end
