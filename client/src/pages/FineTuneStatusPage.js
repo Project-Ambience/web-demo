@@ -194,6 +194,7 @@ const TableWrapper = styled.div`
   background: #fff;
   border: 1px solid #e8edee;
   border-radius: 4px;
+  position: relative;
 `;
 
 const StyledTable = styled.table`
@@ -212,6 +213,22 @@ const Tr = styled.tr`
   &:not(:last-child) {
     border-bottom: 1px solid #e8edee;
   }
+
+  & > th:last-child,
+  & > td:last-child {
+    position: sticky;
+    right: 0;
+    box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.1);
+  }
+
+  & > th:last-child {
+    background-color: #f8f9fa;
+    z-index: 1;
+  }
+
+  & > td:last-child {
+    background-color: #fff;
+  }
 `;
 
 const Th = styled.th`
@@ -221,6 +238,10 @@ const Th = styled.th`
   color: #4c6272;
   white-space: nowrap;
   border-bottom: 2px solid #e8edee;
+
+  &:last-child {
+    text-align: right;
+  }
 `;
 
 const Td = styled.td`
@@ -756,7 +777,14 @@ const FineTuneStatusPage = () => {
     if (request.status === 'waiting_for_fine_tune' && (trafficData?.fine_tuning?.messages_unacknowledged > 0 || trafficData?.fine_tuning?.messages_ready > 0)) {
       return { text: 'Fine-Tuning in Progress', status: 'in_progress' };
     }
-    return { text: request.status.replace(/_/g, ' '), status: request.status };
+    switch (request.status) {
+      case 'done':
+        return { text: 'Fine tuning Done', status: 'done' };
+      case 'failed':
+        return { text: 'Fine tuning Failed', status: 'failed' };
+      default:
+        return { text: request.status.replace(/_/g, ' '), status: request.status };
+    }
   };
 
   return (
