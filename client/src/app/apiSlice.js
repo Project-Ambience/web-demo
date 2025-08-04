@@ -182,6 +182,20 @@ export const apiSlice = createApi({
       query: (ai_model_id) => `/inter_raters/response_pairs/${ai_model_id}`,
       providesTags: ['InterRater']
     }),
+    createRagDataAddingRequest: builder.mutation({
+      query: (file) => {
+        const formData = new FormData();
+        if (file) {
+          formData.append('file', file);
+        }
+    
+        return {
+          url: '/rag_data_adding_requests',
+          method: 'POST',
+          body: formData,
+        };
+      },
+    }),
     addInterRater: builder.mutation({
       query: (payload) => ({
         url: '/inter_raters',
@@ -226,4 +240,5 @@ export const {
   useGetInterRaterResponsePairsQuery,
   useAddInterRaterMutation,
   useAddInterRaterFeedbackMutation,
+  useCreateRagDataAddingRequestMutation,
 } = apiSlice;

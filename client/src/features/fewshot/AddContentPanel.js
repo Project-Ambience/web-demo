@@ -211,6 +211,17 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
                 </InfoIcon>
               </ControlsWrapper>
             </Row>
+            <Row
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log("Add Data clicked (no action yet)");
+              }}
+            >
+              <LabelWrapper>
+                <span>➕ Add data to RAG</span>
+              </LabelWrapper>
+            </Row>
           </SubMenuRight>
         )}
       </RAGWrapper>
