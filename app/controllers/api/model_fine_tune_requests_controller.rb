@@ -100,7 +100,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     if request.waiting_for_formatting?
       request.formatting_in_progress!
     elsif request.waiting_for_fine_tune?
-      request.finetuning_in_progress!
+      request.fine_tuning_in_progress!
     end
 
     head :ok
@@ -136,7 +136,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       request.waiting_for_fine_tune!
       render json: { message: "Fine-tuning process started" }, status: :ok
     rescue => e
-      request.update(status: :failed, error_message: e.message)
+      request.update(status: :fine_tuning_failed, error_message: e.message)
       render json: { error: "Failed to start fine-tuning process" }, status: :internal_server_error
     end
   end
@@ -147,11 +147,11 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
 
     case params[:status]
     when "success"
-      request.done!
+      request.fine_tuning_completed!
       ai_model = create_ai_model(request, params[:adapter_path])
       request.update(new_ai_model_id: ai_model.id)
     when "fail"
-      request.update(status: :failed, error_message: params[:error])
+      request.update(status: :fine_tuning_failed, error_message: params[:error])
     else
       return render json: { error: "Invalid status" }, status: :unprocessable_entity
     end

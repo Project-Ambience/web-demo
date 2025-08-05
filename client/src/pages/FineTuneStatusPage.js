@@ -301,13 +301,13 @@ const StatusText = styled.span`
   white-space: nowrap;
   color: ${({ status }) => {
     switch (status) {
-      case 'done':
+      case 'fine_tuning_completed':
         return '#2e7d32';
-      case 'failed':
+      case 'fine_tuning_failed':
       case 'formatting_failed':
         return '#c62828';
       case 'formatting_in_progress':
-      case 'finetuning_in_progress':
+      case 'fine_tuning_in_progress':
         return '#005eb8';
       case 'awaiting_confirmation':
         return '#ff8f00';
@@ -812,9 +812,9 @@ const STATUSES = [
     { label: 'All', value: 'all' },
     { label: 'Formatting', value: 'waiting_for_formatting,formatting_in_progress' },
     { label: 'Awaiting Confirmation', value: 'awaiting_confirmation' },
-    { label: 'Fine-Tuning', value: 'waiting_for_fine_tune,finetuning_in_progress' },
-    { label: 'Done', value: 'done' },
-    { label: 'Failed', value: 'formatting_failed,failed' },
+    { label: 'Fine-Tuning', value: 'waiting_for_fine_tune,fine_tuning_in_progress' },
+    { label: 'Completed', value: 'fine_tuning_completed' },
+    { label: 'Failed', value: 'formatting_failed,fine_tuning_failed' },
 ];
 
 const TIME_PERIODS = {
@@ -962,7 +962,7 @@ const FineTuneStatusPage = () => {
                                 <DetailsButton onClick={() => handleOpenModal(req)}>
                                   {req.status === 'awaiting_confirmation' ? 'Review & Confirm' : 'Details'}
                                 </DetailsButton>
-                                {req.status === 'done' && req.new_ai_model_id && (<ActionButton href={`/ai-models/${req.new_ai_model_id}`} target="_blank" rel="noopener noreferrer">View Model</ActionButton>)}
+                                {req.status === 'fine_tuning_completed' && req.new_ai_model_id && (<ActionButton href={`/ai-models/${req.new_ai_model_id}`} target="_blank" rel="noopener noreferrer">View Model</ActionButton>)}
                               </Td>
                             </Tr>
                           )})}

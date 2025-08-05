@@ -12,9 +12,9 @@ class ModelFineTuneRequest < ApplicationRecord
     formatting_failed: 3,
     awaiting_confirmation: 4,
     waiting_for_fine_tune: 5,
-    finetuning_in_progress: 6,
-    failed: 7,
-    done: 8
+    fine_tuning_in_progress: 6,
+    fine_tuning_failed: 7,
+    fine_tuning_completed: 8
   }
 
   scope :by_status, ->(status) {
