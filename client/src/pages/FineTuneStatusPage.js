@@ -658,6 +658,33 @@ const StatLabel = styled.div`
   margin-top: 0.5rem;
 `;
 
+const getStatusColors = (status) => {
+  switch (status) {
+    case 'fine_tuning_completed':
+      return { background: '#e8f5e9', color: '#2e7d32' };
+    case 'fine_tuning_failed':
+    case 'formatting_failed':
+      return { background: '#fdecea', color: '#c62828' };
+    case 'formatting_in_progress':
+    case 'fine_tuning_in_progress':
+      return { background: '#eaf1f8', color: '#005eb8' };
+    case 'awaiting_confirmation':
+      return { background: '#fff8e1', color: '#ff8f00' };
+    default:
+      return { background: '#f0f4f5', color: '#5f6368' };
+  }
+};
+
+const StatusBadge = styled.div`
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background-color: ${({ status }) => getStatusColors(status).background};
+  color: ${({ status }) => getStatusColors(status).color};
+`;
+
 const StatusLifecycleModal = ({ onClose }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
@@ -772,11 +799,14 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
     }
   };
 
+  const displayStatus = request.status.replace(/_/g, ' ');
+
   return (
     <ModalOverlay>
       <ModalContent ref={modalRef}>
         <ModalHeader>
           <h3>{request.name}</h3>
+          <StatusBadge status={request.status}>{displayStatus}</StatusBadge>
         </ModalHeader>
         <ModalBody>
           <DetailSection>
@@ -794,6 +824,22 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
             <DetailItem><h4>Submitted At</h4><p>{new Date(request.created_at).toLocaleString()}</p></DetailItem>
           </DetailGrid>
           
+          <DetailSection>
+            <h4>Data & Parameters</h4>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              {request.fine_tune_data && (
+                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
+                  Download Dataset
+                </DataViewButton>
+              )}
+              {request.parameters && (
+                <DataViewButton onClick={() => downloadJson(request.parameters, `${sanitizeFilename(request.name)}_parameters.json`)}>
+                  Download Parameters
+                </DataViewButton>
+              )}
+            </div>
+          </DetailSection>
+
           {request.status === 'awaiting_confirmation' && dataSample.length > 0 && (
             <DetailSection>
               <h4 style={{ marginBottom: '0.75rem' }}>Random Data Sample</h4>
@@ -823,9 +869,6 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
                 <DataViewButton onClick={generateSample}>
                   Show 5 Different Examples
-                </DataViewButton>
-                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
-                  Download Full Dataset
                 </DataViewButton>
               </div>
             </DetailSection>
@@ -861,8 +904,7 @@ const TIME_PERIODS = {
   all: 'All Time',
   day: 'Last 24 Hours',
   week: 'Last 7 Days',
-  month: 'Last 30 Days',
-  custom: 'Custom Range'
+  month: 'Last 30 Days'
 };
 
 const INITIAL_FILTERS = {
@@ -875,7 +917,6 @@ const INITIAL_FILTERS = {
 
 const FineTuneStatusPage = () => {
   const [filters, setFilters] = useState(INITIAL_FILTERS);
-  const [customDates, setCustomDates] = useState({ start: '', end: '' });
   const [apiParams, setApiParams] = useState({ page: 1, ...INITIAL_FILTERS });
   const [isBaseModelOpen, setIsBaseModelOpen] = useState(false);
   const baseModelRef = useRef();
@@ -928,11 +969,10 @@ const FineTuneStatusPage = () => {
       case 'day': params.start_date = new Date(now.setDate(now.getDate() - 1)).toISOString().split('T')[0]; break;
       case 'week': params.start_date = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0]; break;
       case 'month': params.start_date = new Date(now.setMonth(now.getMonth() - 1)).toISOString().split('T')[0]; break;
-      case 'custom': params.start_date = customDates.start; params.end_date = customDates.end; break;
       default: break;
     }
     setApiParams(prev => ({ ...prev, ...params, page: 1 }));
-  }, [filters, customDates]);
+  }, [filters]);
 
   const { data, isLoading, isFetching } = useGetFineTuneRequestsQuery(apiParams);
   const requests = data?.requests || [];
@@ -978,7 +1018,7 @@ const FineTuneStatusPage = () => {
             </FilterSection>
             <FilterSection>
               <FilterSectionTitle>Submitted Time</FilterSectionTitle>
-              <OptionList>{Object.entries(TIME_PERIODS).map(([key, value]) => (<React.Fragment key={key}><OptionListItem isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}><span>{value}</span><IconWrapper isVisible={filters.time_period === key}><CheckmarkIcon /></IconWrapper></OptionListItem>{filters.time_period === 'custom' && key === 'custom' && (<CustomDateWrapper><label htmlFor="start_date">From</label><input type="date" id="start_date" value={customDates.start} onChange={e => setCustomDates(d => ({ ...d, start: e.target.value }))} /><label htmlFor="end_date">To</label><input type="date" id="end_date" value={customDates.end} onChange={e => setCustomDates(d => ({ ...d, end: e.target.value }))} /></CustomDateWrapper>)}</React.Fragment>))}</OptionList>
+              <OptionList>{Object.entries(TIME_PERIODS).map(([key, value]) => (<OptionListItem key={key} isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}><span>{value}</span><IconWrapper isVisible={filters.time_period === key}><CheckmarkIcon /></IconWrapper></OptionListItem>))}</OptionList>
             </FilterSection>
           </Sidebar>
           <MainContent>
