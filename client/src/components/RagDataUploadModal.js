@@ -55,26 +55,40 @@ const ModalCloseButton = styled.button`
 `;
 
 const RagDataUploadModal = ({ onClose, onUpload }) => {
-  const [file, setFile] = React.useState(null);
+  const [files, setFiles] = React.useState([]);
   const [isDragging, setIsDragging] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
   const [status, setStatus] = React.useState("idle");
   const [errorMessage, setErrorMessage] = React.useState("");
   const fileInputRef = React.useRef();
 
+  const MAX_FILE_SIZE_MB = 1000;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+  const MAX_FILES = 5;
+
+  const validateFiles = (newFiles) => {
+    let validFiles = [...files];
+    for (let f of newFiles) {
+      if (f.size > MAX_FILE_SIZE_BYTES) {
+        setErrorMessage(`"${f.name}" exceeds 1GB limit.`);
+        continue;
+      }
+      if (validFiles.length >= MAX_FILES) {
+        setErrorMessage(`You can only upload up to ${MAX_FILES} files.`);
+        break;
+      }
+      validFiles.push(f);
+    }
+    setFiles(validFiles);
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-  
-    const f = e.dataTransfer.files[0];
-    if (f && f.size > MAX_FILE_SIZE_BYTES) {
-      setErrorMessage(`File size must be under 1GB`);
-      setFile(null);
-      return;
-    }
-    setErrorMessage("");
-    setFile(f);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    validateFiles(droppedFiles);
     e.dataTransfer.clearData();
   };
 
@@ -90,25 +104,30 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
     setIsDragging(false);
   };
 
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    validateFiles(selectedFiles);
+    e.target.value = "";
+  };
+
   const handleUploadClick = async () => {
     try {
-      const result = await onUpload(file);
+      const result = await onUpload(files);
       if (result?.data) {
         setStatus("success");
-      } 
-      else {
+      } else {
         setErrorMessage("Unexpected error while adding data to RAG");
         setStatus("error");
       }
-    } 
-    catch (err) {
+    } catch (err) {
       setErrorMessage("Something went wrong. Please try again.");
       setStatus("error");
     }
   };
 
-  const MAX_FILE_SIZE_MB = 1000;
-  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+  const removeFile = (index) => {
+    setFiles(files.filter((_, i) => i !== index));
+  };
 
   return (
     <OverlayContainer onClick={onClose}>
@@ -119,7 +138,7 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
           <>
             <h3>📚 Add Data to RAG</h3>
             <p style={{ marginBottom: "1rem", color: "#4c6272" }}>
-              Upload a document to expand the Retrieval-Augmented Generation knowledge base.
+              Upload up to {MAX_FILES} files (TXT, PDF — Max 1GB each)
             </p>
 
             {errorMessage && (
@@ -159,32 +178,40 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
                 ref={fileInputRef}
                 type="file"
                 accept=".txt,.pdf"
+                multiple
                 style={{ display: "none" }}
-                onChange={(e) => {
-                  const f = e.target.files[0];
-                  if (f && f.size > MAX_FILE_SIZE_BYTES) {
-                    setErrorMessage(`File size must be under 1GB`);
-                    setFile(null);
-                    e.target.value = "";
-                    return;
-                  }
-                  setErrorMessage("");
-                  setFile(f);
-                }}
+                onChange={handleFileChange}
               />
 
-              {file ? (
-                <p style={{ color: "#5f6368", marginBottom: "0.5rem" }}>
-                  <strong>{file.name}</strong>
-                </p>
+              {files.length > 0 ? (
+                <ul style={{ listStyle: "none", padding: 0 }}>
+                  {files.map((f, i) => (
+                    <li key={i} style={{ marginBottom: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span>{f.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeFile(i)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#e53935",
+                          cursor: "pointer",
+                          fontWeight: "bold"
+                        }}
+                      >
+                        ✕
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               ) : (
                 <>
                   <p style={{ fontSize: "2rem", margin: 0 }}>📎</p>
                   <p style={{ color: "#5f6368", margin: "0.5rem 0" }}>
-                    Click or drag & drop a file here
+                    Click or drag & drop files here
                   </p>
                   <small style={{ color: "#888" }}>
-                    Supported: TXT, PDF — Max 1GB
+                    Supported: TXT, PDF — Max 1GB each
                   </small>
                 </>
               )}
@@ -211,19 +238,19 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
                 Cancel
               </button>
               <button
-                disabled={!file}
+                disabled={files.length === 0}
                 onClick={handleUploadClick}
                 style={{
                   padding: "0.5rem 1.25rem",
                   border: "none",
-                  backgroundColor: file ? "#005eb8" : "#BCC8D8",
+                  backgroundColor: files.length > 0 ? "#005eb8" : "#BCC8D8",
                   color: "#fff",
                   borderRadius: "8px",
-                  cursor: file ? "pointer" : "not-allowed",
+                  cursor: files.length > 0 ? "pointer" : "not-allowed",
                   fontWeight: "bold",
                 }}
               >
-                Upload File
+                Submit
               </button>
             </div>
           </>
@@ -232,7 +259,7 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
         {status === "success" && (
           <div style={{ textAlign: "center", padding: "2rem" }}>
             <h3>Upload Successful</h3>
-            <p>Your document was successfully added to the RAG knowledge base.</p>
+            <p>Your documents were successfully added to the RAG knowledge base.</p>
             <button
               onClick={onClose}
               style={{
