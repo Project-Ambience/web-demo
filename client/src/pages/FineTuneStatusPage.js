@@ -6,6 +6,8 @@ import { apiSlice } from '../app/apiSlice';
 import {
   useGetFineTuneRequestsQuery,
   useGetTunableModelsQuery,
+  useGetQueueTrafficQuery,
+  useGetFineTuneStatisticsQuery,
   useConfirmAndStartFineTuneMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
@@ -142,6 +144,7 @@ const OptionListItem = styled.li`
   transition: background-color 0.2s;
   font-size: 0.9rem;
   text-transform: capitalize;
+  user-select: none;
 
   &:hover {
     background-color: #e8edee;
@@ -188,7 +191,7 @@ const MainContent = styled.main`
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 `;
 
 const TableWrapper = styled.div`
@@ -276,6 +279,7 @@ const InfoButton = styled.button`
   color: #5f6368;
   display: flex;
   align-items: center;
+  user-select: none;
   &:hover {
     color: #005eb8;
   }
@@ -327,6 +331,7 @@ const ActionButton = styled.a`
   text-decoration: none;
   font-weight: bold;
   font-size: 0.9rem;
+  user-select: none;
   &:hover {
     background-color: #003087;
   }
@@ -341,6 +346,7 @@ const DetailsButton = styled.button`
   font-weight: bold;
   font-size: 0.9rem;
   cursor: pointer;
+  user-select: none;
   &:hover {
     background-color: #e8edee;
   }
@@ -356,6 +362,7 @@ const DataViewButton = styled.button`
   font-size: 0.9rem;
   border: none;
   cursor: pointer;
+  user-select: none;
   &:hover {
     background-color: #dde3ea;
   }
@@ -374,6 +381,7 @@ const PaginationControls = styled.div`
     background: #fff;
     cursor: pointer;
     border-radius: 20px;
+    user-select: none;
     &:disabled {
       cursor: not-allowed;
       opacity: 0.5;
@@ -455,6 +463,7 @@ const CloseButton = styled.button`
   font-weight: bold;
   font-size: 0.9rem;
   cursor: pointer;
+  user-select: none;
   &:hover {
     background-color: #dde3ea;
   }
@@ -462,6 +471,7 @@ const CloseButton = styled.button`
 
 const ConfirmButton = styled(ActionButton)`
   border: none;
+  user-select: none;
   &:disabled {
     background-color: #ced4da;
     cursor: not-allowed;
@@ -616,6 +626,36 @@ const SampleField = styled.div`
     font-family: monospace;
     font-size: 0.85rem;
   }
+`;
+
+const StatsPanel = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+`;
+
+const StatCard = styled.div`
+  background-color: #fff;
+  border: 1px solid #e8edee;
+  border-radius: 6px;
+  padding: 1.5rem;
+  text-align: center;
+`;
+
+const StatNumber = styled.div`
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #005eb8;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const StatLabel = styled.div`
+  font-size: 0.9rem;
+  color: #4c6272;
+  margin-top: 0.5rem;
 `;
 
 const StatusLifecycleModal = ({ onClose }) => {
@@ -846,6 +886,8 @@ const FineTuneStatusPage = () => {
   const dispatch = useDispatch();
 
   const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
+  const { data: trafficData } = useGetQueueTrafficQuery(undefined, { pollingInterval: 5000 });
+  const { data: statsData, isLoading: isLoadingStats } = useGetFineTuneStatisticsQuery(undefined, { pollingInterval: 5000 });
   const [confirmAndStart, { isLoading: isConfirming }] = useConfirmAndStartFineTuneMutation();
   
   useEffect(() => {
@@ -856,7 +898,7 @@ const FineTuneStatusPage = () => {
     const channelHandlers = {
       received(data) {
         console.log("Received fine-tune status update:", data);
-        dispatch(apiSlice.util.invalidateTags(['FineTuneRequest']));
+        dispatch(apiSlice.util.invalidateTags(['FineTuneRequest', 'FineTuneStatistics']));
       },
       connected() {
         console.log("Connected to FineTuneStatusChannel");
@@ -941,6 +983,26 @@ const FineTuneStatusPage = () => {
           </Sidebar>
           <MainContent>
             <h2>Fine-Tune Status Dashboard</h2>
+            <StatsPanel>
+              <StatCard>
+                <StatNumber>
+                  {trafficData ? trafficData.formatting?.messages_ready : <Spinner />}
+                </StatNumber>
+                <StatLabel>In Formatting Queue</StatLabel>
+              </StatCard>
+              <StatCard>
+                <StatNumber>
+                  {isLoadingStats || !statsData ? <Spinner /> : statsData.awaiting_confirmation}
+                </StatNumber>
+                <StatLabel>Awaiting Review</StatLabel>
+              </StatCard>
+              <StatCard>
+                <StatNumber>
+                  {trafficData ? trafficData.fine_tuning?.messages_ready : <Spinner />}
+                </StatNumber>
+                <StatLabel>In Fine-Tune Queue</StatLabel>
+              </StatCard>
+            </StatsPanel>
             {isLoading || isFetching ? <Spinner /> : (
               <>
                 {requests.length > 0 ? (
