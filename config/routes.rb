@@ -8,6 +8,7 @@ Rails.application.routes.draw do
     resources :model_fine_tune_requests, only: [ :index, :create ] do
       member do
         post :confirm_and_start_fine_tune
+        post :start_processing
       end
       collection do
         get :statistics

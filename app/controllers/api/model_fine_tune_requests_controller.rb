@@ -94,6 +94,18 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     render json: { error: model_fine_tune_request.errors.full_messages }, status: :bad_request
   end
 
+  def start_processing
+    request = ModelFineTuneRequest.find(params[:id])
+
+    if request.waiting_for_formatting?
+      request.formatting_in_progress!
+    elsif request.waiting_for_fine_tune?
+      request.finetuning_in_progress!
+    end
+
+    head :ok
+  end
+
   def formatting_complete
     request = ModelFineTuneRequest.find_by(id: params[:id])
     return render json: { error: "Record not found" }, status: :not_found unless request

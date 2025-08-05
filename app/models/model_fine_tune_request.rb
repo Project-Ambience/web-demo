@@ -8,11 +8,13 @@ class ModelFineTuneRequest < ApplicationRecord
   enum :status, {
     pending: 0,
     waiting_for_formatting: 1,
-    formatting_failed: 2,
-    awaiting_confirmation: 3,
-    waiting_for_fine_tune: 4,
-    failed: 5,
-    done: 6
+    formatting_in_progress: 2,
+    formatting_failed: 3,
+    awaiting_confirmation: 4,
+    waiting_for_fine_tune: 5,
+    finetuning_in_progress: 6,
+    failed: 7,
+    done: 8
   }
 
   scope :by_status, ->(status) {
@@ -28,11 +30,18 @@ class ModelFineTuneRequest < ApplicationRecord
 
   after_initialize :set_default_status, if: :new_record?
   after_create :publish_formatting_request
+  after_commit :broadcast_status_update, on: [:create, :update]
 
   private
 
   def set_default_status
     self.status ||= :pending
+  end
+
+  def broadcast_status_update
+    return unless saved_change_to_status?
+
+    ActionCable.server.broadcast("fine_tune_status_updates", { id: self.id, status: self.status })
   end
 
   def publish_formatting_request

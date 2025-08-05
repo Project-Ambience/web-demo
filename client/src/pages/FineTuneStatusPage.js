@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import styled from 'styled-components';
+import { useDispatch } from 'react-redux';
+import { createConsumer } from '@rails/actioncable';
+import { apiSlice } from '../app/apiSlice';
 import {
   useGetFineTuneRequestsQuery,
   useGetTunableModelsQuery,
-  useGetQueueTrafficQuery,
   useConfirmAndStartFineTuneMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
@@ -304,7 +306,8 @@ const StatusText = styled.span`
       case 'failed':
       case 'formatting_failed':
         return '#c62828';
-      case 'in_progress':
+      case 'formatting_in_progress':
+      case 'finetuning_in_progress':
         return '#005eb8';
       case 'awaiting_confirmation':
         return '#ff8f00';
@@ -807,9 +810,9 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
 
 const STATUSES = [
     { label: 'All', value: 'all' },
-    { label: 'Formatting', value: 'waiting_for_formatting' },
+    { label: 'Formatting', value: 'waiting_for_formatting,formatting_in_progress' },
     { label: 'Awaiting Confirmation', value: 'awaiting_confirmation' },
-    { label: 'Fine-Tuning', value: 'waiting_for_fine_tune' },
+    { label: 'Fine-Tuning', value: 'waiting_for_fine_tune,finetuning_in_progress' },
     { label: 'Done', value: 'done' },
     { label: 'Failed', value: 'formatting_failed,failed' },
 ];
@@ -839,10 +842,37 @@ const FineTuneStatusPage = () => {
   useOnClickOutside(baseModelRef, () => setIsBaseModelOpen(false));
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isLifecycleModalOpen, setIsLifecycleModalOpen] = useState(false);
+  const cable = useRef();
+  const dispatch = useDispatch();
 
   const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
-  const { data: trafficData } = useGetQueueTrafficQuery(undefined, { pollingInterval: 5000 });
   const [confirmAndStart, { isLoading: isConfirming }] = useConfirmAndStartFineTuneMutation();
+  
+  useEffect(() => {
+    if (!cable.current) {
+      cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
+    }
+
+    const channelHandlers = {
+      received(data) {
+        console.log("Received fine-tune status update:", data);
+        dispatch(apiSlice.util.invalidateTags(['FineTuneRequest']));
+      },
+      connected() {
+        console.log("Connected to FineTuneStatusChannel");
+      },
+      disconnected() {
+        console.log("Disconnected from FineTuneStatusChannel");
+      }
+    };
+
+    const subscription = cable.current.subscriptions.create({ channel: "FineTuneStatusChannel" }, channelHandlers);
+
+    return () => {
+      console.log("Unsubscribing from FineTuneStatusChannel");
+      subscription.unsubscribe();
+    };
+  }, [dispatch]);
   
   useEffect(() => {
     const params = {
@@ -877,22 +907,10 @@ const FineTuneStatusPage = () => {
       handleCloseModal();
     }
   };
-
+  
   const getDisplayStatus = (request) => {
-    if (request.status === 'waiting_for_formatting' && trafficData?.formatting?.messages_unacknowledged > 0) {
-      return { text: 'Formatting in Progress', status: 'in_progress' };
-    }
-    if (request.status === 'waiting_for_fine_tune' && trafficData?.fine_tuning?.messages_unacknowledged > 0) {
-      return { text: 'Fine-Tuning in Progress', status: 'in_progress' };
-    }
-    switch (request.status) {
-      case 'done':
-        return { text: 'Fine tuning Done', status: 'done' };
-      case 'failed':
-        return { text: 'Fine tuning Failed', status: 'failed' };
-      default:
-        return { text: request.status.replace(/_/g, ' '), status: request.status };
-    }
+    const text = request.status.replace(/_/g, ' ');
+    return { text, status: request.status };
   };
 
   return (
