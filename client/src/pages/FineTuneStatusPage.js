@@ -499,20 +499,15 @@ const DetailItem = styled.div`
   }
 `;
 
-const CodeBlock = styled.pre`
-  background-color: #f0f4f5;
-  color: #333;
+const ErrorBlock = styled.pre`
+  background-color: #fdecea;
+  color: #a4282a;
   padding: 1rem;
   border-radius: 4px;
   white-space: pre-wrap;
   word-wrap: break-word;
   font-family: monospace;
   font-size: 0.85rem;
-`;
-
-const ErrorBlock = styled(CodeBlock)`
-  background-color: #fdecea;
-  color: #a4282a;
 `;
 
 const IconWrapper = styled.div`
@@ -580,6 +575,46 @@ const LifecycleContent = styled.div`
   }
 `;
 
+const SampleItemContainer = styled.div`
+  border: 1px solid #e8edee;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const SampleItemHeader = styled.p`
+  font-weight: 600;
+  margin: 0 0 0.75rem 0 !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  white-space: normal !important;
+`;
+
+const SampleField = styled.div`
+  & + & {
+    margin-top: 0.75rem;
+  }
+  
+  strong {
+    display: block;
+    color: #4c6272;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+  }
+
+  p {
+    margin: 0 !important;
+    padding: 0.5rem !important;
+    background-color: #f8f9fa !important;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+`;
+
 const StatusLifecycleModal = ({ onClose }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
@@ -633,6 +668,45 @@ const StatusLifecycleModal = ({ onClose }) => {
 const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
+  const [dataSample, setDataSample] = useState([]);
+
+  const parseSampleText = (item) => {
+    if (!item || typeof item.text !== 'string') {
+        return { instruction: 'Invalid data format', input: '', response: '' };
+    }
+    
+    const text = item.text;
+    const parts = text.split('### ').filter(Boolean);
+    const result = {};
+
+    parts.forEach(part => {
+        const [key, ...valueParts] = part.split(':');
+        const value = valueParts.join(':').trim();
+        const lowerKey = key.trim().toLowerCase();
+
+        if (lowerKey === 'instruction') result.instruction = value;
+        if (lowerKey === 'input') result.input = value;
+        if (lowerKey === 'response') result.response = value;
+    });
+
+    return result;
+  };
+
+  const generateSample = useMemo(() => {
+    return () => {
+      if (!request?.fine_tune_data || request.fine_tune_data.length === 0) {
+        setDataSample([]);
+        return;
+      }
+      const dataset = request.fine_tune_data;
+      const shuffled = [...dataset].sort(() => 0.5 - Math.random());
+      setDataSample(shuffled.slice(0, 5));
+    };
+  }, [request?.fine_tune_data]);
+
+  useEffect(() => {
+    generateSample();
+  }, [request, generateSample]);
 
   const sanitizeFilename = (name) => name.replace(/\s+/g, '-');
 
@@ -647,6 +721,12 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleConfirmClick = () => {
+    if (window.confirm("Are you sure you want to start the fine-tuning process? This action cannot be undone.")) {
+      onConfirm();
+    }
   };
 
   return (
@@ -670,16 +750,44 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
             <DetailItem><h4>Task</h4><p>{request.task}</p></DetailItem>
             <DetailItem><h4>Submitted At</h4><p>{new Date(request.created_at).toLocaleString()}</p></DetailItem>
           </DetailGrid>
-          <DetailSection>
-            <h4>Data & Parameters</h4>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem' }}>
-              {request.fine_tune_data && (
-                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
-                  Download Dataset
+          
+          {request.status === 'awaiting_confirmation' && dataSample.length > 0 && (
+            <DetailSection>
+              <h4 style={{ marginBottom: '0.75rem' }}>Random Data Sample</h4>
+              <p style={{ fontSize: '0.85rem', color: '#5f6368', marginBottom: '1rem' }}>
+                Below are {dataSample.length} randomly selected examples from your formatted dataset to verify its structure and content.
+              </p>
+              {dataSample.map((item, index) => {
+                const parsed = parseSampleText(item);
+                return (
+                  <SampleItemContainer key={index}>
+                    <SampleItemHeader>Example {index + 1}</SampleItemHeader>
+                    <SampleField>
+                      <strong>Instruction:</strong>
+                      <p>{parsed.instruction || 'N/A'}</p>
+                    </SampleField>
+                    <SampleField>
+                      <strong>Input:</strong>
+                      <p>{parsed.input || 'N/A'}</p>
+                    </SampleField>
+                    <SampleField>
+                      <strong>Response:</strong>
+                      <p>{parsed.response || 'N/A'}</p>
+                    </SampleField>
+                  </SampleItemContainer>
+                );
+              })}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <DataViewButton onClick={generateSample}>
+                  Show 5 Different Examples
                 </DataViewButton>
-              )}
-            </div>
-          </DetailSection>
+                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
+                  Download Full Dataset
+                </DataViewButton>
+              </div>
+            </DetailSection>
+          )}
+
           {request.error_message && (
             <DetailSection><h4>Error Message</h4><ErrorBlock>{request.error_message}</ErrorBlock></DetailSection>
           )}
@@ -687,7 +795,7 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
         <ModalFooter>
           <CloseButton onClick={onClose}>Close</CloseButton>
           {request.status === 'awaiting_confirmation' && (
-            <ConfirmButton onClick={onConfirm} disabled={isConfirming}>
+            <ConfirmButton onClick={handleConfirmClick} disabled={isConfirming}>
               {isConfirming ? 'Starting...' : 'Confirm & Start Fine-Tune'}
             </ConfirmButton>
           )}
@@ -771,10 +879,10 @@ const FineTuneStatusPage = () => {
   };
 
   const getDisplayStatus = (request) => {
-    if (request.status === 'waiting_for_formatting' && (trafficData?.formatting?.messages_unacknowledged > 0 || trafficData?.formatting?.messages_ready > 0)) {
+    if (request.status === 'waiting_for_formatting' && trafficData?.formatting?.messages_unacknowledged > 0) {
       return { text: 'Formatting in Progress', status: 'in_progress' };
     }
-    if (request.status === 'waiting_for_fine_tune' && (trafficData?.fine_tuning?.messages_unacknowledged > 0 || trafficData?.fine_tuning?.messages_ready > 0)) {
+    if (request.status === 'waiting_for_fine_tune' && trafficData?.fine_tuning?.messages_unacknowledged > 0) {
       return { text: 'Fine-Tuning in Progress', status: 'in_progress' };
     }
     switch (request.status) {
