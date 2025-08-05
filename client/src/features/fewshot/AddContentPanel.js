@@ -163,7 +163,7 @@ const DisabledRow = styled(Row)`
   cursor: not-allowed;
 `;
 
-const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT, onShowCoTInfo, onShowFewShotInfo, onShowRagInfo, isRAGEnabled, onToggleRAG, supportsRAG }) => {
+const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT, onShowCoTInfo, onShowFewShotInfo, onShowRagInfo, isRAGEnabled, onToggleRAG, supportsRAG, onAddRagData }) => {
 
   const [isRAGOpen, setIsRAGOpen] = useState(false);
 
@@ -215,7 +215,9 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log("Add Data clicked (no action yet)");
+                if (onAddRagData) {
+                  onAddRagData();
+                }
               }}
             >
               <LabelWrapper>

@@ -185,17 +185,14 @@ export const apiSlice = createApi({
     createRagDataAddingRequest: builder.mutation({
       query: (file) => {
         const formData = new FormData();
-        if (file) {
-          formData.append('file', file);
-        }
-    
+        formData.append('file', file);
         return {
           url: '/rag_data_adding_requests',
           method: 'POST',
           body: formData,
         };
       },
-    }),
+    }),        
     addInterRater: builder.mutation({
       query: (payload) => ({
         url: '/inter_raters',

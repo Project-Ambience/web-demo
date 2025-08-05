@@ -14,6 +14,7 @@ import {
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
   useGetFewShotTemplatesQuery,
+  useCreateRagDataAddingRequestMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import FewShotTemplateList from '../features/fewshot/FewShotTemplateList';
@@ -762,6 +763,9 @@ const ChatPage = () => {
   const [showCoTInfoModal, setShowCoTInfoModal] = useState(false);
   const [showRAGInfoModal, setShowRAGInfoModal] = useState(false);
   const [showFewShotInfoModal, setShowFewShotInfoModal] = useState(false);
+  const [showRagUploadModal, setShowRagUploadModal] = useState(false);
+  const [createRagDataAddingRequest] = useCreateRagDataAddingRequestMutation();
+
 
   const [fileError, setFileError] = useState('');
   const [viewMode, setViewMode] = useState('chat');
@@ -792,6 +796,144 @@ const ChatPage = () => {
   const [deleteConversation] = useDeleteConversationMutation();
   const [acceptFeedback, { isLoading: isAccepting }] = useAcceptFeedbackMutation();
   const [rejectFeedback, { isLoading: isRejecting }] = useRejectFeedbackMutation();
+
+  const RagDataUploadModal = ({ onClose, onUpload }) => {
+    const [file, setFile] = React.useState(null);
+    const [isDragging, setIsDragging] = React.useState(false);
+    const [isHovered, setIsHovered] = React.useState(false);
+    const fileInputRef = React.useRef();
+  
+    // Handle drop event
+    const handleDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+  
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        setFile(e.dataTransfer.files[0]);
+        e.dataTransfer.clearData();
+      }
+    };
+  
+    // Handle drag events
+    const handleDragOver = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(true);
+    };
+  
+    const handleDragLeave = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragging(false);
+    };
+  
+    return (
+      <OverlayContainer onClick={onClose}>
+        <Modal onClick={(e) => e.stopPropagation()}>
+          <ModalCloseButton onClick={onClose}>×</ModalCloseButton>
+  
+          <h3>📚 Add Data to RAG</h3>
+          <p style={{ marginBottom: "1rem", color: "#4c6272" }}>
+            Upload a document to expand the Retrieval-Augmented Generation knowledge base.
+          </p>
+  
+          {/* Drag & Drop Box */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            style={{
+              border: `2px dashed ${
+                isDragging ? "#005eb8" : isHovered ? "#005eb8" : "#BCC8D8"
+              }`,
+              borderRadius: "12px",
+              padding: "2rem",
+              textAlign: "center",
+              cursor: "pointer",
+              backgroundColor: isDragging
+                ? "#eaf1f8"
+                : isHovered
+                ? "#f1f5f9"
+                : "#f9fafb",
+              boxShadow: isHovered
+                ? "0 0 8px rgba(0,94,184,0.3)"
+                : "none",
+              transition: "background-color 0.2s, border-color 0.2s, box-shadow 0.2s",
+            }}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.pdf,.json"
+              style={{ display: "none" }}
+              onChange={(e) => setFile(e.target.files[0])}
+            />
+  
+            {file ? (
+              <p style={{ color: "#5f6368", marginBottom: "0.5rem" }}>
+                <strong>{file.name}</strong>
+              </p>
+            ) : (
+              <>
+                <p style={{ fontSize: "2rem", margin: 0 }}>📎</p>
+                <p style={{ color: "#5f6368", margin: "0.5rem 0" }}>
+                  Click or drag & drop a file here
+                </p>
+                <small style={{ color: "#888" }}>
+                  Supported: TXT, PDF, JSON — Max 100MB
+                </small>
+              </>
+            )}
+          </div>
+  
+          {/* Buttons */}
+          <div
+            style={{
+              marginTop: "1.5rem",
+              display: "flex",
+              gap: "0.5rem",
+              justifyContent: "flex-end",
+            }}
+          >
+            <button
+              onClick={onClose}
+              style={{
+                padding: "0.5rem 1.25rem",
+                border: "1px solid #ccc",
+                backgroundColor: "#fff",
+                borderRadius: "8px",
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              disabled={!file}
+              onClick={() => {
+                onUpload(file);
+                onClose();
+              }}
+              style={{
+                padding: "0.5rem 1.25rem",
+                border: "none",
+                backgroundColor: file ? "#005eb8" : "#BCC8D8",
+                color: "#fff",
+                borderRadius: "8px",
+                cursor: file ? "pointer" : "not-allowed",
+                fontWeight: "bold",
+              }}
+            >
+              Upload File
+            </button>
+          </div>
+        </Modal>
+      </OverlayContainer>
+    );
+  };  
 
   const [input, setInput] = useState('');
   const messageAreaRef = useRef(null);
@@ -1108,6 +1250,10 @@ const ChatPage = () => {
                                       setViewMode('templateList');
                                       setShowAddContentPanel(false);
                                     }}
+                                    onAddRagData={() => {
+                                      setShowRagUploadModal(true);
+                                      setShowAddContentPanel(false);
+                                    }}
                                     isCoTEnabled={isCoTEnabled}
                                     onToggleCoT={handleToggleCoT}
                                     isRAGEnabled={isRAGEnabled}
@@ -1267,6 +1413,19 @@ const ChatPage = () => {
       {showCoTInfoModal && renderCoTInfoModal()}
       {showRAGInfoModal && renderRAGInfoModal()}
       {showFewShotInfoModal && renderFewShotInfoModal()}
+      {showRagUploadModal && (
+        <RagDataUploadModal
+          onClose={() => setShowRagUploadModal(false)}
+          onUpload={async (file) => {
+            try {
+              await createRagDataAddingRequest(file);
+              alert('Uploaded successfully!');
+            } catch (err) {
+              alert('Failed to upload.');
+            }
+          }}
+        />
+      )}
       <ChatLayout>
         <Sidebar>
           <SidebarTitle>Prompt History</SidebarTitle>

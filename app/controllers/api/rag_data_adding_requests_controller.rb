@@ -1,16 +1,15 @@
 class Api::RagDataAddingRequestsController < Api::ApplicationController
   def create
     rag_data_adding_request = RagDataAddingRequest.create!
-    rag_data_adding_request.file.attach(params[:file]) if params[:file].present?
+
+    if params.dig(:file).present?
+      rag_data_adding_request.file.attach(params.dig(:file))
+    end
 
     response = HTTParty.post(
       ENV["RAG_DATA_ADDING_PATH"],
-      body: {
-        "files" => rag_data_adding_request.file_url
-      },
-      headers: {
-        "X-API-Key" => ENV["RAG_DATA_ADDING_API_KEY"]
-      }
+      body: { "files" => rag_data_adding_request.file_url },
+      headers: { "X-API-Key" => ENV["RAG_DATA_ADDING_API_KEY"] }
     )
 
     if response.code.to_i == 200
