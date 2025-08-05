@@ -66,10 +66,16 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setFile(e.dataTransfer.files[0]);
-      e.dataTransfer.clearData();
+  
+    const f = e.dataTransfer.files[0];
+    if (f && f.size > MAX_FILE_SIZE_BYTES) {
+      setErrorMessage(`File size must be under 1GB`);
+      setFile(null);
+      return;
     }
+    setErrorMessage("");
+    setFile(f);
+    e.dataTransfer.clearData();
   };
 
   const handleDragOver = (e) => {
@@ -101,6 +107,9 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
     }
   };
 
+  const MAX_FILE_SIZE_MB = 1000;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   return (
     <OverlayContainer onClick={onClose}>
       <Modal onClick={(e) => e.stopPropagation()}>
@@ -112,6 +121,12 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
             <p style={{ marginBottom: "1rem", color: "#4c6272" }}>
               Upload a document to expand the Retrieval-Augmented Generation knowledge base.
             </p>
+
+            {errorMessage && (
+              <p style={{ color: "#e53935", fontWeight: "bold", marginBottom: "1rem" }}>
+                {errorMessage}
+              </p>
+            )}
 
             <div
               onClick={() => fileInputRef.current?.click()}
@@ -143,9 +158,19 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".txt,.pdf,.json"
+                accept=".txt,.pdf"
                 style={{ display: "none" }}
-                onChange={(e) => setFile(e.target.files[0])}
+                onChange={(e) => {
+                  const f = e.target.files[0];
+                  if (f && f.size > MAX_FILE_SIZE_BYTES) {
+                    setErrorMessage(`File size must be under 1GB`);
+                    setFile(null);
+                    e.target.value = "";
+                    return;
+                  }
+                  setErrorMessage("");
+                  setFile(f);
+                }}
               />
 
               {file ? (
@@ -159,7 +184,7 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
                     Click or drag & drop a file here
                   </p>
                   <small style={{ color: "#888" }}>
-                    Supported: TXT, PDF, JSON — Max 100MB
+                    Supported: TXT, PDF — Max 1GB
                   </small>
                 </>
               )}
