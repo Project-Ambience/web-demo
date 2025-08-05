@@ -30,7 +30,7 @@ class ModelFineTuneRequest < ApplicationRecord
 
   after_initialize :set_default_status, if: :new_record?
   after_create :publish_formatting_request
-  after_commit :broadcast_status_update, on: [:create, :update]
+  after_commit :broadcast_status_update, on: [ :create, :update ]
 
   private
 

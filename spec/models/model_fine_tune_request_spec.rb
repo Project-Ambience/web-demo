@@ -32,11 +32,13 @@ RSpec.describe ModelFineTuneRequest, type: :model do
       is_expected.to define_enum_for(:status).with_values(
         pending: 0,
         waiting_for_formatting: 1,
-        formatting_failed: 2,
-        awaiting_confirmation: 3,
-        waiting_for_fine_tune: 4,
-        failed: 5,
-        done: 6
+        formatting_in_progress: 2,
+        formatting_failed: 3,
+        awaiting_confirmation: 4,
+        waiting_for_fine_tune: 5,
+        fine_tuning_in_progress: 6,
+        fine_tuning_failed: 7,
+        fine_tuning_completed: 8
       )
     end
   end
@@ -87,18 +89,18 @@ RSpec.describe ModelFineTuneRequest, type: :model do
       allow_any_instance_of(ModelFineTuneRequest).to receive(:publish_formatting_request).and_return(true)
     end
 
-    let!(:done_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :done, created_at: 1.day.ago) }
-    let!(:failed_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :failed, created_at: 2.days.ago) }
+    let!(:completed_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :fine_tuning_completed, created_at: 1.day.ago) }
+    let!(:failed_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :fine_tuning_failed, created_at: 2.days.ago) }
     let!(:waiting_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :waiting_for_fine_tune, name: "Searchable Model") }
-    let!(:other_model_request) { create(:model_fine_tune_request, ai_model: tunable_model_2, status: :done) }
+    let!(:other_model_request) { create(:model_fine_tune_request, ai_model: tunable_model_2, status: :fine_tuning_completed) }
 
     it ".by_status returns the correct requests" do
-      expect(ModelFineTuneRequest.by_status("done")).to contain_exactly(done_request, other_model_request)
-      expect(ModelFineTuneRequest.by_status("failed,formatting_failed")).to contain_exactly(failed_request)
+      expect(ModelFineTuneRequest.by_status("fine_tuning_completed")).to contain_exactly(completed_request, other_model_request)
+      expect(ModelFineTuneRequest.by_status("fine_tuning_failed,formatting_failed")).to contain_exactly(failed_request)
     end
 
     it ".by_base_model returns requests for a specific model" do
-      expect(ModelFineTuneRequest.by_base_model(tunable_model_1.id)).to contain_exactly(done_request, failed_request, waiting_request)
+      expect(ModelFineTuneRequest.by_base_model(tunable_model_1.id)).to contain_exactly(completed_request, failed_request, waiting_request)
       expect(ModelFineTuneRequest.by_base_model(tunable_model_2.id)).to contain_exactly(other_model_request)
     end
 
@@ -108,7 +110,7 @@ RSpec.describe ModelFineTuneRequest, type: :model do
     end
 
     it ".created_after and .created_before filter by date" do
-      expect(ModelFineTuneRequest.created_after(1.5.days.ago)).to contain_exactly(done_request, waiting_request, other_model_request)
+      expect(ModelFineTuneRequest.created_after(1.5.days.ago)).to contain_exactly(completed_request, waiting_request, other_model_request)
       expect(ModelFineTuneRequest.created_before(1.5.days.ago)).to contain_exactly(failed_request)
     end
   end

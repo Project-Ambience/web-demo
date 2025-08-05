@@ -33,7 +33,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     counts = ModelFineTuneRequest.group(:status).count
 
     render json: {
-      awaiting_confirmation: counts["awaiting_confirmation"] || 0,
+      awaiting_confirmation: counts["awaiting_confirmation"] || 0
     }
   end
 

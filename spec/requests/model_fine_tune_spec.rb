@@ -74,7 +74,7 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
     end
 
     it "returns an error if the request is not awaiting confirmation" do
-      request.done!
+      request.fine_tuning_completed!
       post "/api/model_fine_tune_requests/#{request.id}/confirm_and_start_fine_tune"
       expect(response).to have_http_status(:unprocessable_entity)
     end
@@ -87,22 +87,22 @@ RSpec.describe "ModelFineTuneRequests", type: :request do
       req
     end
 
-    it "updates status to done on success and creates a new AiModel" do
+    it "updates status to fine_tuning_completed on success and creates a new AiModel" do
       expect {
         post "/api/model_fine_tune_requests/update_status", params: { id: request.id, status: "success", adapter_path: "path/to/adapter" }
       }.to change(AiModel, :count).by(1)
 
       expect(response).to have_http_status(:ok)
       request.reload
-      expect(request.status).to eq("done")
+      expect(request.status).to eq("fine_tuning_completed")
       expect(request.new_ai_model_id).to eq(AiModel.last.id)
     end
 
-    it "updates status to failed on failure" do
+    it "updates status to fine_tuning_failed on failure" do
       post "/api/model_fine_tune_requests/update_status", params: { id: request.id, status: "fail", error: "Training error" }
       expect(response).to have_http_status(:ok)
       request.reload
-      expect(request.status).to eq("failed")
+      expect(request.status).to eq("fine_tuning_failed")
       expect(request.error_message).to eq("Training error")
     end
   end
