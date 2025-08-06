@@ -566,7 +566,9 @@ const NewInferencePairPage = () => {
                           </Icon>
                         )}
                       </Tag>
-                      <Tag>RAG: False</Tag>
+                      <Tag highlight={!!convo1.rag}>
+                        RAG: {convo1.rag ? 'True' : 'False'}
+                      </Tag>
                       <Tag highlight={!!convo1.cot}>
                         CoT: {convo1.cot ? 'True' : 'False'}
                       </Tag>
@@ -632,7 +634,9 @@ const NewInferencePairPage = () => {
                           </Icon>
                         )}
                       </Tag>
-                      <Tag>RAG: False</Tag>
+                      <Tag highlight={!!convo2.rag}>
+                        RAG: {convo2.rag ? 'True' : 'False'}
+                      </Tag>
                       <Tag highlight={!!convo2.cot}>
                         CoT: {convo2.cot ? 'True' : 'False'}
                       </Tag>

@@ -511,7 +511,9 @@ const InterRaterPage = () => {
                               </Icon>
                             )}
                           </Tag>
-                          <Tag>RAG: False</Tag>
+                          <Tag highlight={!!item.first_conversation_rag}>
+                            RAG: {item.first_conversation_rag ? 'True' : 'False'}
+                          </Tag>
                           <Tag highlight={!!item.first_conversation_cot}>
                             CoT: {item.first_conversation_cot ? 'True' : 'False'}
                           </Tag>
@@ -574,7 +576,9 @@ const InterRaterPage = () => {
                               </Icon>
                             )}
                           </Tag>
-                          <Tag>RAG: False</Tag>
+                          <Tag highlight={!!item.second_conversation_rag}>
+                            RAG: {item.second_conversation_rag ? 'True' : 'False'}
+                          </Tag>
                           <Tag highlight={!!item.second_conversation_cot}>
                             CoT: {item.second_conversation_cot ? 'True' : 'False'}
                           </Tag>
