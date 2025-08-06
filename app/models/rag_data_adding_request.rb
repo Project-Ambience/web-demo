@@ -1,5 +1,5 @@
 class RagDataAddingRequest < ApplicationRecord
-  has_one_attached :file
+  has_many_attached :files
 
   enum :status, {
     pending: 0,
@@ -7,11 +7,16 @@ class RagDataAddingRequest < ApplicationRecord
     failed: 2
   }
 
-  def file_url
-    self.file.attached? ? Rails.application.routes.url_helpers.rails_blob_url(self.file, host: ENV["DOMAIN"], protocol: "http", port: ENV["PORT"]) : nil
-  end
+  def file_urls
+    return [] unless files.attached?
 
-  def file_name
-    self.file.attached? ? self.file.filename.to_s : nil
+    files.map do |file|
+      Rails.application.routes.url_helpers.rails_blob_url(
+        file,
+        host: ENV["DOMAIN"],
+        protocol: "http",
+        port: ENV["PORT"]
+      )
+    end
   end
 end

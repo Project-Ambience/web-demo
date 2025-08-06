@@ -1,5 +1,6 @@
 import React from "react";
 import styled from "styled-components";
+import Spinner from "./common/Spinner";
 
 const OverlayContainer = styled.div`
   position: fixed;
@@ -86,9 +87,7 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    validateFiles(droppedFiles);
+    validateFiles(Array.from(e.dataTransfer.files));
     e.dataTransfer.clearData();
   };
 
@@ -105,12 +104,12 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
   };
 
   const handleFileChange = (e) => {
-    const selectedFiles = Array.from(e.target.files);
-    validateFiles(selectedFiles);
+    validateFiles(Array.from(e.target.files));
     e.target.value = "";
   };
 
   const handleUploadClick = async () => {
+    setStatus("loading"); // Show spinner
     try {
       const result = await onUpload(files);
       if (result?.data) {
@@ -133,6 +132,13 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
     <OverlayContainer onClick={onClose}>
       <Modal onClick={(e) => e.stopPropagation()}>
         <ModalCloseButton onClick={onClose}>×</ModalCloseButton>
+
+        {status === "loading" && (
+          <div style={{ textAlign: "center", padding: "2rem" }}>
+            <Spinner />
+            <p style={{ marginTop: "1rem" }}>Uploading, please wait...</p>
+          </div>
+        )}
 
         {status === "idle" && (
           <>
@@ -186,7 +192,15 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
               {files.length > 0 ? (
                 <ul style={{ listStyle: "none", padding: 0 }}>
                   {files.map((f, i) => (
-                    <li key={i} style={{ marginBottom: "0.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <li
+                      key={i}
+                      style={{
+                        marginBottom: "0.5rem",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
                       <span>{f.name}</span>
                       <button
                         type="button"
@@ -196,7 +210,7 @@ const RagDataUploadModal = ({ onClose, onUpload }) => {
                           border: "none",
                           color: "#e53935",
                           cursor: "pointer",
-                          fontWeight: "bold"
+                          fontWeight: "bold",
                         }}
                       >
                         ✕

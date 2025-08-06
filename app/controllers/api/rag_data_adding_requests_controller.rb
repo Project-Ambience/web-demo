@@ -2,14 +2,16 @@ class Api::RagDataAddingRequestsController < Api::ApplicationController
   def create
     rag_data_adding_request = RagDataAddingRequest.create!
 
-    if params.dig(:file).present?
-      rag_data_adding_request.file.attach(params.dig(:file))
+    if params[:files].present?
+      params[:files].each do |file|
+        rag_data_adding_request.files.attach(file)
+      end
     end
 
     begin
       response = HTTParty.post(
         ENV["RAG_DATA_ADDING_PATH"],
-        body: { "files" => rag_data_adding_request.file_url },
+        body: { "files" => payload(rag_data_adding_request) },
         headers: { "X-API-Key" => ENV["RAG_DATA_ADDING_API_KEY"] }
       )
 
@@ -27,5 +29,11 @@ class Api::RagDataAddingRequestsController < Api::ApplicationController
       rag_data_adding_request.update!(error_log: e.message)
       render json: { error: "Unexpected error while adding data to RAG" }, status: :bad_request
     end
+  end
+
+  private
+
+  def payload(rag_data_adding_request)
+    {}
   end
 end

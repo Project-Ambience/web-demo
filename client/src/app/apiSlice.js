@@ -183,16 +183,18 @@ export const apiSlice = createApi({
       providesTags: ['InterRater']
     }),
     createRagDataAddingRequest: builder.mutation({
-      query: (file) => {
+      query: (files) => {
         const formData = new FormData();
-        formData.append('file', file);
+        files.forEach((file) => {
+          formData.append('files[]', file);
+        });
         return {
           url: '/rag_data_adding_requests',
           method: 'POST',
           body: formData,
         };
       },
-    }),        
+    }),    
     addInterRater: builder.mutation({
       query: (payload) => ({
         url: '/inter_raters',
