@@ -823,22 +823,6 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
             <DetailItem><h4>Task</h4><p>{request.task}</p></DetailItem>
             <DetailItem><h4>Submitted At</h4><p>{new Date(request.created_at).toLocaleString()}</p></DetailItem>
           </DetailGrid>
-          
-          <DetailSection>
-            <h4>Data & Parameters</h4>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-              {request.fine_tune_data && (
-                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
-                  Download Dataset
-                </DataViewButton>
-              )}
-              {request.parameters && (
-                <DataViewButton onClick={() => downloadJson(request.parameters, `${sanitizeFilename(request.name)}_parameters.json`)}>
-                  Download Parameters
-                </DataViewButton>
-              )}
-            </div>
-          </DetailSection>
 
           {request.status === 'awaiting_confirmation' && dataSample.length > 0 && (
             <DetailSection>
@@ -873,6 +857,21 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
               </div>
             </DetailSection>
           )}
+
+          <DetailSection>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              {request.fine_tune_data && (
+                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
+                  Download Dataset
+                </DataViewButton>
+              )}
+              {request.parameters && (
+                <DataViewButton onClick={() => downloadJson(request.parameters, `${sanitizeFilename(request.name)}_parameters.json`)}>
+                  Download Parameters
+                </DataViewButton>
+              )}
+            </div>
+          </DetailSection>
 
           {request.error_message && (
             <DetailSection><h4>Error Message</h4><ErrorBlock>{request.error_message}</ErrorBlock></DetailSection>
