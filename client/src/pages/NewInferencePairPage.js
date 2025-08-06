@@ -533,7 +533,7 @@ const NewInferencePairPage = () => {
                 onChange={(e) => setFirstFilter(e.target.value)}
               />
               <ResponseBox>
-                <h4>First Inference</h4>
+                <h4>First Response</h4>
                 {convo1 ? (
                   <>
                     <p><strong>ID:</strong> {convo1.id}</p>
@@ -601,7 +601,7 @@ const NewInferencePairPage = () => {
                 onChange={(e) => setSecondFilter(e.target.value)}
               />
               <ResponseBox>
-                <h4>Second Inference</h4>
+                <h4>Second Response</h4>
                 {convo2 ? (
                   <>
                     <p><strong>ID:</strong> {convo2.id}</p>

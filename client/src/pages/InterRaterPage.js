@@ -472,7 +472,7 @@ const InterRaterPage = () => {
                   <CardContent>
                     <ResponseComparison>
                       <ResponseBox>
-                        <h4>First Inference</h4>
+                        <h4>First Response</h4>
                         <p>
                           <strong>Model:</strong>{' '}
                           {item.first_conversation_ai_model_name}
@@ -537,7 +537,7 @@ const InterRaterPage = () => {
                         <p><strong>Response:</strong> {item.first_conversation_first_response}</p>
                       </ResponseBox>
                       <ResponseBox>
-                        <h4>Second Inference</h4>
+                        <h4>Second Response</h4>
                         <p>
                           <strong>Model:</strong>{' '}
                           {item.second_conversation_ai_model_name}
@@ -622,10 +622,10 @@ const InterRaterPage = () => {
                             />
                             <span>
                               {[
-                                'Strongly\nPrefer First Inference',
-                                'Prefer\nFirst Inference',
-                                'Prefer\nSecond Inference',
-                                'Strongly\nPrefer Second Inference'
+                                'Strongly\nPrefer First Response',
+                                'Prefer\nFirst Response',
+                                'Prefer\nSecond Response',
+                                'Strongly\nPrefer Second Response'
                               ][value]}
                             </span>
                           </label>
