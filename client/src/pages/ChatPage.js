@@ -1202,7 +1202,7 @@ const ChatPage = () => {
   const renderCoTInfoModal = () => (
     <OverlayContainer onClick={() => setShowCoTInfoModal(false)}>
       <Modal onClick={(e) => e.stopPropagation()}>
-        <ModalCloseButton onClick={() => setShowRAGInfoModal(false)}>×</ModalCloseButton>
+        <ModalCloseButton onClick={() => setShowCoTInfoModal(false)}>×</ModalCloseButton>
         <h3>What is Thinking?</h3>
         <p>
 	  Enabling "Thinking" uses a technique called <strong>Chain-of-Thought (CoT)</strong>. It prompts the AI to "think out loud" by explaining its reasoning step-by-step before providing a final answer. This makes the response more transparent and easier to verify.
