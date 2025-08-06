@@ -8,15 +8,11 @@ import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import StarRating from '../components/common/StarRating';
 
-// --- ICONS ---
-
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
         <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
     </svg>
 );
-
-// --- STYLED COMPONENTS ---
 
 const CatalogueLayout = styled.div`
   display: grid;
@@ -160,8 +156,6 @@ const FineTunedTag = styled.div`
   width: fit-content;
 `;
 
-// --- COMPONENT ---
-
 const ModelCataloguePage = () => {
   const dispatch = useDispatch();
   const { selectedSpecialtyId } = useSelector((state) => state.ui);
@@ -189,11 +183,11 @@ const ModelCataloguePage = () => {
     return <ErrorMessage>Error: {JSON.stringify(error)}</ErrorMessage>;
   }
   
-  const filteredClinicianTypes = clinicianTypes?.filter(type =>
-    type.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-  
   const selectedSpecialty = clinicianTypes?.find(type => type.id === selectedSpecialtyId);
+
+  const filteredModels = selectedSpecialty?.ai_models?.filter(model =>
+    model.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div style={{
@@ -210,13 +204,13 @@ const ModelCataloguePage = () => {
             <SearchIcon />
             <SearchInput
               type="text"
-              placeholder="Search clinicians"
+              placeholder="Search models"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </SearchContainer>
           <SpecialtyList>
-            {filteredClinicianTypes?.map(type => (
+            {clinicianTypes?.map(type => (
               <SpecialtyListItem
                 key={type.id}
                 isActive={selectedSpecialtyId === type.id}
@@ -232,8 +226,8 @@ const ModelCataloguePage = () => {
           {selectedSpecialty ? (
             <>
               <ModelGrid>
-                {selectedSpecialty.ai_models.length > 0 ? (
-                  selectedSpecialty.ai_models.map(model => (
+                {filteredModels?.length > 0 ? (
+                  filteredModels.map(model => (
                     <ModelCard key={model.id} to={`/ai-models/${model.id}`}>
                       <div>
                         <ModelName>{model.name}</ModelName>
@@ -249,7 +243,7 @@ const ModelCataloguePage = () => {
                     </ModelCard>
                   ))
                 ) : (
-                  <p>No AI models are available for this specialty yet.</p>
+                  <p>{searchTerm ? `No models match "${searchTerm}" in this specialty.` : 'No AI models are available for this specialty yet.'}</p>
                 )}
               </ModelGrid>
             </>
