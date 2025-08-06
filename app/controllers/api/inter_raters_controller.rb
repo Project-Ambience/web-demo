@@ -36,8 +36,7 @@ class Api::InterRatersController < Api::ApplicationController
         second_conversation_few_shot_template: inter_rater.second_conversation.few_shot_template,
         second_conversation_cot: inter_rater.second_conversation.cot,
         second_conversation_rag: inter_rater.second_conversation.rag,
-        second_conversation_base_model_name: inter_rater.second_conversation.ai_model.base_model&.name,
-        second_conversation_fine_tune_data: inter_rater.second_conversation.ai_model.model_fine_tune_requests.last&.fine_tune_data
+        second_conversation_base_model_name: inter_rater.second_conversation.ai_model.base_model&.name
       }
     end
 

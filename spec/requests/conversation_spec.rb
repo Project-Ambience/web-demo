@@ -29,12 +29,16 @@ RSpec.describe "Api::ConversationsController", type: :request do
         "first_response",
         "file_url",
         "file_name",
-        "few_shot_template"
+        "few_shot_template",
+        "cot",
+        "rag"
       )
 
       expect(first_convo["ai_model"]).to include(
         "name",
-        "base_model"
+        "base_model",
+        "base_model_name",
+        "speciality"
       )
     end
   end
@@ -58,12 +62,16 @@ RSpec.describe "Api::ConversationsController", type: :request do
         "first_response",
         "file_url",
         "file_name",
-        "few_shot_template"
+        "few_shot_template",
+        "cot",
+        "rag"
       )
 
       expect(first_convo["ai_model"]).to include(
         "name" => base_model.name,
-        "base_model" => nil
+        "base_model" => nil,
+        "base_model_name" => nil,
+        "speciality" => base_model.speciality
       )
     end
   end

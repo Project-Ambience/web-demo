@@ -67,13 +67,19 @@ RSpec.describe Api::InterRatersController, type: :request do
         "first_conversation_file_url" => first_convo.file_url,
         "first_conversation_file_name" => first_convo.file_name,
         "first_conversation_few_shot_template" => first_convo.few_shot_template,
+        "first_conversation_cot" => first_convo.cot,
+        "first_conversation_rag" => first_convo.rag,
+        "first_conversation_base_model_name" => ai_model.base_model&.name,
         "second_conversation_id" => second_convo.id,
         "second_conversation_ai_model_name" => other_model.name,
         "second_conversation_base_prompt" => second_convo.base_prompt,
         "second_conversation_first_response" => second_convo.first_response,
         "second_conversation_file_url" => second_convo.file_url,
         "second_conversation_file_name" => second_convo.file_name,
-        "second_conversation_few_shot_template" => second_convo.few_shot_template
+        "second_conversation_few_shot_template" => second_convo.few_shot_template,
+        "second_conversation_cot" => first_convo.cot,
+        "second_conversation_rag" => first_convo.rag,
+        "second_conversation_base_model_name" => other_model.base_model&.name
       )
     end
   end
