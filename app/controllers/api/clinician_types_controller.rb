@@ -1,6 +1,6 @@
 class Api::ClinicianTypesController < Api::ApplicationController
   def index
-    @clinician_types = ClinicianType.includes(ai_models: :ratings).all
+    @clinician_types = ClinicianType.includes(ai_models: :ratings).page(params[:page]).per(10)
 
     response_data = @clinician_types.map do |type|
       {
@@ -23,6 +23,13 @@ class Api::ClinicianTypesController < Api::ApplicationController
       }
     end
 
-    render json: response_data
+    render json: {
+      data: response_data,
+      pagination: {
+        current_page: @clinician_types.current_page,
+        total_pages: @clinician_types.total_pages,
+        total_count: @clinician_types.total_count
+      }
+    }
   end
 end

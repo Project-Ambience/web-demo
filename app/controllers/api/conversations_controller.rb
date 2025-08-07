@@ -2,7 +2,7 @@ class Api::ConversationsController < Api::ApplicationController
   before_action :set_conversation, only: [ :show, :update, :destroy, :accept_feedback, :reject_feedback ]
 
   def index
-    @conversations = Conversation.includes(:ai_model).order(updated_at: :desc)
+    @conversations = Conversation.includes(:ai_model).order(updated_at: :desc).page(params[:page]).per(20)
 
     response_data = @conversations.map do |convo|
       {
@@ -24,11 +24,18 @@ class Api::ConversationsController < Api::ApplicationController
         cot: convo.cot
       }
     end
-    render json: response_data
+    render json: {
+      data: response_data,
+      pagination: {
+        current_page: @conversations.current_page,
+        total_pages: @conversations.total_pages,
+        total_count: @conversations.total_count
+      }
+    }
   end
 
   def conversation_by_ai_model
-    @conversations = Conversation.where(ai_model_id: params[:ai_model_id])
+    @conversations = Conversation.where(ai_model_id: params[:ai_model_id]).page(params[:page]).per(20)
 
     response_data = @conversations.map do |convo|
       {
@@ -50,7 +57,14 @@ class Api::ConversationsController < Api::ApplicationController
         cot: convo.cot
       }
     end
-    render json: response_data
+    render json: {
+      data: response_data,
+      pagination: {
+        current_page: @conversations.current_page,
+        total_pages: @conversations.total_pages,
+        total_count: @conversations.total_count
+      }
+    }
   end
 
   def show

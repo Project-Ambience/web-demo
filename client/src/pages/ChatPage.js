@@ -746,6 +746,35 @@ const ModalCloseButton = styled(CloseButton)`
   right: 0.75rem;
 `;
 
+const PaginationControls = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid #e8edee;
+  flex-shrink: 0;
+
+  button {
+    background: none;
+    border: 1px solid #005eb8;
+    color: #005eb8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+`;
+
+const PageInfo = styled.span`
+  font-size: 0.8rem;
+  color: #5f6368;
+`;
+
 const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -760,6 +789,7 @@ const ChatPage = () => {
   const [isCoTEnabled, setIsCoTEnabled] = useState(false);
   const [showCoTInfoModal, setShowCoTInfoModal] = useState(false);
   const [showFewShotInfoModal, setShowFewShotInfoModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const [fileError, setFileError] = useState('');
   const [viewMode, setViewMode] = useState('chat');
@@ -773,7 +803,7 @@ const ChatPage = () => {
   const cable = useRef();
   const fileInputRef = useRef(null);
 
-  const { data: conversations, isLoading: isLoadingConversations } = useGetConversationsQuery();
+  const { data: conversationsResponse, isLoading: isLoadingConversations } = useGetConversationsQuery(currentPage);
   const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(activeConversationId, {
     skip: !activeConversationId,
   });
@@ -1120,6 +1150,8 @@ const ChatPage = () => {
     }
   }
 
+  const { data: conversations = [], pagination } = conversationsResponse || {};
+
   const filteredConversations = conversations?.filter(convo => 
     convo.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -1235,39 +1267,52 @@ const ChatPage = () => {
             />
           </SearchContainer>
           {isLoadingConversations ? <Spinner /> : (
-            <ConversationList>
-              {filteredConversations?.map(convo => (
-                <ConversationItem
-                  key={convo.id}
-                  isActive={String(convo.id) === activeConversationId}
-                  onClick={() => editingConversationId !== convo.id && navigate(`/chat/${convo.id}`)}
-                >
-                  {editingConversationId === convo.id ? (
-                     <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
-                        <EditInput
-                          type="text"
-                          value={newTitle}
-                          onChange={e => setNewTitle(e.target.value)}
-                          onClick={e => e.stopPropagation()}
-                          onBlur={handleCancelEditing}
-                          autoFocus
-                        />
-                     </EditForm>
-                  ) : (
-                    <>
-                      <ConversationTitle>ID: {convo.id} {convo.title}</ConversationTitle>
-                      <MenuButton onClick={(e) => { e.stopPropagation(); setMenuOpenFor(menuOpenFor === convo.id ? null : convo.id); }}>⋮</MenuButton>
-                      {menuOpenFor === convo.id && (
-                        <DropdownMenu ref={menuRef}>
-                          <DropdownItem onClick={(e) => { e.stopPropagation(); handleStartEditing(convo); }}>Rename</DropdownItem>
-                          <DropdownItem onClick={(e) => { e.stopPropagation(); handleDelete(convo.id); }}>Delete</DropdownItem>
-                        </DropdownMenu>
-                      )}
-                    </>
-                  )}
-                </ConversationItem>
-              ))}
-            </ConversationList>
+            <>
+              <ConversationList>
+                {filteredConversations?.map(convo => (
+                  <ConversationItem
+                    key={convo.id}
+                    isActive={String(convo.id) === activeConversationId}
+                    onClick={() => editingConversationId !== convo.id && navigate(`/chat/${convo.id}`)}
+                  >
+                    {editingConversationId === convo.id ? (
+                       <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
+                          <EditInput
+                            type="text"
+                            value={newTitle}
+                            onChange={e => setNewTitle(e.target.value)}
+                            onClick={e => e.stopPropagation()}
+                            onBlur={handleCancelEditing}
+                            autoFocus
+                          />
+                       </EditForm>
+                    ) : (
+                      <>
+                        <ConversationTitle>ID: {convo.id} {convo.title}</ConversationTitle>
+                        <MenuButton onClick={(e) => { e.stopPropagation(); setMenuOpenFor(menuOpenFor === convo.id ? null : convo.id); }}>⋮</MenuButton>
+                        {menuOpenFor === convo.id && (
+                          <DropdownMenu ref={menuRef}>
+                            <DropdownItem onClick={(e) => { e.stopPropagation(); handleStartEditing(convo); }}>Rename</DropdownItem>
+                            <DropdownItem onClick={(e) => { e.stopPropagation(); handleDelete(convo.id); }}>Delete</DropdownItem>
+                          </DropdownMenu>
+                        )}
+                      </>
+                    )}
+                  </ConversationItem>
+                ))}
+              </ConversationList>
+              {pagination && pagination.total_pages > 1 && (
+                <PaginationControls>
+                  <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
+                    Prev
+                  </button>
+                  <PageInfo>Page {pagination.current_page} of {pagination.total_pages}</PageInfo>
+                  <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === pagination.total_pages}>
+                    Next
+                  </button>
+                </PaginationControls>
+              )}
+            </>
           )}
         </Sidebar>
         <ChatWindow>

@@ -6,7 +6,7 @@ export const apiSlice = createApi({
   tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate'],
   endpoints: builder => ({
     getClinicianTypes: builder.query({
-      query: () => '/clinician_types',
+      query: (page = 1) => `/clinician_types?page=${page}`,
       providesTags: ['ClinicianType'],
     }),
     getAiModels: builder.query({
@@ -43,16 +43,16 @@ export const apiSlice = createApi({
       ],
     }),
     getConversations: builder.query({
-      query: () => '/conversations',
-      providesTags: (result = []) => [
-        ...result.map(({ id }) => ({ type: 'Conversation', id })),
+      query: (page = 1) => `/conversations?page=${page}`,
+      providesTags: (result = { data: [] }) => [
+        ...result.data.map(({ id }) => ({ type: 'Conversation', id })),
         { type: 'Conversation', id: 'LIST' },
       ],
     }),
     getConversationsByAiModel: builder.query({
-      query: (ai_model_id) => `/conversations/by_ai_model/${ai_model_id}`,
-      providesTags: (result = []) => [
-        ...result.map(({ id }) => ({ type: 'Conversation', id })),
+      query: ({ ai_model_id, page = 1 }) => `/conversations/by_ai_model/${ai_model_id}?page=${page}`,
+      providesTags: (result = { data: [] }) => [
+        ...result.data.map(({ id }) => ({ type: 'Conversation', id })),
         { type: 'Conversation', id: 'BY_AI_MODEL' },
       ],
     }),

@@ -8,15 +8,11 @@ import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 import StarRating from '../components/common/StarRating';
 
-// --- ICONS ---
-
 const SearchIcon = (props) => (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
         <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
     </svg>
 );
-
-// --- STYLED COMPONENTS ---
 
 const CatalogueLayout = styled.div`
   display: grid;
@@ -75,6 +71,7 @@ const SpecialtyList = styled.ul`
   padding: 0;
   margin: 0;
   overflow-y: auto;
+  flex: 1;
 `;
 
 const SpecialtyListItem = styled.li`
@@ -160,26 +157,68 @@ const FineTunedTag = styled.div`
   width: fit-content;
 `;
 
-// --- COMPONENT ---
+const PaginationControls = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  border-top: 1px solid #e8edee;
+  flex-shrink: 0;
+
+  button {
+    background: none;
+    border: 1px solid #005eb8;
+    color: #005eb8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+`;
+
+const PageInfo = styled.span`
+  font-size: 0.8rem;
+  color: #5f6368;
+`;
 
 const ModelCataloguePage = () => {
   const dispatch = useDispatch();
   const { selectedSpecialtyId } = useSelector((state) => state.ui);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const {
-    data: clinicianTypes,
+    data: clinicianTypesResponse,
     isLoading,
     isSuccess,
     isError,
     error,
-  } = useGetClinicianTypesQuery();
+  } = useGetClinicianTypesQuery(currentPage);
+
+  const { data: clinicianTypes = [], pagination } = clinicianTypesResponse || {};
 
   useEffect(() => {
     if (isSuccess && clinicianTypes && clinicianTypes.length > 0 && !selectedSpecialtyId) {
       dispatch(specialtySelected(clinicianTypes[0].id));
     }
   }, [isSuccess, clinicianTypes, selectedSpecialtyId, dispatch]);
+
+  const handleNextPage = () => {
+    if (pagination && currentPage < pagination.total_pages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   if (isLoading) {
     return <Spinner />;
@@ -226,6 +265,17 @@ const ModelCataloguePage = () => {
               </SpecialtyListItem>
             ))}
           </SpecialtyList>
+          {pagination && pagination.total_pages > 1 && (
+            <PaginationControls>
+              <button onClick={handlePrevPage} disabled={currentPage === 1}>
+                Prev
+              </button>
+              <PageInfo>Page {pagination.current_page} of {pagination.total_pages}</PageInfo>
+              <button onClick={handleNextPage} disabled={currentPage === pagination.total_pages}>
+                Next
+              </button>
+            </PaginationControls>
+          )}
         </Sidebar>
         <MainContent>
           <h2>Select Model</h2>
