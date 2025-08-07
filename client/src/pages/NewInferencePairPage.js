@@ -366,32 +366,34 @@ const NewInferencePairPage = () => {
   const [firstIndex, setFirstIndex] = useState(0);
   const [secondIndex, setSecondIndex] = useState(1);
 
-  const { data: allFirstConversations = [], isLoading: isLoadingFirst } = useGetConversationsByAiModelQuery(ai_model_id);
-  const { data: allSecondConversations = [], isLoading: isLoadingSecond } = useGetConversationsQuery();
+  const { data: allFirstConversations = { data: [] }, isLoading: isLoadingFirst } = useGetConversationsByAiModelQuery({ ai_model_id });
+  const { data: allSecondConversations = { data: [] }, isLoading: isLoadingSecond } = useGetConversationsQuery();
 
-  const firstConversations = allFirstConversations
+  const firstConversations = allFirstConversations.data
   .filter(c => c.base_prompt && c.first_response)
   .filter(c =>
     c.id.toString().includes(firstFilter.trim()) ||
     (c.ai_model?.name || '').toLowerCase().includes(firstFilter.toLowerCase())
   );
 
-  const secondConversations = allSecondConversations
+  const secondConversations = allSecondConversations.data
     .filter(c => c.base_prompt && c.first_response)
     .filter(c =>
       c.id.toString().includes(secondFilter.trim()) ||
       (c.ai_model?.name || '').toLowerCase().includes(secondFilter.toLowerCase())
     );
 
-  React.useEffect(() => {
-    if (firstIndex >= firstConversations.length) {
+  useEffect(() => {
+    if (firstIndex >= firstConversations.length && firstConversations.length > 0) {
       setFirstIndex(0);
     }
-  }, [firstConversations.length]);
+  }, [firstConversations.length, firstIndex]);
 
-  React.useEffect(() => {
-    setSecondIndex(0);
-  }, [secondConversations.length]);
+  useEffect(() => {
+    if (secondIndex >= secondConversations.length && secondConversations.length > 0) {
+      setSecondIndex(0);
+    }
+  }, [secondConversations.length, secondIndex]);
 
   const { data: model } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
@@ -664,7 +666,7 @@ const NewInferencePairPage = () => {
           </div>
         </WhiteContainer>
 
-        <SubmitButton onClick={handleSubmit}>
+        <SubmitButton onClick={handleSubmit} disabled={!convo1 || !convo2}>
           Submit
         </SubmitButton>
       </WhiteContainer>
@@ -799,6 +801,7 @@ const NewInferencePairPage = () => {
             </ModalHeader>
             <ModalContent style={{ padding: 0 }}>
               <iframe
+                title={`Inference Chat for Conversation ${chatConversationId}`}
                 src={`/chat/${chatConversationId}?inferenceOnly=true`}
                 style={{
                   border: 'none',

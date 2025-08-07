@@ -1,12 +1,13 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   apiSlice,
   useGetConversationsQuery,
   useGetConversationQuery,
+  useGetMessagesQuery,
   useAddMessageMutation,
   useUpdateConversationMutation,
   useDeleteConversationMutation,
@@ -319,26 +320,6 @@ const MessageBubble = styled.div`
     background-color: #eaf1f8;
     color: #1f1f1f;
     border-top-left-radius: 5px;
-  }
-`;
-
-const FileAttachmentBubble = styled.a`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #f0f4f5; 
-  border-radius: 16px; 
-  padding: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
-  width: fit-content;
-  text-decoration: none;
-  font-size: 0.9rem;
-  color: #005eb8;
-  border: 1px solid #e8edee;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #e1e8ed;
   }
 `;
 
@@ -746,35 +727,6 @@ const ModalCloseButton = styled(CloseButton)`
   right: 0.75rem;
 `;
 
-const PaginationControls = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.75rem 1.5rem;
-  border-top: 1px solid #e8edee;
-  flex-shrink: 0;
-
-  button {
-    background: none;
-    border: 1px solid #005eb8;
-    color: #005eb8;
-    padding: 0.25rem 0.75rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-  }
-`;
-
-const PageInfo = styled.span`
-  font-size: 0.8rem;
-  color: #5f6368;
-`;
-
 const ChatPage = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -789,7 +741,9 @@ const ChatPage = () => {
   const [isCoTEnabled, setIsCoTEnabled] = useState(false);
   const [showCoTInfoModal, setShowCoTInfoModal] = useState(false);
   const [showFewShotInfoModal, setShowFewShotInfoModal] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [conversationPage, setConversationPage] = useState(1);
+  const [messagePage, setMessagePage] = useState(1);
+  const [allConversations, setAllConversations] = useState([]);
 
   const [fileError, setFileError] = useState('');
   const [viewMode, setViewMode] = useState('chat');
@@ -802,17 +756,37 @@ const ChatPage = () => {
   const addContentRef = useRef(null);
   const cable = useRef();
   const fileInputRef = useRef(null);
+  const messageAreaRef = useRef(null);
+  const conversationListRef = useRef(null);
+  const prevScrollHeightRef = useRef(null);
 
-  const { data: conversationsResponse, isLoading: isLoadingConversations } = useGetConversationsQuery(currentPage);
-  const { data: activeConversation, isFetching: isFetchingMessages } = useGetConversationQuery(activeConversationId, {
-    skip: !activeConversationId,
-  });
+  const { data: conversationsResponse, isFetching: isFetchingConversations } = useGetConversationsQuery(conversationPage);
+  const { data: activeConversation } = useGetConversationQuery(activeConversationId, { skip: !activeConversationId });
+  const { data: messagesResponse, isFetching: isFetchingMessages } = useGetMessagesQuery(
+    { conversationId: activeConversationId, page: messagePage },
+    { skip: !activeConversationId }
+  );
+  
+  useEffect(() => {
+    if (conversationsResponse && conversationsResponse.data) {
+      if (conversationPage === 1) {
+        setAllConversations(conversationsResponse.data);
+      } else {
+        setAllConversations(prev => [...prev, ...conversationsResponse.data]);
+      }
+    }
+  }, [conversationsResponse, conversationPage]);
+
+  useEffect(() => {
+    setConversationPage(1);
+    setAllConversations([]);
+  }, [searchTerm]);
+
   const { data: modelDetails, isFetching: isFetchingModelDetails } = useGetAiModelByIdQuery(
     activeConversation?.ai_model_id,
-    {
-      skip: !activeConversation?.ai_model_id,
-    }
+    { skip: !activeConversation?.ai_model_id }
   );
+  
   const { data: templates } = useGetFewShotTemplatesQuery();
   const [addMessage, { isLoading: isSendingMessage }] = useAddMessageMutation();
   const [updateConversation] = useUpdateConversationMutation();
@@ -821,23 +795,15 @@ const ChatPage = () => {
   const [rejectFeedback, { isLoading: isRejecting }] = useRejectFeedbackMutation();
 
   const [input, setInput] = useState('');
-  const messageAreaRef = useRef(null);
   const textareaRef = useRef(null);
+  
+  const { data: messages = [], pagination: msgPagination } = messagesResponse || {};
+  const { pagination: convoPagination } = conversationsResponse || {};
 
   useEffect(() => {
-    setInput('');
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-    setSelectedTemplateId(null);
-    setViewMode('chat');
-    setEditingTemplateId(null);
-    setViewingTemplateData(null);
-    setFileError('');
-    setIsTemplateViewReadOnly(false);
-    setShowAddContentPanel(false);
-  }, [activeConversationId]);
+    setMessagePage(1);
+    dispatch(apiSlice.util.resetApiState());
+  }, [activeConversationId, dispatch]);
 
   useEffect(() => {
     if (activeConversation) {
@@ -845,24 +811,39 @@ const ChatPage = () => {
     }
   }, [activeConversation]);
 
-  const sortedMessages = useMemo(() =>
-    [...(activeConversation?.messages || [])].sort((a, b) => new Date(a.created_at) - new Date(b.created_at)),
-    [activeConversation?.messages]
-  );
-  
-  const lastMessage = sortedMessages.length > 0 ? sortedMessages[sortedMessages.length - 1] : null;
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   const isWaiting = isSendingMessage || (lastMessage?.role === 'user' && !isFetchingMessages);
   const selectedTemplate = templates?.find(t => t.id === selectedTemplateId);
   const [tempFileUrl, setTempFileUrl] = useState(null);
 
-  useEffect(() => {
-    if (selectedFile) {
-      const url = URL.createObjectURL(selectedFile);
-      setTempFileUrl(url);
-      return () => URL.revokeObjectURL(url);
+  const handleConversationScroll = useCallback(() => {
+    const listEl = conversationListRef.current;
+    if (listEl) {
+      const { scrollTop, scrollHeight, clientHeight } = listEl;
+      if (scrollTop + clientHeight >= scrollHeight - 5 && !isFetchingConversations && convoPagination?.current_page < convoPagination?.total_pages) {
+        setConversationPage(p => p + 1);
+      }
     }
-    setTempFileUrl(null);
-  }, [selectedFile]);
+  }, [isFetchingConversations, convoPagination]);
+
+  const handleMessageScroll = useCallback(() => {
+    if (messageAreaRef.current?.scrollTop === 0 && !isFetchingMessages && msgPagination && msgPagination.current_page < msgPagination.total_pages) {
+      prevScrollHeightRef.current = messageAreaRef.current.scrollHeight;
+      setMessagePage(p => p + 1);
+    }
+  }, [isFetchingMessages, msgPagination]);
+  
+  useEffect(() => {
+    const msgEl = messageAreaRef.current;
+    if (msgEl) {
+      if (messagePage === 1) {
+        msgEl.scrollTop = msgEl.scrollHeight;
+      } else if (!isFetchingMessages && prevScrollHeightRef.current) {
+        msgEl.scrollTop = msgEl.scrollHeight - prevScrollHeightRef.current;
+        prevScrollHeightRef.current = null;
+      }
+    }
+  }, [messages, messagePage, isFetchingMessages]);
 
   const handleTextareaInput = (e) => {
     const textarea = e.target;
@@ -872,83 +853,44 @@ const ChatPage = () => {
   };
   
   useEffect(() => {
-    if (messageAreaRef.current) {
-      messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
-    }
-  }, [sortedMessages, isWaiting]);
-
-  useEffect(() => {
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setMenuOpenFor(null);
-      }
-      if (addContentRef.current && !addContentRef.current.contains(event.target)) {
-        setShowAddContentPanel(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(event.target)) setMenuOpenFor(null);
+      if (addContentRef.current && !addContentRef.current.contains(event.target)) setShowAddContentPanel(false);
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [menuRef, addContentRef]);
+  }, []);
 
   useEffect(() => {
     if (activeConversationId) {
-      if (!cable.current) {
-        cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
-      }
-      
-      const channelParams = {
-        channel: 'ConversationChannel',
-        conversation_id: activeConversationId,
-      };
-
-      const channelHandlers = {
-        received(data) {
-          console.log('Received new message via Action Cable:', data);
-          dispatch(
-            apiSlice.util.invalidateTags([{ type: 'Conversation', id: activeConversationId }])
-          );
-        },
-        connected() {
-          console.log(`Connected to ConversationChannel ${activeConversationId}`);
-        },
-        disconnected() {
-          console.log(`Disconnected from ConversationChannel ${activeConversationId}`);
-        },
-      };
-
-      const subscription = cable.current.subscriptions.create(channelParams, channelHandlers);
-
-      return () => {
-        console.log(`Unsubscribing from ConversationChannel ${activeConversationId}`);
-        subscription.unsubscribe();
-      };
+      if (!cable.current) cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
+      const subscription = cable.current.subscriptions.create(
+        { channel: 'ConversationChannel', conversation_id: activeConversationId },
+        {
+          received: () => {
+             dispatch(apiSlice.util.invalidateTags([{ type: 'Message' }]));
+          },
+        }
+      );
+      return () => subscription.unsubscribe();
     }
   }, [activeConversationId, dispatch]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (input.trim() && activeConversationId && !isSendingMessage) {
+    if (input.trim() && activeConversationId && !isWaiting) {
       addMessage({
         conversation_id: activeConversationId,
-        message: {
-          content: input,
-          file: selectedFile,
-          few_shot_template_id: selectedTemplateId,
-          enable_cot: isCoTEnabled,
-        },
+        message: { content: input, file: selectedFile, few_shot_template_id: selectedTemplateId, enable_cot: isCoTEnabled },
       });
       setInput('');
       setSelectedFile(null);
       setSelectedTemplateId(null);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = 'auto';
-      }
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      if (textareaRef.current) textareaRef.current.style.height = 'auto';
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
-  
+
   const handleStartEditing = (convo) => {
     setEditingConversationId(convo.id);
     setNewTitle(convo.title);
@@ -984,7 +926,7 @@ const ChatPage = () => {
       }
     }
   };
-
+  
   const handlePromptClick = (prompt) => {
     setInput(prompt);
     textareaRef.current?.focus();
@@ -995,7 +937,7 @@ const ChatPage = () => {
         }
     }, 0);
   };
-
+  
   const handleToggleCoT = () => {
     setIsCoTEnabled(prevState => !prevState);
   };
@@ -1150,12 +1092,11 @@ const ChatPage = () => {
     }
   }
 
-  const { data: conversations = [], pagination } = conversationsResponse || {};
-
-  const filteredConversations = conversations?.filter(convo => 
-    convo.title.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredConversations = useMemo(() => 
+    allConversations.filter(convo => convo.title.toLowerCase().includes(searchTerm.toLowerCase())),
+    [allConversations, searchTerm]
   );
-
+  
   const renderOverlayContent = () => {
     switch(viewMode) {
       case 'templateList':
@@ -1266,98 +1207,84 @@ const ChatPage = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </SearchContainer>
-          {isLoadingConversations ? <Spinner /> : (
-            <>
-              <ConversationList>
-                {filteredConversations?.map(convo => (
-                  <ConversationItem
-                    key={convo.id}
-                    isActive={String(convo.id) === activeConversationId}
-                    onClick={() => editingConversationId !== convo.id && navigate(`/chat/${convo.id}`)}
-                  >
-                    {editingConversationId === convo.id ? (
-                       <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
-                          <EditInput
-                            type="text"
-                            value={newTitle}
-                            onChange={e => setNewTitle(e.target.value)}
-                            onClick={e => e.stopPropagation()}
-                            onBlur={handleCancelEditing}
-                            autoFocus
-                          />
-                       </EditForm>
-                    ) : (
-                      <>
-                        <ConversationTitle>ID: {convo.id} {convo.title}</ConversationTitle>
-                        <MenuButton onClick={(e) => { e.stopPropagation(); setMenuOpenFor(menuOpenFor === convo.id ? null : convo.id); }}>⋮</MenuButton>
-                        {menuOpenFor === convo.id && (
-                          <DropdownMenu ref={menuRef}>
-                            <DropdownItem onClick={(e) => { e.stopPropagation(); handleStartEditing(convo); }}>Rename</DropdownItem>
-                            <DropdownItem onClick={(e) => { e.stopPropagation(); handleDelete(convo.id); }}>Delete</DropdownItem>
-                          </DropdownMenu>
-                        )}
-                      </>
+          <ConversationList ref={conversationListRef} onScroll={handleConversationScroll}>
+            {filteredConversations?.map(convo => (
+              <ConversationItem
+                key={convo.id}
+                isActive={String(convo.id) === activeConversationId}
+                onClick={() => editingConversationId !== convo.id && navigate(`/chat/${convo.id}`)}
+              >
+                {editingConversationId === convo.id ? (
+                   <EditForm onSubmit={(e) => handleSaveTitle(e, convo.id)}>
+                      <EditInput
+                        type="text"
+                        value={newTitle}
+                        onChange={e => setNewTitle(e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        onBlur={handleCancelEditing}
+                        autoFocus
+                      />
+                   </EditForm>
+                ) : (
+                  <>
+                    <ConversationTitle>ID: {convo.id} {convo.title}</ConversationTitle>
+                    <MenuButton onClick={(e) => { e.stopPropagation(); setMenuOpenFor(menuOpenFor === convo.id ? null : convo.id); }}>⋮</MenuButton>
+                    {menuOpenFor === convo.id && (
+                      <DropdownMenu ref={menuRef}>
+                        <DropdownItem onClick={(e) => { e.stopPropagation(); handleStartEditing(convo); }}>Rename</DropdownItem>
+                        <DropdownItem onClick={(e) => { e.stopPropagation(); handleDelete(convo.id); }}>Delete</DropdownItem>
+                      </DropdownMenu>
                     )}
-                  </ConversationItem>
-                ))}
-              </ConversationList>
-              {pagination && pagination.total_pages > 1 && (
-                <PaginationControls>
-                  <button onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>
-                    Prev
-                  </button>
-                  <PageInfo>Page {pagination.current_page} of {pagination.total_pages}</PageInfo>
-                  <button onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === pagination.total_pages}>
-                    Next
-                  </button>
-                </PaginationControls>
-              )}
-            </>
-          )}
+                  </>
+                )}
+              </ConversationItem>
+            ))}
+            {isFetchingConversations && <Spinner />}
+          </ConversationList>
         </Sidebar>
         <ChatWindow>
           {activeConversationId ? (
             <>
-              <MessageArea ref={messageAreaRef}>
+              <MessageArea ref={messageAreaRef} onScroll={handleMessageScroll}>
                 <MessagesContentWrapper>
-                  {isFetchingMessages && sortedMessages.length === 0 ? <Spinner /> : (
-                    sortedMessages.map((msg, index) => (
-                      <MessageTurn key={msg.id} data-role={msg.role} >
-
-                        {index === 0 && msg.role === 'user' && (
-                          <MessageAttachmentContainer>
-                            {activeConversation.cot && (
-                              <AttachmentBubble>
-                                💭 <AttachmentButton as="span" style={{ cursor: 'default', textDecoration: 'none' }}>Thinking</AttachmentButton>
-                              </AttachmentBubble>
-                            )}
-                            {activeConversation.few_shot_template?.name && (
-                              <AttachmentBubble>
-                                ✨
-                                <AttachmentButton onClick={() => {
-                                  setViewingTemplateData(activeConversation.few_shot_template);
-                                  setIsTemplateViewReadOnly(true);
-                                  setViewMode('templateDetail');
-                                }}>
-                                  {activeConversation.few_shot_template.name}
-                                </AttachmentButton>
-                              </AttachmentBubble>
-                            )}
-                            {activeConversation?.file_url && (
-                               <AttachmentBubble>
-                                 📎 <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_name || "Attached File"}</AttachmentLink>
-                               </AttachmentBubble>
-                            )}
-                          </MessageAttachmentContainer>
-                        )}
-                        <MessageBubble data-role={msg.role}>
-                          {msg.content}
-                        </MessageBubble>
-                      </MessageTurn>
-                    ))
+                  {isFetchingMessages && messagePage === 1 ? <Spinner /> : (
+                    <>
+                      {isFetchingMessages && messagePage > 1 && <div style={{ textAlign: 'center', padding: '1rem' }}><Spinner /></div>}
+                      {messages.map((msg, index) => (
+                        <MessageTurn key={msg.id || `msg-${index}`} data-role={msg.role} >
+                          {index === 0 && msg.role === 'user' && (
+                            <MessageAttachmentContainer>
+                              {activeConversation.cot && (
+                                <AttachmentBubble>
+                                  💭 <AttachmentButton as="span" style={{ cursor: 'default', textDecoration: 'none' }}>Thinking</AttachmentButton>
+                                </AttachmentBubble>
+                              )}
+                              {activeConversation.few_shot_template?.name && (
+                                <AttachmentBubble>
+                                  ✨
+                                  <AttachmentButton onClick={() => {
+                                    setViewingTemplateData(activeConversation.few_shot_template);
+                                    setIsTemplateViewReadOnly(true);
+                                    setViewMode('templateDetail');
+                                  }}>
+                                    {activeConversation.few_shot_template.name}
+                                  </AttachmentButton>
+                                </AttachmentBubble>
+                              )}
+                              {activeConversation?.file_url && (
+                                 <AttachmentBubble>
+                                   📎 <AttachmentLink href={activeConversation.file_url} target="_blank" rel="noopener noreferrer">{activeConversation.file_name || "Attached File"}</AttachmentLink>
+                                 </AttachmentBubble>
+                              )}
+                            </MessageAttachmentContainer>
+                          )}
+                          <MessageBubble data-role={msg.role}>{msg.content}</MessageBubble>
+                        </MessageTurn>
+                      ))}
+                    </>
                   )}
 
-                  {sortedMessages.length === 0 && !isFetchingMessages && !isWaiting && (
+                  {messages.length === 0 && !isFetchingMessages && !isWaiting && (
                     <>
                       {isFetchingModelDetails ? (
                         <Spinner />

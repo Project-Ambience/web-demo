@@ -266,16 +266,6 @@ const FineTunePage = () => {
     pollingInterval: 15000,
   });
 
-  const handleFileChange = (e) => {
-    const uploaded = e.target.files[0];
-    if (uploaded && uploaded.type === 'application/json') {
-      setFile(uploaded);
-    } 
-    else {
-      setSubmissionError('Please upload a fine-tuning .json file.');
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
   
@@ -285,7 +275,7 @@ const FineTunePage = () => {
     }
     
     const selectedTask = model.fine_tune_tasks.find((t) => String(t.id) === String(taskId));
-    const selectedClinician = clinicianTypes.find((c) => String(c.id) === String(clinicianTypeId));
+    const selectedClinician = clinicianTypes.data.find((c) => String(c.id) === String(clinicianTypeId));
     
     setSubmitParams({
       modelName,
@@ -406,7 +396,7 @@ const FineTunePage = () => {
                 required
               >
                 <option value="">Select clinician type</option>
-                {clinicianTypes.map((type) => (
+                {clinicianTypes.data.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.name}
                   </option>

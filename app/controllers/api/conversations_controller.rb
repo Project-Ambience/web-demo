@@ -2,7 +2,7 @@ class Api::ConversationsController < Api::ApplicationController
   before_action :set_conversation, only: [ :show, :update, :destroy, :accept_feedback, :reject_feedback ]
 
   def index
-    @conversations = Conversation.includes(:ai_model).order(updated_at: :desc).page(params[:page]).per(20)
+    @conversations = Conversation.includes(ai_model: :base_model).order(updated_at: :desc).page(params[:page]).per(20)
 
     response_data = @conversations.map do |convo|
       {
@@ -35,7 +35,7 @@ class Api::ConversationsController < Api::ApplicationController
   end
 
   def conversation_by_ai_model
-    @conversations = Conversation.where(ai_model_id: params[:ai_model_id]).page(params[:page]).per(20)
+    @conversations = Conversation.where(ai_model_id: params[:ai_model_id]).includes(ai_model: :base_model).page(params[:page]).per(20)
 
     response_data = @conversations.map do |convo|
       {
@@ -69,7 +69,6 @@ class Api::ConversationsController < Api::ApplicationController
 
   def show
     render json: @conversation.as_json(
-      include: :messages,
       methods: [ :file_url, :file_name ]
     )
   end

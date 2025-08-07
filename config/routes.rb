@@ -19,7 +19,7 @@ Rails.application.routes.draw do
       collection do
         get "by_ai_model/:ai_model_id", to: "conversations#conversation_by_ai_model"
       end
-      resources :messages, only: [ :create ]
+      resources :messages, only: [ :index, :create ]
     end
 
     post "/model_install_requests/update_status", to: "model_install_requests#update_status"

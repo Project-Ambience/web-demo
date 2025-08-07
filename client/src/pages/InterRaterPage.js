@@ -4,7 +4,6 @@ import styled from 'styled-components';
 import {
   useGetInterRaterResponsePairsQuery,
   useGetAiModelByIdQuery,
-  useAddInterRaterMutation,
   useAddInterRaterFeedbackMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
@@ -385,8 +384,7 @@ const InterRaterPage = () => {
 
   const { data: evaluations, isLoading } = useGetInterRaterResponsePairsQuery(ai_model_id);
   const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
-  const [createInterRater] = useAddInterRaterMutation();
-
+  
   const [createInterRaterFeedback] = useAddInterRaterFeedbackMutation();
   const totalItems = evaluations?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);

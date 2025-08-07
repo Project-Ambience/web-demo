@@ -1,4 +1,18 @@
 class Api::MessagesController < Api::ApplicationController
+  def index
+    @conversation = Conversation.find(params[:conversation_id])
+    @messages = @conversation.messages.order(created_at: :desc).page(params[:page]).per(50)
+
+    render json: {
+      data: @messages.reverse,
+      pagination: {
+        current_page: @messages.current_page,
+        total_pages: @messages.total_pages,
+        total_count: @messages.total_count
+      }
+    }
+  end
+
   def create
     @conversation = Conversation.find(params[:conversation_id])
 

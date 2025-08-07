@@ -44,10 +44,13 @@ export const apiSlice = createApi({
     }),
     getConversations: builder.query({
       query: (page = 1) => `/conversations?page=${page}`,
-      providesTags: (result = { data: [] }) => [
-        ...result.data.map(({ id }) => ({ type: 'Conversation', id })),
-        { type: 'Conversation', id: 'LIST' },
-      ],
+      providesTags: (result) =>
+        result && result.data
+          ? [
+              ...result.data.map(({ id }) => ({ type: 'Conversation', id })),
+              { type: 'Conversation', id: 'LIST' },
+            ]
+          : [{ type: 'Conversation', id: 'LIST' }],
     }),
     getConversationsByAiModel: builder.query({
       query: ({ ai_model_id, page = 1 }) => `/conversations/by_ai_model/${ai_model_id}?page=${page}`,
@@ -59,6 +62,30 @@ export const apiSlice = createApi({
     getConversation: builder.query({
       query: id => `/conversations/${id}`,
       providesTags: (result, error, id) => [{ type: 'Conversation', id }],
+    }),
+    getMessages: builder.query({
+      query: ({ conversationId, page = 1 }) => `/conversations/${conversationId}/messages?page=${page}`,
+      serializeQueryArgs: ({ queryArgs }) => {
+        return queryArgs.conversationId;
+      },
+      merge: (currentCache, newItems) => {
+        if (newItems.pagination.current_page === 1) {
+          return newItems;
+        }
+        currentCache.data.unshift(...newItems.data);
+        currentCache.pagination = newItems.pagination;
+        return currentCache;
+      },
+      forceRefetch({ currentArg, previousArg }) {
+        return currentArg?.page !== previousArg?.page;
+      },
+       providesTags: (result) =>
+        result && result.data
+          ? [
+              ...result.data.map(({ id }) => ({ type: 'Message', id })),
+              { type: 'Message', id: 'LIST' },
+            ]
+          : [{ type: 'Message', id: 'LIST' }],
     }),
     createConversation: builder.mutation({
       query: (conversation) => ({
@@ -109,9 +136,16 @@ export const apiSlice = createApi({
           body: formData,
         };
       },
-      invalidatesTags: (result, error, arg) => [
-        { type: 'Conversation', id: arg.conversation_id }
-      ],
+      async onQueryStarted({ conversation_id }, { dispatch, queryFulfilled }) {
+        try {
+          const { data: createdMessage } = await queryFulfilled;
+          dispatch(
+            apiSlice.util.updateQueryData('getMessages', { conversationId: conversation_id }, draft => {
+               draft.data.push(createdMessage);
+            })
+          );
+        } catch {}
+      },
     }),
     createFineTuneRequest: builder.mutation({
       query: (formData) => ({
@@ -125,14 +159,14 @@ export const apiSlice = createApi({
         url: `/conversations/${id}/accept_feedback`,
         method: 'POST',
       }),
-      invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
+      invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }, { type: 'Message', id: 'LIST' }]
     }),
     rejectFeedback: builder.mutation({
       query: (id) => ({
         url: `/conversations/${id}/reject_feedback`,
         method: 'POST',
       }),
-      invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
+      invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }, { type: 'Message', id: 'LIST' }]
     }),
     getRabbitMQTraffic: builder.query({
       query: () => '/rabbitmq/traffic',
@@ -206,6 +240,7 @@ export const {
   useGetConversationsQuery,
   useGetConversationsByAiModelQuery,
   useGetConversationQuery,
+  useGetMessagesQuery,
   useCreateConversationMutation,
   useUpdateConversationMutation,
   useDeleteConversationMutation,
