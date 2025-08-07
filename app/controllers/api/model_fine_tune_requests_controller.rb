@@ -100,8 +100,6 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     elsif request.waiting_for_fine_tune?
       request.fine_tuning_in_progress!
     end
-
-    head :ok
   end
 
   def formatting_complete
