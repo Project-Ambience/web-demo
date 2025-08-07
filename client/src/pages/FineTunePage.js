@@ -499,6 +499,13 @@ const FineTunePage = () => {
     }
   };  
 
+  const truncateFilename = (name, maxLength = 20) => {
+    if (name.length <= maxLength) {
+      return name;
+    }
+    return `${name.substring(0, maxLength)}...`;
+  };
+
   if (isLoading || isClinicianTypesLoading) return <Spinner />;
   if (isError || isClinicianTypesError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
 
@@ -635,7 +642,7 @@ const FineTunePage = () => {
               </>
             ) : (
               <FileDisplay>
-                <strong>{file.name}</strong>
+                <strong title={file.name}>{truncateFilename(file.name)}</strong>
                 <SecondaryButton
                   onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
                   style={{ width: 'auto', padding: '0.2rem 0.8rem', fontSize: '0.8rem', marginBottom: 0 }}
