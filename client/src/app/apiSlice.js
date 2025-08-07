@@ -103,6 +103,10 @@ export const apiSlice = createApi({
             formData.append('message[enable_cot]', message.enable_cot);
         }
 
+        if (message.enable_rag !== undefined && message.enable_rag !== null) {
+          formData.append('message[enable_rag]', message.enable_rag);
+        }
+
         return {
           url: `/conversations/${conversation_id}/messages`,
           method: 'POST',
@@ -178,6 +182,19 @@ export const apiSlice = createApi({
       query: (ai_model_id) => `/inter_raters/response_pairs/${ai_model_id}`,
       providesTags: ['InterRater']
     }),
+    createRagDataAddingRequest: builder.mutation({
+      query: (files) => {
+        const formData = new FormData();
+        files.forEach((file) => {
+          formData.append('files[]', file);
+        });
+        return {
+          url: '/rag_data_adding_requests',
+          method: 'POST',
+          body: formData,
+        };
+      },
+    }),    
     addInterRater: builder.mutation({
       query: (payload) => ({
         url: '/inter_raters',
@@ -222,4 +239,5 @@ export const {
   useGetInterRaterResponsePairsQuery,
   useAddInterRaterMutation,
   useAddInterRaterFeedbackMutation,
+  useCreateRagDataAddingRequestMutation,
 } = apiSlice;
