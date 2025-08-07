@@ -1410,7 +1410,7 @@ const ChatPage = () => {
             </>
           ) : (
             <EmptyStateWrapper>
-              <h1>Project Ambience</h1>
+              <h1>LLMedic</h1>
               <p>Start a new conversation by selecting a model from the catalogue, or continue an existing chat from the history panel.</p>
             </EmptyStateWrapper>
           )}
