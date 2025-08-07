@@ -147,6 +147,13 @@ export const apiSlice = createApi({
       }),
       invalidatesTags: ['FineTuneRequest', 'QueueTraffic', 'FineTuneStatistics']
     }),
+    rejectFormatting: builder.mutation({
+      query: (id) => ({
+        url: `/model_fine_tune_requests/${id}/reject_formatting`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['FineTuneRequest', 'FineTuneStatistics']
+    }),
     acceptFeedback: builder.mutation({
       query: (id) => ({
         url: `/conversations/${id}/accept_feedback`,
@@ -240,6 +247,7 @@ export const {
   useGetFineTuneStatisticsQuery,
   useGetQueueTrafficQuery,
   useConfirmAndStartFineTuneMutation,
+  useRejectFormattingMutation,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
   useGetFewShotTemplatesQuery,

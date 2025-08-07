@@ -115,6 +115,14 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     render json: { message: "Formatting status updated successfully" }, status: :ok
   end
 
+  def reject_formatting
+    request = ModelFineTuneRequest.find(params[:id])
+    return render json: { error: "Request not awaiting confirmation" }, status: :unprocessable_entity unless request.awaiting_confirmation?
+
+    request.reject_formatting!
+    render json: { message: "Formatting rejected successfully" }, status: :ok
+  end
+
   def confirm_and_start_fine_tune
     request = ModelFineTuneRequest.find(params[:id])
     return render json: { error: "Request not awaiting confirmation" }, status: :unprocessable_entity unless request.awaiting_confirmation?

@@ -9,6 +9,7 @@ import {
   useGetQueueTrafficQuery,
   useGetFineTuneStatisticsQuery,
   useConfirmAndStartFineTuneMutation,
+  useRejectFormattingMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -309,6 +310,7 @@ const StatusText = styled.span`
         return '#2e7d32';
       case 'fine_tuning_failed':
       case 'formatting_failed':
+      case 'formatting_rejected':
         return '#c62828';
       case 'formatting_in_progress':
       case 'fine_tuning_in_progress':
@@ -332,8 +334,13 @@ const ActionButton = styled.a`
   font-weight: bold;
   font-size: 0.9rem;
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   &:hover {
     background-color: #003087;
+    text-decoration: none;
   }
 `;
 
@@ -474,6 +481,25 @@ const ConfirmButton = styled(ActionButton)`
   user-select: none;
   &:disabled {
     background-color: #ced4da;
+    cursor: not-allowed;
+  }
+`;
+
+const RejectButton = styled.button`
+  background-color: transparent;
+  color: #c62828;
+  border: 1px solid #c62828;
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  &:hover {
+    background-color: #fdecea;
+  }
+  &:disabled {
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
@@ -664,6 +690,7 @@ const getStatusColors = (status) => {
       return { background: '#e8f5e9', color: '#2e7d32' };
     case 'fine_tuning_failed':
     case 'formatting_failed':
+    case 'formatting_rejected':
       return { background: '#fdecea', color: '#c62828' };
     case 'formatting_in_progress':
     case 'fine_tuning_in_progress':
@@ -735,7 +762,7 @@ const StatusLifecycleModal = ({ onClose }) => {
   );
 };
 
-const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
+const RequestDetailsModal = ({ request, onClose, onConfirm, onReject, isConfirming, isRejecting }) => {
   const modalRef = useRef();
   useOnClickOutside(modalRef, onClose);
   const [dataSample, setDataSample] = useState([]);
@@ -791,12 +818,6 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  };
-
-  const handleConfirmClick = () => {
-    if (window.confirm("Are you sure you want to start the fine-tuning process? This action cannot be undone.")) {
-      onConfirm();
-    }
   };
 
   const displayStatus = request.status.replace(/_/g, ' ');
@@ -880,9 +901,28 @@ const RequestDetailsModal = ({ request, onClose, onConfirm, isConfirming }) => {
         <ModalFooter>
           <CloseButton onClick={onClose}>Close</CloseButton>
           {request.status === 'awaiting_confirmation' && (
-            <ConfirmButton onClick={handleConfirmClick} disabled={isConfirming}>
-              {isConfirming ? 'Starting...' : 'Confirm & Start Fine-Tune'}
-            </ConfirmButton>
+            <>
+              <RejectButton 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to reject this formatted dataset? This action cannot be undone.")) {
+                    onReject();
+                  }
+                }} 
+                disabled={isConfirming || isRejecting}
+              >
+                Reject
+              </RejectButton>
+              <ConfirmButton 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to start the fine-tuning process? This action cannot be undone.")) {
+                    onConfirm();
+                  }
+                }} 
+                disabled={isConfirming || isRejecting}
+              >
+                {isConfirming ? 'Starting...' : 'Confirm & Start Fine-Tune'}
+              </ConfirmButton>
+            </>
           )}
         </ModalFooter>
       </ModalContent>
@@ -896,7 +936,7 @@ const STATUSES = [
     { label: 'Awaiting Confirmation', value: 'awaiting_confirmation' },
     { label: 'Fine-Tuning', value: 'waiting_for_fine_tune,fine_tuning_in_progress' },
     { label: 'Completed', value: 'fine_tuning_completed' },
-    { label: 'Failed', value: 'formatting_failed,fine_tuning_failed' },
+    { label: 'Failed', value: 'formatting_failed,fine_tuning_failed,formatting_rejected' },
 ];
 
 const TIME_PERIODS = {
@@ -929,6 +969,7 @@ const FineTuneStatusPage = () => {
   const { data: trafficData } = useGetQueueTrafficQuery(undefined, { pollingInterval: 5000 });
   const { data: statsData, isLoading: isLoadingStats } = useGetFineTuneStatisticsQuery(undefined, { pollingInterval: 5000 });
   const [confirmAndStart, { isLoading: isConfirming }] = useConfirmAndStartFineTuneMutation();
+  const [rejectFormatting, { isLoading: isRejecting }] = useRejectFormattingMutation();
   
   useEffect(() => {
     if (!cable.current) {
@@ -986,6 +1027,13 @@ const FineTuneStatusPage = () => {
     if (selectedRequest) {
       await confirmAndStart(selectedRequest.id).unwrap();
       handleCloseModal();
+    }
+  };
+
+  const handleReject = async () => {
+    if (selectedRequest) {
+        await rejectFormatting(selectedRequest.id).unwrap();
+        handleCloseModal();
     }
   };
   
@@ -1083,7 +1131,7 @@ const FineTuneStatusPage = () => {
           </MainContent>
         </PageLayout>
       </div>
-      {selectedRequest && (<RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} onConfirm={handleConfirm} isConfirming={isConfirming} />)}
+      {selectedRequest && (<RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} onConfirm={handleConfirm} onReject={handleReject} isConfirming={isConfirming} isRejecting={isRejecting} />)}
       {isLifecycleModalOpen && (<StatusLifecycleModal onClose={() => setIsLifecycleModalOpen(false)} />)}
     </>
   );

@@ -9,6 +9,7 @@ Rails.application.routes.draw do
       member do
         post :confirm_and_start_fine_tune
         post :start_processing
+        post :reject_formatting
       end
       collection do
         get :statistics

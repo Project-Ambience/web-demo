@@ -14,7 +14,8 @@ class ModelFineTuneRequest < ApplicationRecord
     waiting_for_fine_tune: 5,
     fine_tuning_in_progress: 6,
     fine_tuning_failed: 7,
-    fine_tuning_completed: 8
+    fine_tuning_completed: 8,
+    formatting_rejected: 9
   }
 
   scope :by_status, ->(status) {
@@ -31,6 +32,10 @@ class ModelFineTuneRequest < ApplicationRecord
   after_initialize :set_default_status, if: :new_record?
   after_create :publish_formatting_request
   after_commit :broadcast_status_update, on: [ :create, :update ]
+
+  def reject_formatting!
+    update(status: :formatting_rejected, error_message: "Formatting rejected by user.")
+  end
 
   private
 
