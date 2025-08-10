@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
@@ -253,27 +253,104 @@ const SuccessPanel = styled.div`
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: #fff;
+  background-color: #f4f7f6;
   z-index: 100;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 1rem;
+  padding: 2rem;
+`;
+
+const ContentBox = styled.div`
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 2rem 3rem;
+  max-width: 700px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+`;
+
+const SuccessHeader = styled.h2`
+  font-size: 2rem;
+  color: #005eb8;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+`;
+
+const Subtitle = styled.p`
+  font-size: 1.1rem;
+  color: #4c6272;
+  margin-bottom: 2.5rem;
+`;
+
+const LifecycleList = styled.ul`
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0;
+  text-align: left;
+`;
+
+const LifecycleItem = styled.li`
+  position: relative;
+  padding-left: 2rem;
+  padding-bottom: 2rem;
   
-  h3 {
-    font-size: 1.75rem;
-    color: #003087;
-    margin-bottom: 0.75rem;
+  &:last-child {
+    padding-bottom: 0;
   }
 
-  p {
-    font-size: 1rem;
-    color: #4c6272;
-    margin-bottom: 1.5rem;
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 1px;
+    height: 100%;
+    background-color: #ced4da;
+  }
+
+  &:last-child::before {
+    height: 0;
   }
 `;
+
+const LifecycleDot = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #005eb8;
+  background-color: #fff;
+  z-index: 1;
+`;
+
+const LifecycleContent = styled.div`
+  h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+    color: #003087;
+  }
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #4c6272;
+    line-height: 1.5;
+  }
+`;
+
+const CheckmarkIcon = () => (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="12" fill="#2e7d32"/>
+      <path d="M7.5 12.5L10.5 15.5L16.5 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
 
 const FineTunePage = () => {
   const { id } = useParams();
@@ -309,15 +386,6 @@ const FineTunePage = () => {
   const [isValidatingFile, setIsValidatingFile] = useState(false);
 
   const fileInputRef = useRef(null);
-  const redirectTimer = useRef(null);
-
-  useEffect(() => {
-    return () => {
-      if (redirectTimer.current) {
-        clearTimeout(redirectTimer.current);
-      }
-    };
-  }, []);
 
   const resetForm = () => {
     setModelName('');
@@ -459,12 +527,7 @@ const FineTunePage = () => {
   };
   
   const handleRedirectNow = () => {
-    if (redirectTimer.current) {
-      clearTimeout(redirectTimer.current);
-    }
     navigate('/fine-tune-status');
-    resetForm();
-    setSubmissionState('idle');
   };
 
   const handleConfirmedSubmit = async () => {
@@ -485,13 +548,6 @@ const FineTunePage = () => {
     try {
       await createFineTuneRequest(formData).unwrap();
       setSubmissionState('success');
-      
-      redirectTimer.current = setTimeout(() => {
-        navigate('/fine-tune-status');
-        resetForm();
-        setSubmissionState('idle');
-      }, 2500);
-
     } catch (err) {
       const message = err?.data?.error || 'Failed to submit fine-tune request.';
       setSubmissionError(message);
@@ -509,24 +565,58 @@ const FineTunePage = () => {
   if (isLoading || isClinicianTypesLoading) return <Spinner />;
   if (isError || isClinicianTypesError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
 
+  if (submissionState === 'success') {
+    return (
+      <SuccessPanel>
+        <ContentBox>
+          <SuccessHeader>
+            <CheckmarkIcon />
+            Submission Successful!
+          </SuccessHeader>
+          <Subtitle>Your dataset has been added to the queue. Here's what happens next:</Subtitle>
+          <LifecycleList>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Data Formatting & Validation</h5>
+                <p>Your submitted dataset is being automatically processed and validated to ensure it matches the required format for fine-tuning.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Manual Review & Confirmation</h5>
+                <p>Once formatted, your request will move to "Awaiting Confirmation". You must go to the <strong>Fine-Tune Status</strong> page to review a data sample and confirm you want to proceed.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Fine-Tuning Process</h5>
+                <p>After your confirmation, the request enters the fine-tuning queue. The system will then use your data to train a new version of the base model.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot style={{ borderColor: '#2e7d32' }} />
+              <LifecycleContent>
+                <h5 style={{ color: '#2e7d32' }}>Completion</h5>
+                <p>When the process is finished, a new, fine-tuned model will be created and will become available in the Model Catalogue.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+          </LifecycleList>
+          <PrimaryButton onClick={handleRedirectNow} style={{ width: 'auto', marginTop: '2.5rem' }}>Go to Status Page</PrimaryButton>
+        </ContentBox>
+      </SuccessPanel>
+    );
+  }
+
   return (
     <div style={{ width: '100%' }}>
-      {submissionState === 'success' && (
-        <SuccessPanel>
-          <h3>Submission Successful!</h3>
-          <p>Your formatting request has been added to the queue.<br />You will be redirected shortly.</p>
-          <PrimaryButton onClick={handleRedirectNow} style={{ width: 'auto', margin: '0 auto' }}>
-            Go to Status Page Now
-          </PrimaryButton>
-        </SuccessPanel>
-      )}
-
       <BackLink to={`/ai-models/${model.id}`}>Back to model</BackLink>
       <PageWrapper>
         <MainContent>
           <Section>
             <h3>Fine tune {model.name}</h3>
-
             {submissionError && (
               <div style={{
                 backgroundColor: '#fdecea',
@@ -539,7 +629,6 @@ const FineTunePage = () => {
                 {submissionError}
               </div>
             )}
-
             <form onSubmit={handleSubmit}>
               <label htmlFor="modelName">Model name</label>
               <input
