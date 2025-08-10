@@ -142,16 +142,6 @@ const ToggleButton = styled.button`
   }
 `;
 
-const FormatBox = styled.pre`
-  background-color: #fff;
-  border: 1px solid #cdd4d8;
-  padding: 1rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-`;
-
 const BackLink = styled(Link)`
   display: inline-block;
   margin-bottom: 2rem;
@@ -359,7 +349,67 @@ const CheckmarkIcon = () => (
     </svg>
 );
 
+const FormatDisplayContainer = styled.div`
+  border: 1px solid #cdd4d8;
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const FormatTabs = styled.div`
+  display: flex;
+  background-color: #f0f4f5;
+  border-bottom: 1px solid #cdd4d8;
+`;
+
+const FormatTab = styled.button`
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ isActive }) => (isActive ? '#fff' : 'transparent')};
+  color: ${({ isActive }) => (isActive ? '#005eb8' : '#4c6272')};
+  border-bottom: 2px solid ${({ isActive }) => (isActive ? '#005eb8' : 'transparent')};
+  margin-bottom: -1px;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${({ isActive }) => (isActive ? '#fff' : '#e8edee')};
+  }
+`;
+
+const CodeBlock = styled.pre`
+  background-color: #fff;
+  padding: 1rem;
+  margin: 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: monospace;
+`;
+
 const FAILED_STATUSES = ['formatting_failed', 'fine_tuning_failed', 'formatting_rejected'];
+
+const JSON_EXAMPLE = `[
+  {
+    "instruction": "Summarize the clinical note.",
+    "input": "Patient is a 65-year-old male with a history of hypertension and type 2 diabetes...",
+    "response": "65yo M w/ hx HTN, T2DM."
+  },
+  {
+    "instruction": "Extract the key symptom.",
+    "input": "A 42-year-old female presents with acute abdominal pain in the right lower quadrant...",
+    "response": "Symptom: Acute RLQ abdominal pain."
+  }
+]`;
+
+const CSV_EXAMPLE = `instruction,input,response
+"Summarize the clinical note.","Patient is a 65-year-old male with a history of hypertension and type 2 diabetes...","65yo M w/ hx HTN, T2DM."
+"Extract the key symptom.","A 42-year-old female presents with acute abdominal pain in the right lower quadrant...","Symptom: Acute RLQ abdominal pain."`;
+
 
 const FineTunePage = () => {
   const { id } = useParams();
@@ -389,6 +439,7 @@ const FineTunePage = () => {
   const [clinicianTypeId, setClinicianTypeId] = useState('');
   const [file, setFile] = useState(null);
   const [showFormat, setShowFormat] = useState(false);
+  const [activeFormat, setActiveFormat] = useState('json');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitParams, setSubmitParams] = useState(null);
   const [submissionError, setSubmissionError] = useState('');
@@ -789,20 +840,19 @@ const FineTunePage = () => {
             )}
   
             <ToggleButton type="button" onClick={() => setShowFormat((prev) => !prev)}>
-              {showFormat ? 'Hide format' : 'View expected format'}
+              {showFormat ? 'Hide expected formats' : 'View expected formats'}
             </ToggleButton>
   
             {showFormat && (
-              <FormatBox>
-                {(() => {
-                  try {
-                    const parsed = JSON.parse(model.fine_tune_data_format);
-                    return JSON.stringify(parsed, null, 2);
-                  } catch (err) {
-                    return 'Invalid JSON format';
-                  }
-                })()}
-              </FormatBox>
+              <FormatDisplayContainer>
+                <FormatTabs>
+                  <FormatTab isActive={activeFormat === 'json'} onClick={() => setActiveFormat('json')}>JSON</FormatTab>
+                  <FormatTab isActive={activeFormat === 'csv'} onClick={() => setActiveFormat('csv')}>CSV</FormatTab>
+                </FormatTabs>
+                <CodeBlock>
+                  {activeFormat === 'json' ? JSON_EXAMPLE : CSV_EXAMPLE}
+                </CodeBlock>
+              </FormatDisplayContainer>
             )}
           </Section>
           <Section>
