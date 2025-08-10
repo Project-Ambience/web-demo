@@ -38,7 +38,8 @@ RSpec.describe ModelFineTuneRequest, type: :model do
         waiting_for_fine_tune: 5,
         fine_tuning_in_progress: 6,
         fine_tuning_failed: 7,
-        fine_tuning_completed: 8
+        fine_tuning_completed: 8,
+        formatting_rejected: 9
       )
     end
   end
