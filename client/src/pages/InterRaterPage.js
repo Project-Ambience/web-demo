@@ -1,18 +1,11 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { useRef, useEffect } from 'react';
-import { useDispatch } from 'react-redux';
-import { createConsumer } from '@rails/actioncable';
-import { apiSlice } from '../app/apiSlice';
-import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import {
-  useGetConversationsByAiModelQuery,
+  useGetInterRaterResponsePairsQuery,
   useGetAiModelByIdQuery,
   useAddInterRaterMutation,
-  useGetConversationsQuery,
-  useGetAiModelsQuery,
-  useCreateConversationMutation,
+  useAddInterRaterFeedbackMutation,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 
@@ -29,6 +22,55 @@ const WhiteContainer = styled.div`
   border: 1px solid #e8edee;
   border-radius: 6px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+`;
+
+const PageWrapper = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const PaginationWrapper = styled.div`
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+`;
+
+const PageButton = styled.button`
+  background-color: ${({ active }) => (active ? '#005eb8' : '#fff')};
+  color: ${({ active }) => (active ? '#fff' : '#005eb8')};
+  border: 1px solid #005eb8;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+
+  &:hover {
+    background-color: ${({ active }) =>
+      active ? '#004199' : '#f0f4f8'};
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+`;
+
+const Card = styled.div`
+  background-color: #fff;
+  border: 1px solid #e8edee;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+`;
+
+const CardContent = styled.div`
+  margin-bottom: 0.75rem;
+  p {
+    margin: 0.25rem 0;
+    line-height: 1.5;
+  }
 `;
 
 const BackLink = styled(Link)`
@@ -48,6 +90,92 @@ const BackLink = styled(Link)`
   }
 `;
 
+const PageHeader = styled.div`
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  h2 {
+    font-size: 2rem;
+    color: #333;
+    margin: 0;
+    margin-bottom: 1rem;
+  }
+
+  p {
+    color: #4c6272;
+    margin-top: 0.2rem;
+  }
+`;
+
+const EmptyState = styled.div`
+  text-align: center;
+  padding: 3rem 2rem;
+  border: 2px dashed #d1d9de;
+  border-radius: 8px;
+  background-color: #f9fbfc;
+
+  h3 {
+    color: #4c6272;
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #777;
+    font-size: 1.1rem;
+  }
+`;
+
+const LikertScale = styled.div`
+  display: flex;
+  justify-content: space-around;
+  margin: 1.5rem 0;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 0.8rem;
+    color: #444;
+    cursor: pointer;
+    flex: 1;
+
+    input {
+      margin-bottom: 0.5rem;
+      accent-color: #005eb8;
+      width: 18px;
+      height: 18px;
+    }
+
+    span {
+      margin-top: 0.3rem;
+      text-align: center;
+      white-space: pre-line;
+    }
+  }
+`;
+
+const FeedbackBox = styled.div`
+  background-color: #f7fafd;
+  border: 1px solid #d8e6f2;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+`;
+
+const CommentInput = styled.textarea`
+  width: 100%;
+  height: 80px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  resize: vertical;
+  margin-bottom: 1rem;
+`;
+
 const SubmitButton = styled.button`
   background-color: #005eb8;
   color: #fff;
@@ -56,7 +184,6 @@ const SubmitButton = styled.button`
   border-radius: 6px;
   font-weight: bold;
   cursor: pointer;
-  margin-top: 2rem;
 
   &:hover {
     background-color: #004199;
@@ -68,52 +195,34 @@ const SubmitButton = styled.button`
   }
 `;
 
-const ComparisonWrapper = styled.div`
+const ThankYouMessage = styled.div`
+  margin-top: 1rem;
+  padding: 1.25rem;
+  background-color: #e8f5e9;
+  border: 1px solid #b2dfdb;
+  border-radius: 8px;
+  color: #2e7d32;
+  font-weight: 500;
+`;
+
+const ResponseComparison = styled.div`
   display: flex;
-  gap: 2rem;
+  gap: 1.5rem;
+  margin-top: 1rem;
   flex-wrap: wrap;
-  align-items: stretch;
-  margin-top: 0.2rem;
 
   @media (max-width: 768px) {
     flex-direction: column;
   }
 `;
 
-const ConversationColumn = styled.div`
-  flex: 1;
-  min-width: 300px;
-  display: flex;
-  flex-direction: column;
-`;
-
-const ResponseScrollArea = styled.div`
-  max-height: 400px;
-  overflow-y: auto;
-  margin-top: 0.5rem;
-  padding-right: 0.5rem;
-
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 6px;
-  }
-`;
-
 const ResponseBox = styled.div`
+  flex: 1;
   background-color: #f9fafb;
   padding: 1rem;
   border: 1px solid #dce3e8;
   border-radius: 8px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  min-width: 300px;
 
   h4 {
     margin-top: 0;
@@ -127,75 +236,9 @@ const ResponseBox = styled.div`
   p {
     white-space: pre-line;
     color: #444;
-    line-height: 1.4;
+    line-height: 1.5;
     font-size: 0.95rem;
-    margin: 0.25rem 0;
   }
-
-  strong {
-    font-weight: 600;
-    display: inline-block;
-    margin-right: 0.25rem;
-  }
-`;
-
-
-const Navigation = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 1rem 0;
-  gap: 1rem;
-
-  span {
-    flex: 1;
-    text-align: center;
-    font-weight: 500;
-    color: #555;
-  }
-`;
-
-const PageHeader = styled.div`
-  margin-bottom: 1.5rem;
-
-  h2 {
-    font-size: 2rem;
-    color: #333;
-    margin: 0;
-  }
-
-  p {
-    color: #4c6272;
-    margin-top: 1rem;
-  }
-`;
-
-const NavButton = styled.button`
-  background-color: #e0ebf6;
-  color: #005eb8;
-  border: none;
-  padding: 0.4rem 0.9rem;
-  border-radius: 4px;
-  font-weight: 500;
-  cursor: pointer;
-  min-width: 70px;
-
-  &:hover {
-    background-color: #cddff3;
-  }
-
-  &:disabled {
-    background-color: #f0f4f8;
-    color: #999;
-    cursor: not-allowed;
-  }
-`;
-
-const PageIndicator = styled.span`
-  flex: 1;
-  text-align: center;
-  font-weight: 500;
-  color: #555;
 `;
 
 const Tag = styled.span`
@@ -321,117 +364,39 @@ const ModalFooter = styled.div`
   }
 `;
 
-const FilterInput = styled.input`
-  width: 100%;
-  padding: 0.6rem 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid #dce3e8;
-  border-radius: 6px;
-  font-size: 0.95rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+const HeaderRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
 
-  &:focus {
-    outline: none;
-    border-color: #005eb8;
-    box-shadow: 0 0 0 3px rgba(0, 94, 184, 0.2);
-  }
-
-  &::placeholder {
-    color: #999;
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
   }
 `;
 
-const MakeInferenceLink = styled.button`
-  background: none;
-  border: none;
-  color: #005eb8;
-  font-weight: bold;
-  font-size: 0.95rem;
-  text-decoration: underline;
-  cursor: pointer;
-  align-self: flex-end;
-  margin-top: 2rem;
-
-  &:hover {
-    color: #004199;
-  }
-`;
-
-const NewInferencePairPage = () => {
+const InterRaterPage = () => {
   const { id: ai_model_id } = useParams();
+  const [formState, setFormState] = useState({});
+  const [feedbackSent, setFeedbackSent] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 3;
 
-  const [firstFilter, setFirstFilter] = useState('');
-  const [secondFilter, setSecondFilter] = useState('');
-
-  const [firstIndex, setFirstIndex] = useState(0);
-  const [secondIndex, setSecondIndex] = useState(1);
-
-  const { data: allFirstConversations = [], isLoading: isLoadingFirst } = useGetConversationsByAiModelQuery(ai_model_id);
-  const { data: allSecondConversations = [], isLoading: isLoadingSecond } = useGetConversationsQuery();
-
-  const firstConversations = allFirstConversations
-  .filter(c => c.base_prompt && c.first_response)
-  .filter(c =>
-    c.id.toString().includes(firstFilter.trim()) ||
-    (c.ai_model?.name || '').toLowerCase().includes(firstFilter.toLowerCase())
-  );
-
-  const secondConversations = allSecondConversations
-    .filter(c => c.base_prompt && c.first_response)
-    .filter(c =>
-      c.id.toString().includes(secondFilter.trim()) ||
-      (c.ai_model?.name || '').toLowerCase().includes(secondFilter.toLowerCase())
-    );
-
-  React.useEffect(() => {
-    if (firstIndex >= firstConversations.length) {
-      setFirstIndex(0);
-    }
-  }, [firstConversations.length, firstIndex]);
-
-  React.useEffect(() => {
-    setSecondIndex(0);
-  }, [secondConversations.length]);
-
-  const { data: model } = useGetAiModelByIdQuery(ai_model_id);
+  const { data: evaluations, isLoading } = useGetInterRaterResponsePairsQuery(ai_model_id);
+  const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
+
+  const [createInterRaterFeedback] = useAddInterRaterFeedbackMutation();
+  const totalItems = evaluations?.length || 0;
+  const totalPages = Math.ceil(totalItems / itemsPerPage);
+  const paginatedEvaluations = evaluations?.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalData, setModalData] = useState(null);
-
-  const [showModelSelection, setShowModelSelection] = useState(false);
-  const [selectedModelId, setSelectedModelId] = useState('');
-
-  const { data: allModels = [], isLoading: isLoadingModels } = useGetAiModelsQuery();
-
-  const [showChatModal, setShowChatModal] = useState(false);
-  const [chatConversationId, setChatConversationId] = useState(null);
-
-  const [createConversation] = useCreateConversationMutation();
-
-  const cable = useRef(null);
-  const dispatch = useDispatch();
-
-  const navigate = useNavigate();
-
-  const handleModelSelect = async (modelId) => {
-    const model = allModels.find((m) => m.id.toString() === modelId.toString());
-    try {
-      const convo = await createConversation({
-        conversation: {
-          ai_model_id: model.id,
-          title: `Chat with ${model.name}`,
-        },
-      }).unwrap();
-  
-      setChatConversationId(convo.id);
-      setShowModelSelection(false);
-      setShowChatModal(true);
-    } catch (error) {
-      alert('Failed to create conversation.');
-      console.error(error);
-    }
-  };
 
   const openModal = (template) => {
     setModalData(template);
@@ -443,232 +408,259 @@ const NewInferencePairPage = () => {
     setModalData(null);
   };
 
-  const handleNavigate = (setIndex, currentIndex, direction, list) => {
-    const newIndex = currentIndex + direction;
-    if (newIndex >= 0 && newIndex < list.length) {
-      setIndex(newIndex);
+  const handleChange = (id, field, value) => {
+    setFormState((prev) => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: field === 'rating' ? parseInt(value, 10) : value,
+      },
+    }));
+  };
+
+  const handleSubmit = async (item) => {
+    const form = formState[item.id];
+    const payload = {
+      inter_rater_id: item.id,
+      rating: form?.rating,
+      comment: form?.comment,
+    };
+  
+    try {
+      await createInterRaterFeedback(payload).unwrap();
+  
+      setFeedbackSent((prev) => ({
+        ...prev,
+        [item.id]: true,
+      }));
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
     }
   };
   
-  const handleSubmit = async () => {
-    const confirmed = window.confirm("Are you sure you want to submit this Inference Pair?");
-    if (!confirmed) return;
-  
-    try {
-      await createInterRater({
-        ai_model_id,
-        first_conversation_id: convo1.id,
-        second_conversation_id: convo2.id,
-      }).unwrap();
-  
-      navigate(`/ai-models/${ai_model_id}/evaluate`);
-    } catch (e) {
-      alert("❌ Error creating InterRater");
-      console.error(e);
-    }
-  };  
-  
-  const convo1 = firstConversations[firstIndex];
-  const convo2 = secondConversations[secondIndex];
-
-  useEffect(() => {
-    if (!chatConversationId || !showChatModal) {
-      return () => {};
-    }
-  
-    if (!cable.current) {
-      cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
-    }
-  
-    const subscription = cable.current.subscriptions.create(
-      {
-        channel: 'InferenceChannel',
-        conversation_id: chatConversationId,
-      },
-      {
-        received(data) {
-          console.log('📡 InferenceChannel received:', data);
-  
-          dispatch(apiSlice.util.invalidateTags([
-            { type: 'Conversation', id: chatConversationId },
-            { type: 'Conversation', id: 'BY_AI_MODEL' }
-          ]));
-        },
-        connected() {
-          console.log(`✅ Connected to InferenceChannel ${chatConversationId}`);
-        },
-        disconnected() {
-          console.log(`❌ Disconnected from InferenceChannel ${chatConversationId}`);
-        },
-      }
-    );
-  
-    return () => {
-      console.log(`🧹 Unsubscribed from InferenceChannel ${chatConversationId}`);
-      subscription.unsubscribe();
-    };
-  }, [chatConversationId, showChatModal, dispatch]);
-
-  if (isLoadingFirst || isLoadingSecond || !model) return <Spinner />;
-  
   return (
     <PageLayout>
-      <BackLink to={`/ai-models/${ai_model_id}/evaluate`}>
-        Back to Evaluate
-      </BackLink>
+      <BackLink to={`/ai-models/${ai_model_id}`}>Back to Model</BackLink>
       <WhiteContainer>
-        <PageHeader>
-          <h2>New Inference Pair</h2>
-          <p><strong>Model:</strong> {model?.name}</p>
-          <p><strong>Base Model:</strong> {model?.base_model?.name}</p>
-        </PageHeader>
+        <PageWrapper>
+          <HeaderRow>
+            <PageHeader>
+              <h2>Model Evaluation</h2>
+              {model && (
+                <>
+                  <p><strong>Model:</strong> {model.name}</p>
+                  {model.base_model && <p><strong>Base Model:</strong> {model.base_model.name}</p>}
+                </>
+              )}
+            </PageHeader>
+            <Link to={`/ai-models/${ai_model_id}/new/inference-pair`} style={{ textDecoration: 'none' }}>
+              <SubmitButton>New Inference Pair</SubmitButton>
+            </Link>
+          </HeaderRow>
 
-        <WhiteContainer>
-          <ComparisonWrapper>
-            <ConversationColumn>
-              <FilterInput
-                type="text"
-                placeholder="Filter by model name or ID"
-                value={firstFilter}
-                onChange={(e) => setFirstFilter(e.target.value)}
-              />
-              <ResponseBox>
-                <h4>First Inference</h4>
-                {convo1 ? (
-                  <>
-                    <p><strong>ID:</strong> {convo1.id}</p>
-                    <p><strong>Model:</strong> {convo1.ai_model?.name}</p>
-                    <p>
-                      <strong>Fine-tuned Speciality:</strong> {convo1?.ai_model?.speciality || "-"}
-                    </p>
-                    <p>
-                      <strong>Base Model:</strong> {convo1?.ai_model?.base_model_name || "-"}
-                    </p>
-                    <p>
-                      <Tag
-                        clickable={convo1.few_shot_template?.examples?.length > 0}
-                        highlight={convo1.few_shot_template?.examples?.length > 0}
-                        onClick={() => convo1.few_shot_template && openModal(convo1.few_shot_template)}
-                        title="Click to view few-shot template"
-                      >
-                        Few Shot: {convo1.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
-                        {convo1.few_shot_template && (
-                          <Icon
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+          {isLoading || isModelLoading ? (
+            <Spinner />
+          ) : totalItems === 0 ? (
+            <EmptyState>
+              <h3>No Evaluation Data</h3>
+              <p>This model does not have any evaluation data yet.</p>
+            </EmptyState>
+          ) : (
+            <>
+              {paginatedEvaluations.map((item) => (
+                <Card key={item.id}>
+                  <CardContent>
+                    <ResponseComparison>
+                      <ResponseBox>
+                        <h4>First Inference</h4>
+                        <p>
+                          <strong>Model:</strong>{' '}
+                          {item.first_conversation_ai_model_name}
+                        </p>
+                        <p>
+                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          {item.first_conversation_ai_model_speciality || "-"}
+                        </p>
+                        <p>
+                          <strong>Base Model:</strong>{' '}
+                          {item.first_conversation_base_model_name || "-"}
+                        </p>
+                        <p>
+                          <Tag
+                            clickable={!!item.first_conversation_few_shot_template}
+                            highlight={!!item.first_conversation_few_shot_template}
+                            onClick={() => {
+                              if (item.first_conversation_few_shot_template) {
+                                openModal(item.first_conversation_few_shot_template);
+                              }
+                            }}
+                            title="Click to view few-shot template"
                           >
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </Icon>
-                        )}
-                      </Tag>
-                      <Tag>RAG: False</Tag>
-                      <Tag highlight={!!convo1.cot}>
-                        CoT: {convo1.cot ? 'True' : 'False'}
-                      </Tag>
-                    </p>
-                    <hr style={{ margin: '1rem 0' }} />
-                    <p><strong>Prompt:</strong> {convo1.base_prompt}</p>
-                    <p><strong>Files:</strong> {convo1.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                    <ResponseScrollArea>
-                      <p><strong>Response:</strong> {convo1.first_response}</p>
-                    </ResponseScrollArea>
-                  </>
-                ) : (
-                  <p style={{ color: '#888' }}>No matching conversation found.</p>
-                )}
-              </ResponseBox>
-              <Navigation>
-                <NavButton onClick={() => handleNavigate(setFirstIndex, firstIndex, -1, firstConversations)} disabled={firstIndex === 0}>Prev</NavButton>
-                <PageIndicator>
-                  {firstConversations.length === 0 ? '0 / 0' : `${firstIndex + 1} / ${firstConversations.length}`}
-                </PageIndicator>
-                <NavButton onClick={() => handleNavigate(setFirstIndex, firstIndex, 1, firstConversations)} disabled={firstIndex >= firstConversations.length - 1}>Next</NavButton>
-              </Navigation>
-            </ConversationColumn>
-
-            <ConversationColumn>
-              <FilterInput
-                type="text"
-                placeholder="Filter by model name or ID"
-                value={secondFilter}
-                onChange={(e) => setSecondFilter(e.target.value)}
-              />
-              <ResponseBox>
-                <h4>Second Inference</h4>
-                {convo2 ? (
-                  <>
-                    <p><strong>ID:</strong> {convo2.id}</p>
-                    <p><strong>Model:</strong> {convo2.ai_model?.name}</p>
-                    <p>
-                      <strong>Fine-tuned Speciality:</strong> {convo2?.ai_model?.speciality || "-"}
-                    </p>
-                    <p>
-                      <strong>Base Model:</strong> {convo2?.ai_model?.base_model_name || "-"}
-                    </p>
-                    <p>
-                      <Tag
-                        clickable={convo2.few_shot_template?.examples?.length > 0}
-                        highlight={convo2.few_shot_template?.examples?.length > 0}
-                        onClick={() => convo2.few_shot_template && openModal(convo2.few_shot_template)}
-                        title="Click to view few-shot template"
-                      >
-                        Few Shot: {convo2.few_shot_template?.examples?.length > 0 ? 'True' : 'False'}
-                        {convo2.few_shot_template && (
-                          <Icon
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                            Few Shot: {item.first_conversation_few_shot_template ? 'True' : 'False'}{' '}
+                            {item.first_conversation_few_shot_template && (
+                              <Icon
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </Icon>
+                            )}
+                          </Tag>
+                          <Tag>RAG: False</Tag>
+                          <Tag highlight={!!item.first_conversation_cot}>
+                            CoT: {item.first_conversation_cot ? 'True' : 'False'}
+                          </Tag>
+                        </p>
+                        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
+                        <p><strong>Prompt:</strong> {item.first_conversation_base_prompt}</p>
+                        <p>
+                          <strong>File:</strong>{' '}
+                          {item.first_conversation_file_url && item.first_conversation_file_name ? (
+                            <a
+                              href={item.first_conversation_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Attached File 
+                            </a>
+                          ) : (
+                            'No file uploaded'
+                          )}
+                        </p>
+                        <p><strong>Response:</strong> {item.first_conversation_first_response}</p>
+                      </ResponseBox>
+                      <ResponseBox>
+                        <h4>Second Inference</h4>
+                        <p>
+                          <strong>Model:</strong>{' '}
+                          {item.second_conversation_ai_model_name}
+                        </p>
+                        <p>
+                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          {item.second_conversation_ai_model_speciality || "-"}
+                        </p>
+                        <p>
+                          <strong>Base Model:</strong>{' '}
+                          {item.second_conversation_base_model_name || "-"}
+                        </p>
+                        <p>
+                        <Tag
+                            clickable={!!item.second_conversation_few_shot_template}
+                            highlight={!!item.second_conversation_few_shot_template}
+                            onClick={() => {
+                              if (item.second_conversation_few_shot_template) {
+                                openModal(item.second_conversation_few_shot_template);
+                              }
+                            }}
+                            title="Click to view few-shot template"
                           >
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                            <circle cx="12" cy="12" r="3" />
-                          </Icon>
-                        )}
-                      </Tag>
-                      <Tag>RAG: False</Tag>
-                      <Tag highlight={!!convo2.cot}>
-                        CoT: {convo2.cot ? 'True' : 'False'}
-                      </Tag>
-                    </p>
-                    <hr style={{ margin: '1rem 0' }} />
-                    <p><strong>Prompt:</strong> {convo2.base_prompt}</p>
-                    <p><strong>Files:</strong> {convo2.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                    <ResponseScrollArea>
-                      <p><strong>Response:</strong> {convo2.first_response}</p>
-                    </ResponseScrollArea>
-                  </>
-                ) : (
-                  <p style={{ color: '#888' }}>No matching conversation found.</p>
-                )}
-              </ResponseBox>
-              <Navigation>
-                <NavButton onClick={() => handleNavigate(setSecondIndex, secondIndex, -1, secondConversations)} disabled={secondIndex === 0}>Prev</NavButton>
-                <PageIndicator>
-                  {secondConversations.length === 0 ? '0 / 0' : `${secondIndex + 1} / ${secondConversations.length}`}
-                </PageIndicator>
-                <NavButton onClick={() => handleNavigate(setSecondIndex, secondIndex, 1, secondConversations)} disabled={secondIndex >= secondConversations.length - 1}>Next</NavButton>
-              </Navigation>
-            </ConversationColumn>
-          </ComparisonWrapper>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <MakeInferenceLink onClick={() => setShowModelSelection(true)}>
-              + Make New Inference
-            </MakeInferenceLink>
-          </div>
-        </WhiteContainer>
+                            Few Shot: {item.second_conversation_few_shot_template ? 'True' : 'False'}{' '}
+                            {item.second_conversation_few_shot_template && (
+                              <Icon
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </Icon>
+                            )}
+                          </Tag>
+                          <Tag>RAG: False</Tag>
+                          <Tag highlight={!!item.second_conversation_cot}>
+                            CoT: {item.second_conversation_cot ? 'True' : 'False'}
+                          </Tag>
+                        </p>
+                        <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
+                        <p><strong>Prompt:</strong> {item.second_conversation_base_prompt}</p>
+                        <p>
+                          <strong>File:</strong>{' '}
+                          {item.second_conversation_file_url && item.second_conversation_file_name ? (
+                            <a
+                              href={item.second_conversation_file_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Attached File
+                            </a>
+                          ) : (
+                            'No file uploaded'
+                          )}
+                        </p>
+                        <p><strong>Response:</strong> {item.second_conversation_first_response}</p>
+                      </ResponseBox>
+                    </ResponseComparison>
+                  </CardContent>
 
-        <SubmitButton onClick={handleSubmit}>
-          Submit
-        </SubmitButton>
+                  {feedbackSent[item.id] ? (
+                    <ThankYouMessage>✅ Thank you for your feedback!</ThankYouMessage>
+                  ) : (
+                    <FeedbackBox>
+                      <LikertScale>
+                        {[0, 1, 2, 3].map((value) => (
+                          <label key={value}>
+                            <input
+                              type="radio"
+                              name={`rating-${item.id}`}
+                              value={value}
+                              checked={formState[item.id]?.rating === value}
+                              onChange={(e) =>
+                                handleChange(item.id, 'rating', e.target.value)
+                              }
+                            />
+                            <span>
+                              {[
+                                'Strongly\nPrefer First Inference',
+                                'Prefer\nFirst Inference',
+                                'Prefer\nSecond Inference',
+                                'Strongly\nPrefer Second Inference'
+                              ][value]}
+                            </span>
+                          </label>
+                        ))}
+                      </LikertScale>
+                      <CommentInput
+                        placeholder="Comment..."
+                        value={formState[item.id]?.comment || ''}
+                        onChange={(e) =>
+                          handleChange(item.id, 'comment', e.target.value)
+                        }
+                      />
+                      <SubmitButton
+                        onClick={() => handleSubmit(item)}
+                        disabled={formState[item.id]?.rating === undefined}
+                      >
+                        Submit Feedback
+                      </SubmitButton>
+                    </FeedbackBox>
+                  )}
+                </Card>
+              ))}
+              {totalPages > 1 && (
+                <PaginationWrapper>
+                  {Array.from({ length: totalPages }, (_, index) => (
+                    <PageButton
+                      key={index}
+                      active={index + 1 === currentPage}
+                      onClick={() => setCurrentPage(index + 1)}
+                    >
+                      {index + 1}
+                    </PageButton>
+                  ))}
+                </PaginationWrapper>
+              )}
+            </>
+          )}
+        </PageWrapper>
       </WhiteContainer>
-
       {isModalOpen && (
         <>
           <ModalOverlay onClick={closeModal} />
@@ -700,122 +692,8 @@ const NewInferencePairPage = () => {
         </>
       )}
 
-      {showModelSelection && (
-        <>
-          <ModalOverlay onClick={() => setShowModelSelection(false)} />
-          <ModalContainer>
-            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Select Model</span>
-              <button
-                onClick={() => setShowModelSelection(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                  cursor: 'pointer',
-                  color: '#999',
-                }}
-                aria-label="Close"
-              >
-                ×
-              </button>
-            </ModalHeader>
-
-            <ModalContent>
-              {isLoadingModels ? (
-                <p>Loading models...</p>
-              ) : (
-                <>
-                  <select
-                    value={selectedModelId}
-                    onChange={(e) => setSelectedModelId(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '0.6rem',
-                      borderRadius: '6px',
-                      border: '1px solid #ccc',
-                      marginBottom: '1rem',
-                    }}
-                  >
-                    <option value="">Select a model</option>
-                    {allModels
-                      .map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.name}
-                        </option>
-                      ))}
-                  </select>
-                </>
-              )}
-            </ModalContent>
-            <ModalFooter>
-              <button
-                onClick={() => setShowModelSelection(false)}
-                style={{
-                  backgroundColor: '#e0e0e0',
-                  color: '#333',
-                  marginRight: '1rem',
-                  padding: '0.6rem 1.5rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontWeight: 'bold',
-                }}
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={() => {
-                  if (selectedModelId) {
-                    handleModelSelect(selectedModelId);
-                  }
-                }}
-                disabled={!selectedModelId}
-                style={{
-                  backgroundColor: selectedModelId ? '#005eb8' : '#c8d3e0',
-                  color: '#fff',
-                  padding: '0.6rem 1.5rem',
-                  borderRadius: '8px',
-                  border: 'none',
-                  cursor: selectedModelId ? 'pointer' : 'not-allowed',
-                  fontWeight: 'bold',
-                }}
-              >
-                Confirm
-              </button>
-            </ModalFooter>
-          </ModalContainer>
-        </>
-      )}
-
-      {showChatModal && chatConversationId && (
-        <>
-          <ModalOverlay onClick={() => setShowChatModal(false)} />
-          <ModalContainer style={{ maxWidth: '900px', padding: 0 }}>
-            <ModalHeader>
-              Inference Chat
-            </ModalHeader>
-            <ModalContent style={{ padding: 0 }}>
-              <iframe
-                src={`/chat/${chatConversationId}?inferenceOnly=true`}
-                title="Inference Chat"
-                style={{
-                  border: 'none',
-                  width: '100%',
-                  height: '70vh',
-                  borderBottomLeftRadius: '16px',
-                  borderBottomRightRadius: '16px',
-                }}
-              />
-            </ModalContent>
-          </ModalContainer>
-        </>
-      )}
-
     </PageLayout>
   );
 };
 
-export default NewInferencePairPage;
+export default InterRaterPage;
