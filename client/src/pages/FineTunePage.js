@@ -701,7 +701,7 @@ const FineTunePage = () => {
             <input
               id="file-upload"
               type="file"
-              accept=".json,.csv,.txt"
+              accept=".json,.csv"
               ref={fileInputRef}
               style={{ display: 'none' }}
               onChange={(e) => handleFileSelection(e.target.files)}
