@@ -748,7 +748,7 @@ const StatusLifecycleModal = ({ onClose }) => {
             <LifecycleItem>
               <LifecycleDot style={{ borderColor: '#2e7d32' }} />
               <LifecycleContent>
-                <h5 style={{ color: '#2e7d32' }}>Done</h5>
+                <h5 style={{ color: '#2e7d32' }}>Completion</h5>
                 <p>The model has been successfully fine-tuned and the new version is available in the Model Catalogue.</p>
               </LifecycleContent>
             </LifecycleItem>
