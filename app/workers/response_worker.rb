@@ -24,6 +24,10 @@ class ResponseWorker
       { message: { id: message.id, role: message.role, content: message.content }, status: conversation.status }
     )
 
+    if conversation.rag
+      conversation.completed!
+    end
+
     ack!
   rescue => e
     reject!

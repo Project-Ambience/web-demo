@@ -533,7 +533,7 @@ const NewInferencePairPage = () => {
                 onChange={(e) => setFirstFilter(e.target.value)}
               />
               <ResponseBox>
-                <h4>First Inference</h4>
+                <h4>First Response</h4>
                 {convo1 ? (
                   <>
                     <p><strong>ID:</strong> {convo1.id}</p>
@@ -566,7 +566,9 @@ const NewInferencePairPage = () => {
                           </Icon>
                         )}
                       </Tag>
-                      <Tag>RAG: False</Tag>
+                      <Tag highlight={!!convo1.rag}>
+                        RAG: {convo1.rag ? 'True' : 'False'}
+                      </Tag>
                       <Tag highlight={!!convo1.cot}>
                         CoT: {convo1.cot ? 'True' : 'False'}
                       </Tag>
@@ -599,7 +601,7 @@ const NewInferencePairPage = () => {
                 onChange={(e) => setSecondFilter(e.target.value)}
               />
               <ResponseBox>
-                <h4>Second Inference</h4>
+                <h4>Second Response</h4>
                 {convo2 ? (
                   <>
                     <p><strong>ID:</strong> {convo2.id}</p>
@@ -632,7 +634,9 @@ const NewInferencePairPage = () => {
                           </Icon>
                         )}
                       </Tag>
-                      <Tag>RAG: False</Tag>
+                      <Tag highlight={!!convo2.rag}>
+                        RAG: {convo2.rag ? 'True' : 'False'}
+                      </Tag>
                       <Tag highlight={!!convo2.cot}>
                         CoT: {convo2.cot ? 'True' : 'False'}
                       </Tag>

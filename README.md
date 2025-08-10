@@ -1,4 +1,4 @@
-# 🚀 Project Ambience 
+# 🚀 LLMedic 
 
 ## Environment Variables
 

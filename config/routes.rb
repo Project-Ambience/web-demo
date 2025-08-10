@@ -17,6 +17,7 @@ Rails.application.routes.draw do
         post :formatting_complete
       end
     end
+    resources :rag_data_adding_requests, only: [ :create ]
     resources :ai_models, only: [ :index, :show ] do
       collection do
         get :tunable
