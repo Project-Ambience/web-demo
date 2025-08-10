@@ -6,6 +6,8 @@ import {
   useGetClinicianTypesQuery,
   useCreateFineTuneRequestMutation,
   useGetQueueTrafficQuery,
+  useGetAiModelsQuery,
+  useGetFineTuneRequestsQuery,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
@@ -247,6 +249,11 @@ const FileErrorText = styled.p`
   height: 1rem;
 `;
 
+const ValidationErrorText = styled(FileErrorText)`
+  margin-top: -1rem;
+  text-align: left;
+`;
+
 const SuccessPanel = styled.div`
   position: fixed;
   top: 70px;
@@ -352,6 +359,8 @@ const CheckmarkIcon = () => (
     </svg>
 );
 
+const FAILED_STATUSES = ['formatting_failed', 'fine_tuning_failed', 'formatting_rejected'];
+
 const FineTunePage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -360,12 +369,16 @@ const FineTunePage = () => {
   const {
     data: clinicianTypes,
     isLoading: isClinicianTypesLoading,
-    isError: isClinicianTypesError,
   } = useGetClinicianTypesQuery();
 
-  const [createFineTuneRequest, { isLoading: isSubmitting }] = useCreateFineTuneRequestMutation();
+  const { data: allModels, isLoading: isLoadingAllModels } = useGetAiModelsQuery();
+  const { data: allRequestsData, isLoading: isLoadingAllRequests } = useGetFineTuneRequestsQuery({ status: 'all', per: 10000 });
+  const allRequests = allRequestsData?.requests;
+
+
+  const [createFineTuneRequest] = useCreateFineTuneRequestMutation();
   
-  const { data: trafficData, isLoading: isTrafficLoading, isError: isTrafficError } = useGetQueueTrafficQuery(undefined, {
+  const { data: trafficData, isLoading: isTrafficLoading } = useGetQueueTrafficQuery(undefined, {
     pollingInterval: 15000,
   });
 
@@ -380,12 +393,43 @@ const FineTunePage = () => {
   const [submitParams, setSubmitParams] = useState(null);
   const [submissionError, setSubmissionError] = useState('');
   const [fileError, setFileError] = useState('');
+  const [nameError, setNameError] = useState('');
   const [isDragging, setIsDragging] = useState(false);
   const [showQueueWarning, setShowQueueWarning] = useState(false);
   const [submissionState, setSubmissionState] = useState('idle');
   const [isValidatingFile, setIsValidatingFile] = useState(false);
 
   const fileInputRef = useRef(null);
+
+  const validateModelName = (name) => {
+    if (!allModels || !allRequests) return true;
+
+    const normalizedName = name.trim().toLowerCase();
+    if (!normalizedName) return true;
+
+    const isNameInModels = allModels.some(m => m.name.toLowerCase() === normalizedName);
+    if (isNameInModels) {
+      setNameError('This model name is already in use.');
+      return false;
+    }
+    
+    const activeRequests = allRequests.filter(req => !FAILED_STATUSES.includes(req.status));
+    const isNameInActiveRequests = activeRequests.some(req => req.name.toLowerCase() === normalizedName);
+    if (isNameInActiveRequests) {
+      setNameError('This name is already used in an active request.');
+      return false;
+    }
+
+    setNameError('');
+    return true;
+  };
+  
+  const handleNameChange = (e) => {
+    setModelName(e.target.value);
+    if (nameError) {
+      validateModelName(e.target.value);
+    }
+  };
 
   const resetForm = () => {
     setModelName('');
@@ -396,6 +440,7 @@ const FineTunePage = () => {
     setFile(null);
     setSubmissionError('');
     setFileError('');
+    setNameError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -501,6 +546,8 @@ const FineTunePage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!validateModelName(modelName)) return;
   
     if (!file) {
       setSubmissionError('Please upload a fine-tuning dataset file.');
@@ -562,8 +609,8 @@ const FineTunePage = () => {
     return `${name.substring(0, maxLength)}...`;
   };
 
-  if (isLoading || isClinicianTypesLoading) return <Spinner />;
-  if (isError || isClinicianTypesError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
+  if (isLoading || isClinicianTypesLoading || isLoadingAllModels || isLoadingAllRequests) return <Spinner />;
+  if (isError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
 
   if (submissionState === 'success') {
     return (
@@ -635,10 +682,12 @@ const FineTunePage = () => {
                 id="modelName"
                 type="text"
                 value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
+                onChange={handleNameChange}
+                onBlur={() => validateModelName(modelName)}
                 placeholder="Enter a new name for the fine-tuned model"
                 required
               />
+              {nameError && <ValidationErrorText>{nameError}</ValidationErrorText>}
   
               <label htmlFor="description">Description</label>
               <textarea
@@ -687,7 +736,7 @@ const FineTunePage = () => {
                 placeholder="Note for this fine-tuned model"
               />
   
-              <PrimaryButton type="submit" disabled={submissionState === 'submitting'}>
+              <PrimaryButton type="submit" disabled={submissionState === 'submitting' || !!nameError}>
                 {submissionState === 'submitting' ? 'Submitting...' : 'Submit'}
               </PrimaryButton>
             </form>
@@ -759,7 +808,6 @@ const FineTunePage = () => {
           <Section>
             <h3>Queue Status</h3>
             {isTrafficLoading && <p>Loading traffic...</p>}
-            {isTrafficError && <p style={{ color: 'red' }}>Error loading traffic.</p>}
             {trafficData && (
               <div style={{
                 background: '#fff',
