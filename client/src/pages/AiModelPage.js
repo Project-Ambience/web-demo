@@ -308,21 +308,6 @@ const AiModelPage = () => {
                 <p>{model.fine_tuning_notes || "No fine tuning notes"}</p>
               </Section>
             )}
-            <Section>
-              <h3>Comments</h3>
-              <CommentList>
-                {model.comments.length > 0 ? (
-                  model.comments.map(comment => (
-                    <CommentItem key={comment.id}>
-                      <p>"{comment.comment}"</p>
-                      <small>Posted on: {new Date(comment.created_at).toLocaleDateString()}</small>
-                    </CommentItem>
-                  ))
-                ) : (
-                  <p>No comments yet.</p>
-                )}
-              </CommentList>
-            </Section>
           </MainContent>
 
           <Sidebar>
