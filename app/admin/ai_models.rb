@@ -21,14 +21,14 @@ ActiveAdmin.register AiModel do
     f.semantic_errors
     f.inputs do
       f.input :name
-      f.input :description
+      f.input :description, as: :text, input_html: { rows: 5 }
       f.input :speciality
       f.input :family
       f.input :parameter_size
-      f.input :fine_tune_data_format
-      f.input :fine_tune_data_format_csv
+      f.input :fine_tune_data_format, as: :text, input_html: { rows: 5 }
+      f.input :fine_tune_data_format_csv, as: :text, input_html: { rows: 5 }
       f.input :allow_fine_tune
-      f.input :fine_tuning_notes
+      f.input :fine_tuning_notes, as: :text, input_html: { rows: 5 }
     end
     f.actions
   end
