@@ -1,0 +1,1140 @@
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import styled from 'styled-components';
+import { useDispatch } from 'react-redux';
+import { createConsumer } from '@rails/actioncable';
+import { apiSlice } from '../app/apiSlice';
+import {
+  useGetFineTuneRequestsQuery,
+  useGetTunableModelsQuery,
+  useGetQueueTrafficQuery,
+  useGetFineTuneStatisticsQuery,
+  useConfirmAndStartFineTuneMutation,
+  useRejectFormattingMutation,
+} from '../app/apiSlice';
+import Spinner from '../components/common/Spinner';
+
+const InfoIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M11 7H13V9H11V7ZM11 11H13V17H11V11ZM12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM12 20C7.59 20 4 16.41 4 12C4 7.59 7.59 4 12 4C16.41 4 20 7.59 20 12C20 16.41 16.41 20 12 20Z"/>
+  </svg>
+);
+
+const SortArrowIcon = ({ direction }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"
+       style={{ 
+         transition: 'transform 0.2s ease-in-out',
+         transform: direction === 'asc' ? 'rotate(180deg)' : 'rotate(0deg)' 
+       }}>
+    <path d="M12 5V19M12 19L18 13M12 19L6 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);
+
+const CheckmarkIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9.00016 16.1698L4.83016 11.9998L3.41016 13.4098L9.00016 18.9998L21.0002 6.99984L19.5902 5.58984L9.00016 16.1698Z" fill="#005eb8"/>
+  </svg>
+);
+
+const DropdownArrow = ({ isOpen }) => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style={{ transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease-in-out' }}>
+    <path d="M7 10l5 5 5-5z" />
+  </svg>
+);
+
+const SearchIcon = (props) => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" {...props}>
+        <path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path>
+    </svg>
+);
+
+const useOnClickOutside = (ref, handler) => {
+  useEffect(() => {
+    const listener = (event) => {
+      if (!ref.current || ref.current.contains(event.target)) {
+        return;
+      }
+      handler(event);
+    };
+    document.addEventListener("mousedown", listener);
+    return () => {
+      document.removeEventListener("mousedown", listener);
+    };
+  }, [ref, handler]);
+};
+
+const PageLayout = styled.div`
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  gap: 2rem;
+  height: 100%;
+  width: 100%;
+`;
+
+const Sidebar = styled.aside`
+  background-color: #f0f4f5;
+  border-right: 1px solid #e8edee;
+  padding: 1.5rem 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+`;
+
+const SidebarTitle = styled.h2`
+  font-size: 1.25rem;
+  color: #003087;
+  padding: 0 1.5rem 1rem 1.5rem;
+  margin: 0;
+  border-bottom: 1px solid #e8edee;
+`;
+
+const FilterSection = styled.div`
+  padding: 1rem 0;
+  border-bottom: 1px solid #e8edee;
+  &:last-of-type {
+    border-bottom: none;
+  }
+`;
+
+const FilterSectionTitle = styled.h4`
+  font-size: 1rem;
+  color: #4c6272;
+  margin: 0 1.5rem 0.75rem 1.5rem;
+`;
+
+const SearchContainer = styled.div`
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #e8edee;
+  position: relative;
+  
+  svg {
+    position: absolute;
+    top: 50%;
+    left: 2.25rem;
+    transform: translateY(-50%);
+    color: #5f6368;
+  }
+`;
+
+const SearchInput = styled.input`
+  width: 100%;
+  padding: 0.6rem 1rem 0.6rem 2.5rem;
+  border-radius: 20px;
+  border: none;
+  background-color: #dde3ea;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: 2px solid #005eb8;
+  }
+`;
+
+const OptionList = styled.ul`
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+`;
+
+const OptionListItem = styled.li`
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  position: relative;
+  font-weight: ${({ isActive }) => (isActive ? '600' : 'normal')};
+  color: ${({ isActive }) => (isActive ? '#005eb8' : '#4c6272')};
+  background-color: ${({ isActive }) => (isActive ? '#eaf1f8' : 'transparent')};
+  transition: background-color 0.2s;
+  font-size: 0.9rem;
+  text-transform: capitalize;
+  user-select: none;
+
+  &:hover {
+    background-color: #e8edee;
+  }
+`;
+
+const DropdownMenu = styled.div`
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background-color: #f8f9fa;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 1000;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.5rem 0;
+`;
+
+const CustomDateWrapper = styled.div`
+  background-color: #dde3ea;
+  padding: 1rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+
+  label {
+    font-weight: 600;
+    font-size: 0.85rem;
+  }
+  input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+  }
+`;
+
+const MainContent = styled.main`
+  padding: 1rem 2rem 1rem 0;
+  overflow-y: auto;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+`;
+
+const TableWrapper = styled.div`
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #e8edee;
+  border-radius: 4px;
+  position: relative;
+`;
+
+const StyledTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+`;
+
+const Thead = styled.thead`
+  background-color: #f8f9fa;
+`;
+
+const Tbody = styled.tbody``;
+
+const Tr = styled.tr`
+  &:not(:last-child) {
+    border-bottom: 1px solid #e8edee;
+  }
+
+  & > th:last-child,
+  & > td:last-child {
+    position: sticky;
+    right: 0;
+    box-shadow: -2px 0 5px -2px rgba(0, 0, 0, 0.1);
+  }
+
+  & > th:last-child {
+    background-color: #f8f9fa;
+    z-index: 1;
+  }
+
+  & > td:last-child {
+    background-color: #fff;
+  }
+`;
+
+const Th = styled.th`
+  padding: 0.8rem 1rem;
+  text-align: left;
+  font-weight: 600;
+  color: #4c6272;
+  white-space: nowrap;
+  border-bottom: 2px solid #e8edee;
+
+  &:last-child {
+    text-align: right;
+  }
+`;
+
+const Td = styled.td`
+  padding: 0.8rem 1rem;
+  vertical-align: middle;
+  white-space: nowrap;
+  color: #2c3e50;
+
+  &.actions {
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 0.75rem;
+  }
+`;
+
+const HeaderWithIcon = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+`;
+
+const InfoButton = styled.button`
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  &:hover {
+    color: #005eb8;
+  }
+`;
+
+const SortHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.2s;
+  color: inherit;
+  
+  &:hover {
+    color: #005eb8;
+  }
+`;
+
+const StatusText = styled.span`
+  font-weight: bold;
+  text-transform: capitalize;
+  white-space: nowrap;
+  color: ${({ status }) => {
+    switch (status) {
+      case 'fine_tuning_completed':
+        return '#2e7d32';
+      case 'fine_tuning_failed':
+      case 'formatting_failed':
+      case 'formatting_rejected':
+        return '#c62828';
+      case 'formatting_in_progress':
+      case 'fine_tuning_in_progress':
+        return '#005eb8';
+      case 'awaiting_confirmation':
+        return '#ff8f00';
+      case 'waiting_for_formatting':
+      case 'waiting_for_fine_tune':
+      default:
+        return '#5f6368';
+    }
+  }};
+`;
+
+const ActionButton = styled.a`
+  background-color: #005eb8;
+  color: white;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 0.9rem;
+  user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  &:hover {
+    background-color: #003087;
+    text-decoration: none;
+  }
+`;
+
+const DetailsButton = styled.button`
+  background-color: #f0f4f5;
+  color: #4c6272;
+  border: 1px solid #ced4da;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  &:hover {
+    background-color: #e8edee;
+  }
+`;
+
+const DataViewButton = styled.button`
+  background-color: #e8edee;
+  color: #2c3e50;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  user-select: none;
+  &:hover {
+    background-color: #dde3ea;
+  }
+`;
+
+const PaginationControls = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+  gap: 1rem;
+
+  button {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ced4da;
+    background: #fff;
+    cursor: pointer;
+    border-radius: 20px;
+    user-select: none;
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+`;
+
+const EmptyStateWrapper = styled.div`
+  text-align: center;
+  padding: 4rem 2rem;
+  margin-top: 2rem;
+  background-color: #f8f9fa;
+  border: 1px dashed #ced4da;
+  border-radius: 8px;
+  color: #4c6272;
+`;
+
+const ModalOverlay = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+`;
+
+const ModalContent = styled.div`
+  background: #fff;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+`;
+
+const ModalHeader = styled.header`
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid #e8edee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+
+  h3 {
+    margin: 0;
+    color: #003087;
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+`;
+
+const ModalBody = styled.div`
+  padding: 1.5rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+`;
+
+const ModalFooter = styled.footer`
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #e8edee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+`;
+
+const CloseButton = styled.button`
+  background-color: #e8edee;
+  color: #4c6272;
+  border: 1px solid #ced4da;
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  &:hover {
+    background-color: #dde3ea;
+  }
+`;
+
+const ConfirmButton = styled(ActionButton)`
+  border: none;
+  user-select: none;
+  &:disabled {
+    background-color: #ced4da;
+    cursor: not-allowed;
+  }
+`;
+
+const RejectButton = styled.button`
+  background-color: transparent;
+  color: #c62828;
+  border: 1px solid #c62828;
+  padding: 0.5rem 1.2rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.9rem;
+  cursor: pointer;
+  user-select: none;
+  &:hover {
+    background-color: #fdecea;
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const DetailSection = styled.div`
+  h4 {
+    margin: 0 0 0.5rem 0;
+    color: #4c6272;
+    font-size: 1rem;
+  }
+  p {
+    margin: 0;
+    white-space: pre-wrap;
+  }
+`;
+
+const DetailGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  padding: 1rem 0;
+  border-top: 1px solid #e8edee;
+  border-bottom: 1px solid #e8edee;
+`;
+
+const DetailItem = styled.div`
+  h4 {
+    margin: 0 0 0.25rem 0;
+    color: #4c6272;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+  p {
+    margin: 0;
+    font-size: 1rem;
+  }
+`;
+
+const ErrorBlock = styled.pre`
+  background-color: #fdecea;
+  color: #a4282a;
+  padding: 1rem;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: monospace;
+  font-size: 0.85rem;
+`;
+
+const IconWrapper = styled.div`
+  visibility: ${({ isVisible }) => (isVisible ? 'visible' : 'hidden')};
+  position: absolute;
+  right: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+`;
+
+const LifecycleList = styled.ul`
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0;
+`;
+
+const LifecycleItem = styled.li`
+  position: relative;
+  padding-left: 2rem;
+  padding-bottom: 1.5rem;
+  
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 1px;
+    height: 100%;
+    background-color: #ced4da;
+  }
+
+  &:last-child::before {
+    height: 0;
+  }
+`;
+
+const LifecycleDot = styled.div`
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #005eb8;
+  background-color: #fff;
+  z-index: 1;
+`;
+
+const LifecycleContent = styled.div`
+  h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+    color: #003087;
+  }
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #4c6272;
+  }
+`;
+
+const SampleItemContainer = styled.div`
+  border: 1px solid #e8edee;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+`;
+
+const SampleItemHeader = styled.p`
+  font-weight: 600;
+  margin: 0 0 0.75rem 0 !important;
+  padding: 0 !important;
+  background-color: transparent !important;
+  white-space: normal !important;
+`;
+
+const SampleField = styled.div`
+  & + & {
+    margin-top: 0.75rem;
+  }
+  
+  strong {
+    display: block;
+    color: #4c6272;
+    font-size: 0.8rem;
+    margin-bottom: 0.25rem;
+    text-transform: uppercase;
+  }
+
+  p {
+    margin: 0 !important;
+    padding: 0.5rem !important;
+    background-color: #f8f9fa !important;
+    border-radius: 4px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+`;
+
+const StatsPanel = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+`;
+
+const StatCard = styled.div`
+  background-color: #fff;
+  border: 1px solid #e8edee;
+  border-radius: 6px;
+  padding: 1.5rem;
+  text-align: center;
+`;
+
+const StatNumber = styled.div`
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: #005eb8;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+const StatLabel = styled.div`
+  font-size: 0.9rem;
+  color: #4c6272;
+  margin-top: 0.5rem;
+`;
+
+const getStatusColors = (status) => {
+  switch (status) {
+    case 'fine_tuning_completed':
+      return { background: '#e8f5e9', color: '#2e7d32' };
+    case 'fine_tuning_failed':
+    case 'formatting_failed':
+    case 'formatting_rejected':
+      return { background: '#fdecea', color: '#c62828' };
+    case 'formatting_in_progress':
+    case 'fine_tuning_in_progress':
+      return { background: '#eaf1f8', color: '#005eb8' };
+    case 'awaiting_confirmation':
+      return { background: '#fff8e1', color: '#ff8f00' };
+    default:
+      return { background: '#f0f4f5', color: '#5f6368' };
+  }
+};
+
+const StatusBadge = styled.div`
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  background-color: ${({ status }) => getStatusColors(status).background};
+  color: ${({ status }) => getStatusColors(status).color};
+`;
+
+const StatusLifecycleModal = ({ onClose }) => {
+  const modalRef = useRef();
+  useOnClickOutside(modalRef, onClose);
+  return (
+    <ModalOverlay>
+      <ModalContent ref={modalRef}>
+        <ModalHeader>
+          <h3>Status Lifecycle</h3>
+        </ModalHeader>
+        <ModalBody>
+          <p>This is the lifecycle of a fine-tuning request from submission to completion.</p>
+          <LifecycleList>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Waiting for Formatting</h5>
+                <p>The request is in the queue waiting for the dataset to be formatted and validated.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Awaiting Confirmation</h5>
+                <p>The dataset has been successfully formatted. The request is now waiting for user review and confirmation.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Waiting for Fine-Tune</h5>
+                <p>The user has confirmed the formatted data. The request is now in the queue for fine-tuning.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot style={{ borderColor: '#2e7d32' }} />
+              <LifecycleContent>
+                <h5 style={{ color: '#2e7d32' }}>Completion</h5>
+                <p>The model has been successfully fine-tuned and the new version is available in the Model Catalogue.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+          </LifecycleList>
+        </ModalBody>
+        <ModalFooter>
+          <CloseButton onClick={onClose}>Close</CloseButton>
+        </ModalFooter>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+const RequestDetailsModal = ({ request, onClose, onConfirm, onReject, isConfirming, isRejecting }) => {
+  const modalRef = useRef();
+  useOnClickOutside(modalRef, onClose);
+  const [dataSample, setDataSample] = useState([]);
+
+  const parseSampleText = (item) => {
+    if (!item || typeof item.text !== 'string') {
+        return { instruction: 'Invalid data format', input: '', response: '' };
+    }
+    
+    const text = item.text;
+    const parts = text.split('### ').filter(Boolean);
+    const result = {};
+
+    parts.forEach(part => {
+        const [key, ...valueParts] = part.split(':');
+        const value = valueParts.join(':').trim();
+        const lowerKey = key.trim().toLowerCase();
+
+        if (lowerKey === 'instruction') result.instruction = value;
+        if (lowerKey === 'input') result.input = value;
+        if (lowerKey === 'response') result.response = value;
+    });
+
+    return result;
+  };
+
+  const generateSample = useMemo(() => {
+    return () => {
+      if (!request?.fine_tune_data || request.fine_tune_data.length === 0) {
+        setDataSample([]);
+        return;
+      }
+      const dataset = request.fine_tune_data;
+      const shuffled = [...dataset].sort(() => 0.5 - Math.random());
+      setDataSample(shuffled.slice(0, 5));
+    };
+  }, [request?.fine_tune_data]);
+
+  useEffect(() => {
+    generateSample();
+  }, [request, generateSample]);
+
+  const sanitizeFilename = (name) => name.replace(/\s+/g, '-');
+
+  const downloadJson = (jsonData, filename) => {
+    const jsonString = JSON.stringify(jsonData, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const displayStatus = request.status.replace(/_/g, ' ');
+
+  return (
+    <ModalOverlay>
+      <ModalContent ref={modalRef}>
+        <ModalHeader>
+          <h3>{request.name}</h3>
+          <StatusBadge status={request.status}>{displayStatus}</StatusBadge>
+        </ModalHeader>
+        <ModalBody>
+          <DetailSection>
+            <h4>Description</h4>
+            <p>{request.description || 'N/A'}</p>
+          </DetailSection>
+          <DetailSection>
+            <h4>Fine-Tuning Notes</h4>
+            <p>{request.fine_tuning_notes || 'N/A'}</p>
+          </DetailSection>
+          <DetailGrid>
+            <DetailItem><h4>Base Model</h4><p>{request.ai_model.name}</p></DetailItem>
+            <DetailItem><h4>Clinician Type</h4><p>{request.clinician_type.name}</p></DetailItem>
+            <DetailItem><h4>Task</h4><p>{request.task}</p></DetailItem>
+            <DetailItem><h4>Submitted At</h4><p>{new Date(request.created_at).toLocaleString()}</p></DetailItem>
+          </DetailGrid>
+
+          {request.status === 'awaiting_confirmation' && dataSample.length > 0 && (
+            <DetailSection>
+              <h4 style={{ marginBottom: '0.75rem' }}>Random Data Sample</h4>
+              <p style={{ fontSize: '0.85rem', color: '#5f6368', marginBottom: '1rem' }}>
+                Below are {dataSample.length} randomly selected examples from your formatted dataset to verify its structure and content.
+              </p>
+              {dataSample.map((item, index) => {
+                const parsed = parseSampleText(item);
+                return (
+                  <SampleItemContainer key={index}>
+                    <SampleItemHeader>Example {index + 1}</SampleItemHeader>
+                    <SampleField>
+                      <strong>Instruction:</strong>
+                      <p>{parsed.instruction || 'N/A'}</p>
+                    </SampleField>
+                    <SampleField>
+                      <strong>Input:</strong>
+                      <p>{parsed.input || 'N/A'}</p>
+                    </SampleField>
+                    <SampleField>
+                      <strong>Response:</strong>
+                      <p>{parsed.response || 'N/A'}</p>
+                    </SampleField>
+                  </SampleItemContainer>
+                );
+              })}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <DataViewButton onClick={generateSample}>
+                  Show 5 Different Examples
+                </DataViewButton>
+              </div>
+            </DetailSection>
+          )}
+
+          <DetailSection>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              {request.fine_tune_data && (
+                <DataViewButton onClick={() => downloadJson(request.fine_tune_data, `${sanitizeFilename(request.name)}_dataset.json`)}>
+                  Download Dataset
+                </DataViewButton>
+              )}
+              {request.parameters && (
+                <DataViewButton onClick={() => downloadJson(request.parameters, `${sanitizeFilename(request.name)}_parameters.json`)}>
+                  Download Parameters
+                </DataViewButton>
+              )}
+            </div>
+          </DetailSection>
+
+          {request.error_message && (
+            <DetailSection><h4>Error Message</h4><ErrorBlock>{request.error_message}</ErrorBlock></DetailSection>
+          )}
+        </ModalBody>
+        <ModalFooter>
+          <CloseButton onClick={onClose}>Close</CloseButton>
+          {request.status === 'awaiting_confirmation' && (
+            <>
+              <RejectButton 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to reject this formatted dataset? This action cannot be undone.")) {
+                    onReject();
+                  }
+                }} 
+                disabled={isConfirming || isRejecting}
+              >
+                Reject
+              </RejectButton>
+              <ConfirmButton 
+                onClick={() => {
+                  if (window.confirm("Are you sure you want to start the fine-tuning process? This action cannot be undone.")) {
+                    onConfirm();
+                  }
+                }} 
+                disabled={isConfirming || isRejecting}
+              >
+                {isConfirming ? 'Starting...' : 'Confirm & Start Fine-Tune'}
+              </ConfirmButton>
+            </>
+          )}
+        </ModalFooter>
+      </ModalContent>
+    </ModalOverlay>
+  );
+};
+
+const STATUSES = [
+    { label: 'All', value: 'all' },
+    { label: 'Formatting', value: 'waiting_for_formatting,formatting_in_progress' },
+    { label: 'Awaiting Confirmation', value: 'awaiting_confirmation' },
+    { label: 'Fine-Tuning', value: 'waiting_for_fine_tune,fine_tuning_in_progress' },
+    { label: 'Completed', value: 'fine_tuning_completed' },
+    { label: 'Failed', value: 'formatting_failed,fine_tuning_failed,formatting_rejected' },
+];
+
+const TIME_PERIODS = {
+  all: 'All Time',
+  day: 'Last 24 Hours',
+  week: 'Last 7 Days',
+  month: 'Last 30 Days'
+};
+
+const INITIAL_FILTERS = {
+  search: '',
+  base_model_id: '',
+  time_period: 'all',
+  status: 'all',
+  sort_order: 'desc',
+};
+
+const FineTuneStatusPage = () => {
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
+  const [apiParams, setApiParams] = useState({ page: 1, ...INITIAL_FILTERS });
+  const [isBaseModelOpen, setIsBaseModelOpen] = useState(false);
+  const baseModelRef = useRef();
+  useOnClickOutside(baseModelRef, () => setIsBaseModelOpen(false));
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [isLifecycleModalOpen, setIsLifecycleModalOpen] = useState(false);
+  const cable = useRef();
+  const dispatch = useDispatch();
+
+  const { data: tunableModels, isLoading: isLoadingModels } = useGetTunableModelsQuery();
+  const { data: trafficData } = useGetQueueTrafficQuery(undefined, { pollingInterval: 5000 });
+  const { data: statsData, isLoading: isLoadingStats } = useGetFineTuneStatisticsQuery(undefined, { pollingInterval: 5000 });
+  const [confirmAndStart, { isLoading: isConfirming }] = useConfirmAndStartFineTuneMutation();
+  const [rejectFormatting, { isLoading: isRejecting }] = useRejectFormattingMutation();
+  
+  useEffect(() => {
+    if (!cable.current) {
+      cable.current = createConsumer(process.env.REACT_APP_CABLE_URL);
+    }
+
+    const channelHandlers = {
+      received(data) {
+        console.log("Received fine-tune status update:", data);
+        dispatch(apiSlice.util.invalidateTags(['FineTuneRequest', 'FineTuneStatistics']));
+      },
+      connected() {
+        console.log("Connected to FineTuneStatusChannel");
+      },
+      disconnected() {
+        console.log("Disconnected from FineTuneStatusChannel");
+      }
+    };
+
+    const subscription = cable.current.subscriptions.create({ channel: "FineTuneStatusChannel" }, channelHandlers);
+
+    return () => {
+      console.log("Unsubscribing from FineTuneStatusChannel");
+      subscription.unsubscribe();
+    };
+  }, [dispatch]);
+  
+  useEffect(() => {
+    const params = {
+      search: filters.search,
+      base_model_id: filters.base_model_id,
+      status: filters.status,
+      sort_order: filters.sort_order,
+    };
+    const now = new Date();
+    switch (filters.time_period) {
+      case 'day': params.start_date = new Date(now.setDate(now.getDate() - 1)).toISOString().split('T')[0]; break;
+      case 'week': params.start_date = new Date(now.setDate(now.getDate() - 7)).toISOString().split('T')[0]; break;
+      case 'month': params.start_date = new Date(now.setMonth(now.getMonth() - 1)).toISOString().split('T')[0]; break;
+      default: break;
+    }
+    setApiParams(prev => ({ ...prev, ...params, page: 1 }));
+  }, [filters]);
+
+  const { data, isLoading, isFetching } = useGetFineTuneRequestsQuery(apiParams);
+  const requests = data?.requests || [];
+  const pagination = data?.pagination || {};
+  const selectedModelName = tunableModels?.find(m => m.id === filters.base_model_id)?.name || 'All Models';
+  const hasActiveFilters = useMemo(() => JSON.stringify(filters) !== JSON.stringify(INITIAL_FILTERS), [filters]);
+
+  const handleOpenModal = (request) => setSelectedRequest(request);
+  const handleCloseModal = () => setSelectedRequest(null);
+
+  const handleConfirm = async () => {
+    if (selectedRequest) {
+      await confirmAndStart(selectedRequest.id).unwrap();
+      handleCloseModal();
+    }
+  };
+
+  const handleReject = async () => {
+    if (selectedRequest) {
+        await rejectFormatting(selectedRequest.id).unwrap();
+        handleCloseModal();
+    }
+  };
+  
+  const getDisplayStatus = (request) => {
+    const text = request.status.replace(/_/g, ' ');
+    return { text, status: request.status };
+  };
+
+  return (
+    <>
+      <div style={{ position: 'fixed', top: '70px', left: '0', width: '100vw', height: 'calc(100vh - 70px)' }}>
+        <PageLayout>
+          <Sidebar>
+            <SidebarTitle>Refine by</SidebarTitle>
+            <SearchContainer>
+              <SearchIcon />
+              <SearchInput type="text" placeholder="Search new models..." value={filters.search} onChange={(e) => setFilters(f => ({ ...f, search: e.target.value }))} />
+            </SearchContainer>
+            <FilterSection ref={baseModelRef}>
+              <FilterSectionTitle>Base Model</FilterSectionTitle>
+              <div style={{ position: 'relative' }}>
+                <OptionList><OptionListItem as="div" isActive={true} onClick={() => setIsBaseModelOpen(p => !p)}><span>{selectedModelName}</span><IconWrapper isVisible={true}><DropdownArrow isOpen={isBaseModelOpen} /></IconWrapper></OptionListItem></OptionList>
+                {isBaseModelOpen && (<DropdownMenu><OptionList><OptionListItem isActive={!filters.base_model_id} onClick={() => { setFilters(f => ({ ...f, base_model_id: '' })); setIsBaseModelOpen(false); }}><span>All Models</span><IconWrapper isVisible={!filters.base_model_id}><CheckmarkIcon /></IconWrapper></OptionListItem>{isLoadingModels ? <Spinner /> : tunableModels?.map(model => (<OptionListItem key={model.id} isActive={filters.base_model_id === model.id} onClick={() => { setFilters(f => ({ ...f, base_model_id: model.id })); setIsBaseModelOpen(false); }}><span>{model.name}</span><IconWrapper isVisible={filters.base_model_id === model.id}><CheckmarkIcon /></IconWrapper></OptionListItem>))}</OptionList></DropdownMenu>)}
+              </div>
+            </FilterSection>
+            <FilterSection>
+              <FilterSectionTitle>Status</FilterSectionTitle>
+              <OptionList>{STATUSES.map(s => (<OptionListItem key={s.value} isActive={filters.status === s.value} onClick={() => setFilters(f => ({ ...f, status: s.value }))}><span>{s.label}</span><IconWrapper isVisible={filters.status === s.value}><CheckmarkIcon /></IconWrapper></OptionListItem>))}</OptionList>
+            </FilterSection>
+            <FilterSection>
+              <FilterSectionTitle>Submitted Time</FilterSectionTitle>
+              <OptionList>{Object.entries(TIME_PERIODS).map(([key, value]) => (<OptionListItem key={key} isActive={filters.time_period === key} onClick={() => setFilters(f => ({...f, time_period: key}))}><span>{value}</span><IconWrapper isVisible={filters.time_period === key}><CheckmarkIcon /></IconWrapper></OptionListItem>))}</OptionList>
+            </FilterSection>
+          </Sidebar>
+          <MainContent>
+            <h2>Fine-Tune Status Dashboard</h2>
+            <StatsPanel>
+              <StatCard>
+                <StatNumber>
+                  {trafficData ? trafficData.formatting?.messages_ready : <Spinner />}
+                </StatNumber>
+                <StatLabel>In Formatting Queue</StatLabel>
+              </StatCard>
+              <StatCard>
+                <StatNumber>
+                  {isLoadingStats || !statsData ? <Spinner /> : statsData.awaiting_confirmation}
+                </StatNumber>
+                <StatLabel>Awaiting Review</StatLabel>
+              </StatCard>
+              <StatCard>
+                <StatNumber>
+                  {trafficData ? trafficData.fine_tuning?.messages_ready : <Spinner />}
+                </StatNumber>
+                <StatLabel>In Fine-Tune Queue</StatLabel>
+              </StatCard>
+            </StatsPanel>
+            {isLoading || isFetching ? <Spinner /> : (
+              <>
+                {requests.length > 0 ? (
+                  <>
+                    <TableWrapper>
+                      <StyledTable>
+                        <Thead><Tr><Th>New Model</Th><Th><HeaderWithIcon><span>Status</span><InfoButton onClick={() => setIsLifecycleModalOpen(true)}><InfoIcon /></InfoButton></HeaderWithIcon></Th><Th>Base Model</Th><Th>Task</Th><Th><SortHeader onClick={() => setFilters(f => ({...f, sort_order: f.sort_order === 'desc' ? 'asc' : 'desc'}))}><span>Submitted Time</span><SortArrowIcon direction={filters.sort_order} /></SortHeader></Th><Th></Th></Tr></Thead>
+                        <Tbody>
+                          {requests.map(req => {
+                            const display = getDisplayStatus(req);
+                            return (
+                            <Tr key={req.id}>
+                              <Td><strong>{req.name}</strong></Td>
+                              <Td><StatusText status={display.status}>{display.text}</StatusText></Td>
+                              <Td>{req.ai_model.name}</Td>
+                              <Td>{req.task}</Td>
+                              <Td>{new Date(req.created_at).toLocaleString()}</Td>
+                              <Td className="actions">
+                                <DetailsButton onClick={() => handleOpenModal(req)}>
+                                  {req.status === 'awaiting_confirmation' ? 'Review & Confirm' : 'Details'}
+                                </DetailsButton>
+                                {req.status === 'fine_tuning_completed' && req.new_ai_model_id && (<ActionButton href={`/ai-models/${req.new_ai_model_id}`} target="_blank" rel="noopener noreferrer">View Model</ActionButton>)}
+                              </Td>
+                            </Tr>
+                          )})}
+                        </Tbody>
+                      </StyledTable>
+                    </TableWrapper>
+                    <PaginationControls>
+                      <button onClick={() => setApiParams(p => ({ ...p, page: p.page - 1 }))} disabled={!pagination.current_page || pagination.current_page === 1}>Previous</button>
+                      <button onClick={() => setApiParams(p => ({ ...p, page: p.page + 1 }))} disabled={!pagination.total_pages || pagination.current_page === pagination.total_pages}>Next</button>
+                    </PaginationControls>
+                  </>
+                ) : (
+                  <EmptyStateWrapper><h3>{hasActiveFilters ? 'No Results Found' : 'No Tasks Submitted'}</h3><p>{hasActiveFilters ? 'Try adjusting your filters.' : 'There are no fine-tuning tasks to display.'}</p></EmptyStateWrapper>
+                )}
+              </>
+            )}
+          </MainContent>
+        </PageLayout>
+      </div>
+      {selectedRequest && (<RequestDetailsModal request={selectedRequest} onClose={handleCloseModal} onConfirm={handleConfirm} onReject={handleReject} isConfirming={isConfirming} isRejecting={isRejecting} />)}
+      {isLifecycleModalOpen && (<StatusLifecycleModal onClose={() => setIsLifecycleModalOpen(false)} />)}
+    </>
+  );
+};
+
+export default FineTuneStatusPage;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { useSelector, useDispatch } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { createConsumer } from '@rails/actioncable';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -321,26 +321,6 @@ const MessageBubble = styled.div`
     background-color: #eaf1f8;
     color: #1f1f1f;
     border-top-left-radius: 5px;
-  }
-`;
-
-const FileAttachmentBubble = styled.a`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: #f0f4f5; 
-  border-radius: 16px; 
-  padding: 0.5rem 1rem;
-  margin-bottom: 0.5rem;
-  width: fit-content;
-  text-decoration: none;
-  font-size: 0.9rem;
-  color: #005eb8;
-  border: 1px solid #e8edee;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background-color: #e1e8ed;
   }
 `;
 

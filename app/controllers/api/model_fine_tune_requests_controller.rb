@@ -1,4 +1,42 @@
 class Api::ModelFineTuneRequestsController < Api::ApplicationController
+  def index
+    sort_order = params[:sort_order] == "asc" ? :asc : :desc
+
+    requests = ModelFineTuneRequest.includes(:ai_model, :clinician_type)
+      .by_status(params[:status])
+      .by_base_model(params[:base_model_id])
+      .created_after(params[:start_date])
+      .created_before(params[:end_date])
+      .search_by_name(params[:search])
+      .order(created_at: sort_order)
+
+    paginated_requests = requests.page(params[:page]).per(20)
+
+    render json: {
+      requests: paginated_requests.as_json(
+        only: [ :id, :name, :description, :fine_tuning_notes, :task, :created_at, :new_ai_model_id, :error_message, :parameters, :fine_tune_data ],
+        methods: [ :status ],
+        include: {
+          ai_model: { only: [ :id, :name ] },
+          clinician_type: { only: [ :id, :name ] }
+        }
+      ),
+      pagination: {
+        current_page: paginated_requests.current_page,
+        total_pages: paginated_requests.total_pages,
+        total_count: paginated_requests.total_count
+      }
+    }
+  end
+
+  def statistics
+    counts = ModelFineTuneRequest.group(:status).count
+
+    render json: {
+      awaiting_confirmation: counts["awaiting_confirmation"] || 0
+    }
+  end
+
   def create
     required_params = %i[name description fine_tune_task_id clinician_type_id file]
     missing = required_params.select { |key| params[key].blank? }
@@ -54,31 +92,72 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
     render json: { error: model_fine_tune_request.errors.full_messages }, status: :bad_request
   end
 
-  def update_status
-    request_id = params[:id]
-    status = params[:status]
-    adapter_path = params[:adapter_path]
+  def start_processing
+    request = ModelFineTuneRequest.find(params[:id])
 
-    model_fine_tune_request = ModelFineTuneRequest.find_by(id: request_id)
-
-    if model_fine_tune_request.nil?
-      render json: { error: "Record not found" }, status: :not_found and return
+    if request.waiting_for_formatting?
+      request.formatting_in_progress!
+    elsif request.waiting_for_fine_tune?
+      request.fine_tuning_in_progress!
     end
+  end
 
-    if !model_fine_tune_request.in_progress?
-      render json: { error: "Request is not ready to update" }, status: :bad_request and return
-    end
+  def formatting_complete
+    request = ModelFineTuneRequest.find_by(id: params[:id])
+    return render json: { error: "Record not found" }, status: :not_found unless request
 
-    case status
-    when "success"
-      model_fine_tune_request.done!
-      ai_model = create_ai_model(model_fine_tune_request, adapter_path)
-      model_fine_tune_request.update(new_ai_model_id: ai_model.id)
-      model_fine_tune_request.save!
-    when "fail"
-      model_fine_tune_request.failed!
+    if params[:status] == "success"
+      request.update(fine_tune_data: params[:validated_dataset], status: :awaiting_confirmation)
     else
-      render json: { error: "Invalid status" }, status: :unprocessable_entity and return
+      request.update(status: :formatting_failed, error_message: params[:error])
+    end
+
+    render json: { message: "Formatting status updated successfully" }, status: :ok
+  end
+
+  def reject_formatting
+    request = ModelFineTuneRequest.find(params[:id])
+    return render json: { error: "Request not awaiting confirmation" }, status: :unprocessable_entity unless request.awaiting_confirmation?
+
+    request.reject_formatting!
+    render json: { message: "Formatting rejected successfully" }, status: :ok
+  end
+
+  def confirm_and_start_fine_tune
+    request = ModelFineTuneRequest.find(params[:id])
+    return render json: { error: "Request not awaiting confirmation" }, status: :unprocessable_entity unless request.awaiting_confirmation?
+
+    payload = {
+      fine_tune_request_id: request.id,
+      ai_model_path: request.ai_model.path,
+      parameters: request.parameters,
+      fine_tune_data: request.fine_tune_data,
+      callback_url: ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"]
+    }
+
+    begin
+      MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
+      request.waiting_for_fine_tune!
+      render json: { message: "Fine-tuning process started" }, status: :ok
+    rescue => e
+      request.update(status: :fine_tuning_failed, error_message: e.message)
+      render json: { error: "Failed to start fine-tuning process" }, status: :internal_server_error
+    end
+  end
+
+  def update_status
+    request = ModelFineTuneRequest.find_by(id: params[:id])
+    return render json: { error: "Record not found" }, status: :not_found unless request
+
+    case params[:status]
+    when "success"
+      request.fine_tuning_completed!
+      ai_model = create_ai_model(request, params[:adapter_path])
+      request.update(new_ai_model_id: ai_model.id)
+    when "fail"
+      request.update(status: :fine_tuning_failed, error_message: params[:error])
+    else
+      return render json: { error: "Invalid status" }, status: :unprocessable_entity
     end
 
     render json: { message: "Status updated successfully" }, status: :ok
@@ -87,7 +166,7 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
   private
 
   def create_ai_model(model_fine_tune_request, adapter_path)
-    ai_model = AiModel.create!(
+    AiModel.create!(
       name: model_fine_tune_request.name,
       description: model_fine_tune_request.description,
       clinician_type_id: model_fine_tune_request.clinician_type_id,
@@ -100,7 +179,5 @@ class Api::ModelFineTuneRequestsController < Api::ApplicationController
       parameter_size: model_fine_tune_request.ai_model.parameter_size,
       fine_tuning_notes: model_fine_tune_request.fine_tuning_notes
     )
-
-    ai_model
   end
 end

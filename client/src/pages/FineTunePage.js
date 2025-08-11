@@ -1,24 +1,39 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import { useParams, Link } from 'react-router-dom';
-import { 
-  useGetAiModelByIdQuery, 
-  useGetClinicianTypesQuery, 
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import styled, { keyframes } from 'styled-components';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import {
+  useGetAiModelByIdQuery,
+  useGetClinicianTypesQuery,
   useCreateFineTuneRequestMutation,
-  useGetRabbitMQTrafficQuery
+  useGetQueueTrafficQuery,
+  useGetAiModelsQuery,
+  useGetFineTuneRequestsQuery,
 } from '../app/apiSlice';
 import Spinner from '../components/common/Spinner';
 import ErrorMessage from '../components/common/ErrorMessage';
 
+const spinAnimation = keyframes`
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+`;
+
+const InlineSpinner = styled.div`
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #fff;
+  border-radius: 50%;
+  width: 16px;
+  height: 16px;
+  animation: ${spinAnimation} 1s linear infinite;
+`;
+
 const PageWrapper = styled.div`
   display: grid;
   grid-template-columns: 1fr;
+  gap: 2rem;
 
   @media (min-width: 960px) {
     grid-template-columns: 2fr 1fr;
   }
-
-  gap: 2rem;
 `;
 
 const MainContent = styled.div`
@@ -102,6 +117,16 @@ const PrimaryButton = styled(ButtonBase)`
   }
 `;
 
+const SecondaryButton = styled(ButtonBase)`
+  background-color: white;
+  color: #005eb8;
+  border: 2px solid #005eb8;
+
+  &:hover:not(:disabled) {
+    background-color: #e8edee;
+  }
+`;
+
 const ToggleButton = styled.button`
   font-size: 0.85rem;
   background: none;
@@ -115,16 +140,6 @@ const ToggleButton = styled.button`
   &:hover {
     text-decoration: none;
   }
-`;
-
-const FormatBox = styled.pre`
-  background-color: #fff;
-  border: 1px solid #cdd4d8;
-  padding: 1rem;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  white-space: pre-wrap;
-  word-wrap: break-word;
 `;
 
 const BackLink = styled(Link)`
@@ -197,56 +212,225 @@ const ModalButton = styled(ButtonBase)`
   padding: 0.5rem 1.25rem;
 `;
 
-const FileInputWrapper = styled.div`
-  position: relative;
-  display: inline-block;
-  width: 100%;
+const UploadButton = styled(PrimaryButton)`
+  border: 2px dashed transparent;
+  background-color: ${({ isDragging }) => (isDragging ? '#003087' : '#005eb8')};
+  border-color: ${({ isDragging }) => (isDragging ? '#fff' : 'transparent')};
+  margin-bottom: 0.5rem;
 `;
 
-const Tooltip = styled.div`
-  position: absolute;
-  bottom: 110%;
-  left: 0;
-  background-color: #333;
-  color: #fff;
-  padding: 4px 8px;
+const FileDisplay = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #eaf1f8;
+  padding: 0.75rem 1rem;
   border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+`;
+
+const FileErrorText = styled.p`
+  color: #c62828;
+  font-size: 0.85rem;
+  text-align: center;
+  margin-top: -0.25rem;
+  margin-bottom: 1rem;
+  height: 1rem;
+`;
+
+const ValidationErrorText = styled(FileErrorText)`
+  margin-top: -1rem;
+  text-align: left;
+`;
+
+const SuccessPanel = styled.div`
+  position: fixed;
+  top: 70px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #f4f7f6;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+`;
+
+const ContentBox = styled.div`
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 2rem 3rem;
+  max-width: 700px;
+  width: 100%;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+`;
+
+const SuccessHeader = styled.h2`
+  font-size: 2rem;
+  color: #005eb8;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+`;
+
+const Subtitle = styled.p`
+  font-size: 1.1rem;
+  color: #4c6272;
+  margin-bottom: 2.5rem;
+`;
+
+const LifecycleList = styled.ul`
+  list-style: none;
+  padding-left: 1rem;
+  margin: 0;
+  text-align: left;
+`;
+
+const LifecycleItem = styled.li`
+  position: relative;
+  padding-left: 2rem;
+  padding-bottom: 2rem;
   
-  ${FileInputWrapper}:hover & {
-    opacity: 1;
+  &:last-child {
+    padding-bottom: 0;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 7px;
+    width: 1px;
+    height: 100%;
+    background-color: #ced4da;
+  }
+
+  &:last-child::before {
+    height: 0;
   }
 `;
 
-const ErrorTooltip = styled.div`
+const LifecycleDot = styled.div`
   position: absolute;
-  bottom: 110%;
   left: 0;
-  background-color: #e53935;
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  white-space: nowrap;
-  z-index: 10;
+  top: 0;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid #005eb8;
+  background-color: #fff;
+  z-index: 1;
 `;
+
+const LifecycleContent = styled.div`
+  h5 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.1rem;
+    color: #003087;
+  }
+  p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #4c6272;
+    line-height: 1.5;
+  }
+`;
+
+const CheckmarkIcon = () => (
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="12" fill="#2e7d32"/>
+      <path d="M7.5 12.5L10.5 15.5L16.5 9.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+);
+
+const FormatDisplayContainer = styled.div`
+  border: 1px solid #cdd4d8;
+  border-radius: 4px;
+  overflow: hidden;
+`;
+
+const FormatTabs = styled.div`
+  display: flex;
+  background-color: #f0f4f5;
+  border-bottom: 1px solid #cdd4d8;
+`;
+
+const FormatTab = styled.button`
+  flex: 1;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  background-color: ${({ isActive }) => (isActive ? '#fff' : 'transparent')};
+  color: ${({ isActive }) => (isActive ? '#005eb8' : '#4c6272')};
+  border-bottom: 2px solid ${({ isActive }) => (isActive ? '#005eb8' : 'transparent')};
+  margin-bottom: -1px;
+  transition: all 0.2s;
+
+  &:hover {
+    background-color: ${({ isActive }) => (isActive ? '#fff' : '#e8edee')};
+  }
+`;
+
+const CodeBlock = styled.pre`
+  background-color: #fff;
+  padding: 1rem;
+  margin: 0;
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-height: 300px;
+  overflow-y: auto;
+  font-family: monospace;
+`;
+
+const FAILED_STATUSES = ['formatting_failed', 'fine_tuning_failed', 'formatting_rejected'];
+
+const JSON_EXAMPLE = `[
+  {
+    "instruction": "Summarize the clinical note.",
+    "input": "Patient is a 65-year-old male with a history of hypertension and type 2 diabetes...",
+    "response": "65yo M w/ hx HTN, T2DM."
+  },
+  {
+    "instruction": "Extract the key symptom.",
+    "input": "A 42-year-old female presents with acute abdominal pain in the right lower quadrant...",
+    "response": "Symptom: Acute RLQ abdominal pain."
+  }
+]`;
+
+const CSV_EXAMPLE = `instruction,input,response
+"Summarize the clinical note.","Patient is a 65-year-old male with a history of hypertension and type 2 diabetes...","65yo M w/ hx HTN, T2DM."
+"Extract the key symptom.","A 42-year-old female presents with acute abdominal pain in the right lower quadrant...","Symptom: Acute RLQ abdominal pain."`;
 
 
 const FineTunePage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { data: model, isLoading, isError } = useGetAiModelByIdQuery(id);
 
   const {
     data: clinicianTypes,
     isLoading: isClinicianTypesLoading,
-    isError: isClinicianTypesError,
   } = useGetClinicianTypesQuery();
 
-  const [createFineTuneRequest, { isLoading: isSubmitting }] = useCreateFineTuneRequestMutation();
+  const { data: allModels, isLoading: isLoadingAllModels } = useGetAiModelsQuery();
+  const { data: allRequestsData, isLoading: isLoadingAllRequests } = useGetFineTuneRequestsQuery({ status: 'all', per: 10000 });
+  const allRequests = allRequestsData?.requests;
+
+
+  const [createFineTuneRequest] = useCreateFineTuneRequestMutation();
+  
+  const { data: trafficData, isLoading: isTrafficLoading } = useGetQueueTrafficQuery(undefined, {
+    pollingInterval: 15000,
+  });
 
   const [modelName, setModelName] = useState('');
   const [description, setDescription] = useState('');
@@ -255,32 +439,169 @@ const FineTunePage = () => {
   const [clinicianTypeId, setClinicianTypeId] = useState('');
   const [file, setFile] = useState(null);
   const [showFormat, setShowFormat] = useState(false);
+  const [activeFormat, setActiveFormat] = useState('json');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [submitParams, setSubmitParams] = useState(null);
   const [submissionError, setSubmissionError] = useState('');
-  const [submissionSuccess, setSubmissionSuccess] = useState(null);
   const [fileError, setFileError] = useState('');
+  const [nameError, setNameError] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
   const [showQueueWarning, setShowQueueWarning] = useState(false);
+  const [submissionState, setSubmissionState] = useState('idle');
+  const [isValidatingFile, setIsValidatingFile] = useState(false);
 
-  const { data: rabbitTraffic, isLoading: isTrafficLoading, isError: isTrafficError } = useGetRabbitMQTrafficQuery(undefined, {
-    pollingInterval: 15000,
-  });
+  const fileInputRef = useRef(null);
 
-  const handleFileChange = (e) => {
-    const uploaded = e.target.files[0];
-    if (uploaded && uploaded.type === 'application/json') {
-      setFile(uploaded);
-    } 
-    else {
-      setSubmissionError('Please upload a fine-tuning .json file.');
+  const validateModelName = (name) => {
+    if (!allModels || !allRequests) return true;
+
+    const normalizedName = name.trim().toLowerCase();
+    if (!normalizedName) return true;
+
+    const isNameInModels = allModels.some(m => m.name.toLowerCase() === normalizedName);
+    if (isNameInModels) {
+      setNameError('This model name is already in use.');
+      return false;
     }
+    
+    const activeRequests = allRequests.filter(req => !FAILED_STATUSES.includes(req.status));
+    const isNameInActiveRequests = activeRequests.some(req => req.name.toLowerCase() === normalizedName);
+    if (isNameInActiveRequests) {
+      setNameError('This name is already used in an active request.');
+      return false;
+    }
+
+    setNameError('');
+    return true;
+  };
+  
+  const handleNameChange = (e) => {
+    setModelName(e.target.value);
+    if (nameError) {
+      validateModelName(e.target.value);
+    }
+  };
+
+  const resetForm = () => {
+    setModelName('');
+    setDescription('');
+    setFineTuningNotes('');
+    setTaskId('');
+    setClinicianTypeId('');
+    setFile(null);
+    setSubmissionError('');
+    setFileError('');
+    setNameError('');
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+  
+  const parseCsvToJson = (csvText) => {
+    const lines = csvText.trim().split(/\r?\n/);
+    if (lines.length < 2) return [];
+    const headers = lines[0].split(',').map(h => h.trim());
+    const result = [];
+    for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue;
+        const obj = {};
+        const currentline = lines[i].split(',');
+        for (let j = 0; j < headers.length; j++) {
+            obj[headers[j]] = currentline[j] ? currentline[j].trim().replace(/^"|"$/g, '') : '';
+        }
+        result.push(obj);
+    }
+    return result;
+  };
+
+  const validateJsonData = (data) => {
+    if (!Array.isArray(data) || data.length === 0) {
+      return { isValid: false, message: 'Dataset must be a non-empty array of objects.' };
+    }
+    for (const [index, item] of data.entries()) {
+      if (typeof item !== 'object' || item === null) {
+        return { isValid: false, message: `Record ${index + 1} is not a valid object.` };
+      }
+      for (const key in item) {
+        const value = item[key];
+        if (value == null || (typeof value === 'string' && value.trim() === '')) {
+          const lineNumber = index + 2;
+          return { isValid: false, message: `Record ${index + 1} (line ${lineNumber}) has an empty value for field "${key}".` };
+        }
+      }
+    }
+    return { isValid: true };
+  };
+
+  const handleFileSelection = async (files) => {
+    if (!files || files.length === 0) return;
+    setIsValidatingFile(true);
+    const uploaded = files[0];
+    const maxSizeMB = 100;
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    const fileExtension = uploaded.name.substring(uploaded.name.lastIndexOf('.'));
+  
+    try {
+      if (!uploaded) throw new Error("No file selected.");
+      if (uploaded.size > maxSizeBytes) {
+        throw new Error(`File size should not exceed ${maxSizeMB}MB`);
+      }
+      
+      const fileText = await uploaded.text();
+      let jsonData;
+
+      if (fileExtension.toLowerCase() === '.json') {
+          jsonData = JSON.parse(fileText);
+      } else {
+          jsonData = parseCsvToJson(fileText);
+      }
+      
+      const validationResult = validateJsonData(jsonData);
+      if (!validationResult.isValid) {
+        throw new Error(validationResult.message);
+      }
+
+      const jsonString = JSON.stringify(jsonData);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const newFileName = uploaded.name.replace(/\.[^/.]+$/, "") + ".json";
+      const jsonFile = new File([blob], newFileName, { type: 'application/json' });
+      
+      setFile(jsonFile);
+      setFileError('');
+    } catch (e) {
+      setFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      const errorMessage = e instanceof SyntaxError ? 'Invalid JSON syntax. Please check the file content.' : e.message;
+      setFileError(errorMessage);
+      setTimeout(() => setFileError(''), 4000);
+    } finally {
+      setIsValidatingFile(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    handleFileSelection(e.dataTransfer.files);
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    if (!validateModelName(modelName)) return;
   
     if (!file) {
-      setSubmissionError('Please upload a fine-tuning .json file.');
+      setSubmissionError('Please upload a fine-tuning dataset file.');
       return;
     }
     
@@ -296,11 +617,15 @@ const FineTunePage = () => {
       fileName: file.name,
     });
   
-    if (rabbitTraffic?.messages_ready > 5) {
+    if (trafficData?.formatting?.messages_ready > 5) {
       setShowQueueWarning(true);
     } else {
       setShowConfirmModal(true);
     }
+  };
+  
+  const handleRedirectNow = () => {
+    navigate('/fine-tune-status');
   };
 
   const handleConfirmedSubmit = async () => {
@@ -314,29 +639,82 @@ const FineTunePage = () => {
     formData.append('clinician_type_id', clinicianTypeId);
     formData.append('file', file);
     formData.append('ai_model_id', model.id);
+    
+    setSubmissionState('submitting');
+    setShowConfirmModal(false);
   
     try {
       await createFineTuneRequest(formData).unwrap();
-      setSubmissionSuccess('Fine-tune request submitted successfully!');
-      setShowConfirmModal(false);
+      setSubmissionState('success');
     } catch (err) {
       const message = err?.data?.error || 'Failed to submit fine-tune request.';
       setSubmissionError(message);
-      setShowConfirmModal(false);
+      setSubmissionState('idle');
     }
   };  
 
-  if (isLoading || isClinicianTypesLoading) return <Spinner />;
-  if (isError || isClinicianTypesError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
+  const truncateFilename = (name, maxLength = 20) => {
+    if (name.length <= maxLength) {
+      return name;
+    }
+    return `${name.substring(0, maxLength)}...`;
+  };
+
+  if (isLoading || isClinicianTypesLoading || isLoadingAllModels || isLoadingAllRequests) return <Spinner />;
+  if (isError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
+
+  if (submissionState === 'success') {
+    return (
+      <SuccessPanel>
+        <ContentBox>
+          <SuccessHeader>
+            <CheckmarkIcon />
+            Submission Successful!
+          </SuccessHeader>
+          <Subtitle>Your dataset has been added to the queue. Here's what happens next:</Subtitle>
+          <LifecycleList>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Data Formatting & Validation</h5>
+                <p>Your submitted dataset is being automatically processed and validated to ensure it matches the required format for fine-tuning.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Manual Review & Confirmation</h5>
+                <p>Once formatted, your request will move to "Awaiting Confirmation". You must go to the <strong>Fine-Tune Status</strong> page to review a data sample and confirm you want to proceed.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot />
+              <LifecycleContent>
+                <h5>Fine-Tuning Process</h5>
+                <p>After your confirmation, the request enters the fine-tuning queue. The system will then use your data to train a new version of the base model.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+            <LifecycleItem>
+              <LifecycleDot style={{ borderColor: '#2e7d32' }} />
+              <LifecycleContent>
+                <h5 style={{ color: '#2e7d32' }}>Completion</h5>
+                <p>When the process is finished, a new, fine-tuned model will be created and will become available in the Model Catalogue.</p>
+              </LifecycleContent>
+            </LifecycleItem>
+          </LifecycleList>
+          <PrimaryButton onClick={handleRedirectNow} style={{ width: 'auto', marginTop: '2.5rem' }}>Go to Status Page</PrimaryButton>
+        </ContentBox>
+      </SuccessPanel>
+    );
+  }
 
   return (
-    <div>
+    <div style={{ width: '100%' }}>
       <BackLink to={`/ai-models/${model.id}`}>Back to model</BackLink>
       <PageWrapper>
         <MainContent>
           <Section>
             <h3>Fine tune {model.name}</h3>
-
             {submissionError && (
               <div style={{
                 backgroundColor: '#fdecea',
@@ -349,30 +727,18 @@ const FineTunePage = () => {
                 {submissionError}
               </div>
             )}
-
-            {submissionSuccess && (
-              <div style={{
-                backgroundColor: '#e6f4ea',
-                color: '#1e4620',
-                border: '1px solid #a5d6a7',
-                borderRadius: '4px',
-                padding: '1rem',
-                marginBottom: '1rem',
-              }}>
-                {submissionSuccess}
-              </div>
-            )}
-
             <form onSubmit={handleSubmit}>
               <label htmlFor="modelName">Model name</label>
               <input
                 id="modelName"
                 type="text"
                 value={modelName}
-                onChange={(e) => setModelName(e.target.value)}
+                onChange={handleNameChange}
+                onBlur={() => validateModelName(modelName)}
                 placeholder="Enter a new name for the fine-tuned model"
                 required
               />
+              {nameError && <ValidationErrorText>{nameError}</ValidationErrorText>}
   
               <label htmlFor="description">Description</label>
               <textarea
@@ -421,133 +787,78 @@ const FineTunePage = () => {
                 placeholder="Note for this fine-tuned model"
               />
   
-              <PrimaryButton type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit'}
+              <PrimaryButton type="submit" disabled={submissionState === 'submitting' || !!nameError}>
+                {submissionState === 'submitting' ? 'Submitting...' : 'Submit'}
               </PrimaryButton>
             </form>
-          </Section>
-  
-          <Section>
-            <h3>History</h3>
-            <div
-              style={{
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                overflow: 'hidden',
-              }}
-            >
-              {model.model_fine_tune_requests?.length > 0 ? (
-                model.model_fine_tune_requests.map((request, index) => (
-                  <div
-                    key={request.id || index}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '1rem',
-                      borderBottom:
-                        index !== model.model_fine_tune_requests.length - 1
-                          ? '1px solid #ccc'
-                          : 'none',
-                      backgroundColor: '#fff',
-                    }}
-                  >
-                    <div>
-                      <strong>Model name:</strong> {request.name}
-                      <br />
-                      <strong>Status:</strong> {request.status}
-                      <br />
-                      <strong>Task:</strong> {request.task}
-                      <br />
-                      <strong>Created at:</strong> {request.created_at}
-                    </div>
-                    <div>
-                      {request.status === 'done' && (
-                        <Link
-                          to={`/ai-models/${request.new_ai_model_id}`}
-                          style={{
-                            color: '#005eb8',
-                            fontWeight: 'normal',
-                            fontSize: '0.95rem',
-                          }}
-                        >
-                          Visit model
-                        </Link>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p style={{ padding: '1rem' }}>No fine-tune requests submitted yet.</p>
-              )}
-            </div>
           </Section>
         </MainContent>
   
         <Sidebar>
           <Section>
             <h3>Fine-Tuning Data</h3>
-            <label htmlFor="file">Upload JSON file</label>
-            <FileInputWrapper>
-              <input
-                id="file"
-                type="file"
-                accept=".json"
-                onChange={(e) => {
-                  const uploaded = e.target.files[0];
-                  const maxSizeMB = 100;
-                  const maxSizeBytes = maxSizeMB * 1024 * 1024;
-
-                  if (uploaded) {
-                    if (uploaded.size > maxSizeBytes) {
-                      setFile(null);
-                      setFileError(`File size should not exceed ${maxSizeMB}MB`);
-                      e.target.value = '';
-                      setTimeout(() => setFileError(''), 4000);
-                    } else if (uploaded.type !== 'application/json') {
-                      setFile(null);
-                      setFileError('Please upload a .json file');
-                      e.target.value = '';
-                      setTimeout(() => setFileError(''), 4000);
-                    } else {
-                      setFile(uploaded);
-                      setFileError('');
-                    }
-                  }
-                }}
-                required
-              />
-              <Tooltip>Max 1 file, 50MB</Tooltip>
-              {fileError && <ErrorTooltip>{fileError}</ErrorTooltip>}
-            </FileInputWrapper>
-
-            {file && (
-              <p>
-                <strong>Selected file:</strong> {file.name}
-              </p>
+            <label htmlFor="file-upload">Upload Dataset File</label>
+            <input
+              id="file-upload"
+              type="file"
+              accept=".json,.csv"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              onChange={(e) => handleFileSelection(e.target.files)}
+            />
+            {!file ? (
+              <>
+                <UploadButton
+                  as="button"
+                  type="button"
+                  onClick={() => fileInputRef.current.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  isDragging={isDragging}
+                  disabled={isValidatingFile}
+                >
+                  {isValidatingFile ? (
+                    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <InlineSpinner />
+                      Validating...
+                    </span>
+                  ) : (
+                    'Upload File'
+                  )}
+                </UploadButton>
+                {fileError && <FileErrorText>{fileError}</FileErrorText>}
+              </>
+            ) : (
+              <FileDisplay>
+                <strong title={file.name}>{truncateFilename(file.name)}</strong>
+                <SecondaryButton
+                  onClick={() => { setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                  style={{ width: 'auto', padding: '0.2rem 0.8rem', fontSize: '0.8rem', marginBottom: 0 }}
+                >Remove</SecondaryButton>
+              </FileDisplay>
             )}
   
             <ToggleButton type="button" onClick={() => setShowFormat((prev) => !prev)}>
-              {showFormat ? 'Hide format' : 'View expected format'}
+              {showFormat ? 'Hide expected formats' : 'View expected formats'}
             </ToggleButton>
   
             {showFormat && (
-              <FormatBox>
-                {(() => {
-                  try {
-                    const parsed = JSON.parse(model.fine_tune_data_format);
-                    return JSON.stringify(parsed, null, 2);
-                  } catch (err) {
-                    return 'Invalid JSON format';
-                  }
-                })()}
-              </FormatBox>
+              <FormatDisplayContainer>
+                <FormatTabs>
+                  <FormatTab isActive={activeFormat === 'json'} onClick={() => setActiveFormat('json')}>JSON</FormatTab>
+                  <FormatTab isActive={activeFormat === 'csv'} onClick={() => setActiveFormat('csv')}>CSV</FormatTab>
+                </FormatTabs>
+                <CodeBlock>
+                  {activeFormat === 'json' ? JSON_EXAMPLE : CSV_EXAMPLE}
+                </CodeBlock>
+              </FormatDisplayContainer>
             )}
           </Section>
           <Section>
             <h3>Queue Status</h3>
             {isTrafficLoading && <p>Loading traffic...</p>}
-            {isTrafficError && <p style={{ color: 'red' }}>Error loading traffic.</p>}
-            {rabbitTraffic && (
+            {trafficData && (
               <div style={{
                 background: '#fff',
                 border: '1px solid #cdd4d8',
@@ -556,10 +867,10 @@ const FineTunePage = () => {
                 fontSize: '0.95rem',
               }}>
                 <p>
-                  <strong>Waiting to Start:</strong> {rabbitTraffic.messages_ready}
+                  <strong>Formatting Queue:</strong> {trafficData.formatting?.messages_ready || 0}
                 </p>
                 <p>
-                  <strong>Currently Running:</strong> {rabbitTraffic.messages_unacknowledged}
+                  <strong>Fine-Tuning Queue:</strong> {trafficData.fine_tuning?.messages_ready || 0}
                 </p>
               </div>
             )}
@@ -576,24 +887,12 @@ const FineTunePage = () => {
               <strong>{model.name}</strong>?
             </p>
             <ParamList>
-              <li>
-                <strong>Model name:</strong> {submitParams.modelName}
-              </li>
-              <li>
-                <strong>Description:</strong> {submitParams.description}
-              </li>
-              <li>
-                <strong>Task:</strong> {submitParams.task}
-              </li>
-              <li>
-                <strong>Clinician type:</strong> {submitParams.clinicianType}
-              </li>
-              <li>
-                <strong>Fine Tuning Notes:</strong> {submitParams.fine_tuning_notes}
-              </li>
-              <li>
-                <strong>File:</strong> {submitParams.fileName}
-              </li>
+              <li><strong>Model name:</strong> {submitParams.modelName}</li>
+              <li><strong>Description:</strong> {submitParams.description}</li>
+              <li><strong>Task:</strong> {submitParams.task}</li>
+              <li><strong>Clinician type:</strong> {submitParams.clinicianType}</li>
+              <li><strong>Fine Tuning Notes:</strong> {submitParams.fine_tuning_notes}</li>
+              <li><strong>File:</strong> {submitParams.fileName}</li>
             </ParamList>
             <ModalButtonGroup>
               <ModalButton onClick={() => setShowConfirmModal(false)}>Cancel</ModalButton>
@@ -607,18 +906,13 @@ const FineTunePage = () => {
           <ModalBox>
             <ModalTitle>High Queue Notice</ModalTitle>
             <p>
-              There are currently <strong>{rabbitTraffic.messages_ready}</strong> fine-tune requests waiting to be processed.
+              There are currently <strong>{trafficData?.formatting?.messages_ready || 0}</strong> requests waiting to be processed.
               Your request will be added to the queue and may take longer than usual.
             </p>
             <p>Do you still want to continue?</p>
             <ModalButtonGroup>
               <ModalButton onClick={() => setShowQueueWarning(false)}>Cancel</ModalButton>
-              <PrimaryButton
-                onClick={() => {
-                  setShowQueueWarning(false);
-                  setShowConfirmModal(true);
-                }}
-              >
+              <PrimaryButton onClick={() => { setShowQueueWarning(false); setShowConfirmModal(true); }}>
                 Continue
               </PrimaryButton>
             </ModalButtonGroup>

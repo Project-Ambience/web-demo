@@ -21,4 +21,9 @@ class Api::AiModelsController < Api::ApplicationController
       add_clinician_type_name: true
     )
   end
+
+  def tunable
+    @tunable_models = AiModel.where(allow_fine_tune: true).select(:id, :name).order(:name)
+    render json: @tunable_models
+  end
 end

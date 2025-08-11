@@ -3,7 +3,7 @@ import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
-  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate'],
+  tagTypes: ['Model', 'ClinicianType', 'Conversation', 'Message', 'FewShotTemplate', 'FineTuneRequest', 'FineTuneStatistics', 'QueueTraffic'],
   endpoints: builder => ({
     getClinicianTypes: builder.query({
       query: () => '/clinician_types',
@@ -19,6 +19,10 @@ export const apiSlice = createApi({
     getAiModelById: builder.query({
       query: id => `/ai_models/${id}`,
       providesTags: (result, error, id) => [{ type: 'Model', id }],
+    }),
+    getTunableModels: builder.query({
+      query: () => '/ai_models/tunable',
+      providesTags: ['Model'],
     }),
     addRating: builder.mutation({
       query: ({ ai_model_id, rating }) => ({
@@ -123,6 +127,36 @@ export const apiSlice = createApi({
         method: 'POST',
         body: formData,
       }),
+      invalidatesTags: ['FineTuneRequest']
+    }),
+    getFineTuneRequests: builder.query({
+      query: (params) => {
+        const queryParams = new URLSearchParams(params).toString();
+        return `/model_fine_tune_requests?${queryParams}`;
+      },
+      providesTags: ['FineTuneRequest'],
+    }),
+    getFineTuneStatistics: builder.query({
+      query: () => '/model_fine_tune_requests/statistics',
+      providesTags: ['FineTuneStatistics'],
+    }),
+    getQueueTraffic: builder.query({
+        query: () => '/rabbitmq/traffic',
+        providesTags: ['QueueTraffic'],
+    }),
+    confirmAndStartFineTune: builder.mutation({
+      query: (id) => ({
+        url: `/model_fine_tune_requests/${id}/confirm_and_start_fine_tune`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['FineTuneRequest', 'QueueTraffic', 'FineTuneStatistics']
+    }),
+    rejectFormatting: builder.mutation({
+      query: (id) => ({
+        url: `/model_fine_tune_requests/${id}/reject_formatting`,
+        method: 'POST',
+      }),
+      invalidatesTags: ['FineTuneRequest', 'FineTuneStatistics']
     }),
     acceptFeedback: builder.mutation({
       query: (id) => ({
@@ -137,9 +171,6 @@ export const apiSlice = createApi({
         method: 'POST',
       }),
       invalidatesTags: (result, error, id) => [{ type: 'Conversation', id }]
-    }),
-    getRabbitMQTraffic: builder.query({
-      query: () => '/rabbitmq/traffic',
     }),
     getFewShotTemplates: builder.query({
       query: () => '/few_shot_templates',
@@ -218,6 +249,7 @@ export const {
   useGetClinicianTypesQuery,
   useGetAiModelsQuery,
   useGetAiModelByIdQuery,
+  useGetTunableModelsQuery,
   useAddRatingMutation,
   useAddCommentMutation,
   useGetConversationsQuery,
@@ -228,9 +260,13 @@ export const {
   useDeleteConversationMutation,
   useAddMessageMutation,
   useCreateFineTuneRequestMutation,
+  useGetFineTuneRequestsQuery,
+  useGetFineTuneStatisticsQuery,
+  useGetQueueTrafficQuery,
+  useConfirmAndStartFineTuneMutation,
+  useRejectFormattingMutation,
   useAcceptFeedbackMutation,
   useRejectFeedbackMutation,
-  useGetRabbitMQTrafficQuery,
   useGetFewShotTemplatesQuery,
   useGetFewShotTemplateQuery,
   useCreateFewShotTemplateMutation,

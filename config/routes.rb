@@ -5,9 +5,23 @@ Rails.application.routes.draw do
   namespace :api do
     resources :clinician_types, only: [ :index ]
     resources :few_shot_templates, only: [ :index, :show, :create, :update, :destroy ]
-    resources :model_fine_tune_requests, only: [ :create ]
+    resources :model_fine_tune_requests, only: [ :index, :create ] do
+      member do
+        post :confirm_and_start_fine_tune
+        post :start_processing
+        post :reject_formatting
+      end
+      collection do
+        get :statistics
+        post :update_status
+        post :formatting_complete
+      end
+    end
     resources :rag_data_adding_requests, only: [ :create ]
     resources :ai_models, only: [ :index, :show ] do
+      collection do
+        get :tunable
+      end
       resources :comments, only: [ :create ]
       resources :ratings, only: [ :create ]
     end
@@ -24,7 +38,6 @@ Rails.application.routes.draw do
     end
 
     post "/model_install_requests/update_status", to: "model_install_requests#update_status"
-    post "/model_fine_tune_requests/update_status", to: "model_fine_tune_requests#update_status"
     get "/rabbitmq/traffic", to: "rabbitmq#traffic"
 
     resources :inter_raters, only: [ :create ] do
