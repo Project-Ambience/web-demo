@@ -1,5 +1,5 @@
 ActiveAdmin.register AiModel do
-  permit_params :fine_tune_data_format, :allow_fine_tune, :name, :description, :speciality, :family, :parameter_size, :fine_tuning_notes
+  permit_params :fine_tune_data_format, :allow_fine_tune, :name, :description, :speciality, :family, :parameter_size, :fine_tuning_notes, :fine_tune_data_format_csv
   actions :all, except: [ :new, :destroy, :create ]
 
   filter :id
