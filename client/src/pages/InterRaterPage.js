@@ -16,6 +16,20 @@ const PageLayout = styled.div`
   margin: 0 auto;
 `;
 
+const SeeMoreButton = styled.button`
+  background: none;
+  border: none;
+  color: #005eb8;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+
+  &:hover {
+    color: #004199;
+  }
+`;
+
 const WhiteContainer = styled.div`
   background-color: #fff;
   padding: 2rem;
@@ -387,6 +401,25 @@ const InterRaterPage = () => {
   const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
+  const [isTextModalOpen, setIsTextModalOpen] = useState(false);
+  const [textModalTitle, setTextModalTitle] = useState('');
+  const [textModalBody, setTextModalBody] = useState('');
+
+  const PREVIEW_CHARS = 200;
+
+  const getPreview = (str = '', limit = PREVIEW_CHARS) => {
+    if (!str) return { preview: '', needsMore: false };
+    const needsMore = str.length > limit;
+    const preview = needsMore ? `${str.slice(0, limit).trimEnd()}…` : str;
+    return { preview, needsMore };
+  };
+
+  const openTextModal = (title, body) => {
+    setTextModalTitle(title);
+    setTextModalBody(body || '');
+    setIsTextModalOpen(true);
+  };
+
   const [createInterRaterFeedback] = useAddInterRaterFeedbackMutation();
   const totalItems = evaluations?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -478,7 +511,7 @@ const InterRaterPage = () => {
                           {item.first_conversation_ai_model_name}
                         </p>
                         <p>
-                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          <strong>Task:</strong>{' '}
                           {item.first_conversation_ai_model_speciality || "-"}
                         </p>
                         <p>
@@ -519,7 +552,6 @@ const InterRaterPage = () => {
                           </Tag>
                         </p>
                         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
-                        <p><strong>Prompt:</strong> {item.first_conversation_base_prompt}</p>
                         <p>
                           <strong>File:</strong>{' '}
                           {item.first_conversation_file_url && item.first_conversation_file_name ? (
@@ -534,7 +566,59 @@ const InterRaterPage = () => {
                             'No file uploaded'
                           )}
                         </p>
-                        <p><strong>Response:</strong> {item.first_conversation_first_response}</p>
+                        <>
+                          <p><strong>Prompt:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.first_conversation_base_prompt);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Prompt`,
+                                          item.first_conversation_base_prompt
+                                        )
+                                      }
+                                      aria-label="See full prompt (first response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+
+                          <p><strong>Response:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.first_conversation_first_response);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Response`,
+                                          item.first_conversation_first_response
+                                        )
+                                      }
+                                      aria-label="See full response (first response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+                        </>
                       </ResponseBox>
                       <ResponseBox>
                         <h4>Second Response</h4>
@@ -543,7 +627,7 @@ const InterRaterPage = () => {
                           {item.second_conversation_ai_model_name}
                         </p>
                         <p>
-                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          <strong>Task:</strong>{' '}
                           {item.second_conversation_ai_model_speciality || "-"}
                         </p>
                         <p>
@@ -584,7 +668,6 @@ const InterRaterPage = () => {
                           </Tag>
                         </p>
                         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
-                        <p><strong>Prompt:</strong> {item.second_conversation_base_prompt}</p>
                         <p>
                           <strong>File:</strong>{' '}
                           {item.second_conversation_file_url && item.second_conversation_file_name ? (
@@ -599,7 +682,59 @@ const InterRaterPage = () => {
                             'No file uploaded'
                           )}
                         </p>
-                        <p><strong>Response:</strong> {item.second_conversation_first_response}</p>
+                        <>
+                          <p><strong>Prompt:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.second_conversation_base_prompt);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Prompt`,
+                                          item.second_conversation_base_prompt
+                                        )
+                                      }
+                                      aria-label="See full prompt (second response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+
+                          <p><strong>Response:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.second_conversation_first_response);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Response`,
+                                          item.second_conversation_first_response
+                                        )
+                                      }
+                                      aria-label="See full response (second response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+                        </>
                       </ResponseBox>
                     </ResponseComparison>
                   </CardContent>
@@ -695,7 +830,36 @@ const InterRaterPage = () => {
           </ModalContainer>
         </>
       )}
-
+      {isTextModalOpen && (
+        <>
+          <ModalOverlay onClick={() => setIsTextModalOpen(false)} />
+          <ModalContainer role="dialog" aria-modal="true" aria-label={textModalTitle}>
+            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{textModalTitle || 'Full content'}</span>
+              <button
+                onClick={() => setIsTextModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </ModalHeader>
+            <ModalContent>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{textModalBody}</div>
+            </ModalContent>
+            <ModalFooter>
+              <button onClick={() => setIsTextModalOpen(false)}>Close</button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
     </PageLayout>
   );
 };
