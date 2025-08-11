@@ -660,6 +660,18 @@ const FineTunePage = () => {
     return `${name.substring(0, maxLength)}...`;
   };
 
+  const getJsonFormatExample = () => {
+    if (!model?.fine_tune_data_format) {
+      return 'Invalid JSON format';
+    }
+    try {
+      const parsed = JSON.parse(model.fine_tune_data_format);
+      return JSON.stringify(parsed, null, 2);
+    } catch (err) {
+      return 'Invalid JSON format';
+    }
+  };
+
   if (isLoading || isClinicianTypesLoading || isLoadingAllModels || isLoadingAllRequests) return <Spinner />;
   if (isError) return <ErrorMessage>Failed to load data.</ErrorMessage>;
 
@@ -850,7 +862,7 @@ const FineTunePage = () => {
                   <FormatTab isActive={activeFormat === 'csv'} onClick={() => setActiveFormat('csv')}>CSV</FormatTab>
                 </FormatTabs>
                 <CodeBlock>
-                  {activeFormat === 'json' ? JSON_EXAMPLE : CSV_EXAMPLE}
+                  {activeFormat === 'json' ? getJsonFormatExample() : model.fine_tune_data_format_csv || "There is no expected CSV format."}
                 </CodeBlock>
               </FormatDisplayContainer>
             )}

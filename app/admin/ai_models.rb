@@ -26,6 +26,7 @@ ActiveAdmin.register AiModel do
       f.input :family
       f.input :parameter_size
       f.input :fine_tune_data_format
+      f.input :fine_tune_data_format_csv
       f.input :allow_fine_tune
       f.input :fine_tuning_notes
     end

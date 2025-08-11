@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2025_08_04_095128) do
+ActiveRecord::Schema[8.0].define(version: 2025_08_11_160025) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -85,6 +85,7 @@ ActiveRecord::Schema[8.0].define(version: 2025_08_04_095128) do
     t.string "parameter_size"
     t.string "fine_tuning_notes"
     t.boolean "support_rag", default: false, null: false
+    t.string "fine_tune_data_format_csv"
     t.index ["base_model_id"], name: "index_ai_models_on_base_model_id"
     t.index ["clinician_type_id"], name: "index_ai_models_on_clinician_type_id"
   end
