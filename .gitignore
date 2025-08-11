@@ -5,7 +5,6 @@
 # `$XDG_CONFIG_HOME/git/ignore` or `~/.config/git/ignore`
 
 .DS_Store
-*.py
 
 # Ignore bundler config.
 /.bundle
