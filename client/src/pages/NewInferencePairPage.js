@@ -409,6 +409,24 @@ const NewInferencePairPage = () => {
   const [textModalTitle, setTextModalTitle] = useState('');
   const [textModalBody, setTextModalBody] = useState('');
 
+  const [isFineTuneOpen, setIsFineTuneOpen] = useState(false);
+  const [fineTuneTitle, setFineTuneTitle] = useState('');
+  const [fineTuneBody, setFineTuneBody] = useState('');
+
+  const openFineTuneModal = (modelObj) => {
+    const title = `Fine-tune Data`;
+    let body = modelObj?.fine_tune_data;
+    if (body && typeof body === 'object') {
+      try {
+        body = JSON.stringify(body, null, 2);
+      } catch (_) {}
+    }
+
+    setFineTuneTitle(title);
+    setFineTuneBody(body || 'No fine-tune data available.');
+    setIsFineTuneOpen(true);
+  };
+
   const PREVIEW_CHARS = 200;
 
   const getPreview = (str = '', limit = PREVIEW_CHARS) => {
@@ -561,6 +579,33 @@ const NewInferencePairPage = () => {
                     </p>
                     <p>
                       <Tag
+                        clickable={!!convo1?.ai_model?.fine_tune_data}
+                        highlight={!!convo1?.ai_model?.fine_tune_data}
+                        onClick={() =>
+                          convo1?.ai_model?.fine_tune_data && openFineTuneModal(convo1.ai_model)
+                        }
+                        title={
+                          convo1?.ai_model?.fine_tune_data
+                            ? 'Click to view fine-tune data'
+                            : 'No fine-tune data available'
+                        }
+                      >
+                        Fine Tuned: {convo1?.ai_model?.fine_tune_data ? 'True' : 'False'}
+                        {convo1?.ai_model?.fine_tune_data && (
+                          <Icon
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </Icon>
+                        )}
+                      </Tag>
+                      <Tag
                         clickable={convo1.few_shot_template?.examples?.length > 0}
                         highlight={convo1.few_shot_template?.examples?.length > 0}
                         onClick={() => convo1.few_shot_template && openModal(convo1.few_shot_template)}
@@ -678,6 +723,33 @@ const NewInferencePairPage = () => {
                       <strong>Base Model:</strong> {convo2?.ai_model?.base_model_name || "-"}
                     </p>
                     <p>
+                      <Tag
+                        clickable={!!convo2?.ai_model?.fine_tune_data}
+                        highlight={!!convo2?.ai_model?.fine_tune_data}
+                        onClick={() =>
+                          convo2?.ai_model?.fine_tune_data && openFineTuneModal(convo2.ai_model)
+                        }
+                        title={
+                          convo2?.ai_model?.fine_tune_data
+                            ? 'Click to view fine-tune data'
+                            : 'No fine-tune data available'
+                        }
+                      >
+                        Fine Tuned: {convo2?.ai_model?.fine_tune_data ? 'True' : 'False'}
+                        {convo2?.ai_model?.fine_tune_data && (
+                          <Icon
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </Icon>
+                        )}
+                      </Tag>
                       <Tag
                         clickable={convo2.few_shot_template?.examples?.length > 0}
                         highlight={convo2.few_shot_template?.examples?.length > 0}
@@ -958,6 +1030,52 @@ const NewInferencePairPage = () => {
             </ModalContent>
             <ModalFooter>
               <button onClick={() => setIsTextModalOpen(false)}>Close</button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
+      {isFineTuneOpen && (
+        <>
+          <ModalOverlay onClick={() => setIsFineTuneOpen(false)} />
+          <ModalContainer role="dialog" aria-modal="true" aria-label={fineTuneTitle} style={{ maxWidth: '900px' }}>
+            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{fineTuneTitle}</span>
+              <button
+                onClick={() => setIsFineTuneOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </ModalHeader>
+            <ModalContent>
+              <div
+                style={{
+                  background: '#f9fafb',
+                  color: '#333',
+                  border: '1px solid #dce3e8', 
+                  borderRadius: '8px',
+                  padding: '1rem 1.25rem',
+                  overflowX: 'auto',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9rem',
+                  lineHeight: '1.5',
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {fineTuneBody}
+                </pre>
+              </div>
+            </ModalContent>
+            <ModalFooter>
+              <button onClick={() => setIsFineTuneOpen(false)}>Close</button>
             </ModalFooter>
           </ModalContainer>
         </>

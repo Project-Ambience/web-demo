@@ -14,7 +14,8 @@ class Api::ConversationsController < Api::ApplicationController
           name: convo.ai_model.name,
           base_model: convo.ai_model.base_model,
           base_model_name: convo.ai_model.base_model&.name,
-          speciality: convo.ai_model.speciality
+          speciality: convo.ai_model.speciality,
+          fine_tune_data: convo.ai_model.model_fine_tune_requests&.last&.fine_tune_data
         },
         base_prompt: convo.base_prompt,
         first_response: convo.first_response,
@@ -41,7 +42,8 @@ class Api::ConversationsController < Api::ApplicationController
           name: convo.ai_model.name,
           base_model: convo.ai_model.base_model,
           base_model_name: convo.ai_model.base_model&.name,
-          speciality: convo.ai_model.speciality
+          speciality: convo.ai_model.speciality,
+          fine_tune_data: convo.ai_model.model_fine_tune_requests&.last&.fine_tune_data
         },
         base_prompt: convo.base_prompt,
         first_response: convo.first_response,

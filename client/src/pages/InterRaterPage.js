@@ -255,6 +255,20 @@ const ResponseBox = styled.div`
   }
 `;
 
+const FineTuneContainer = styled.div`
+  background-color: #f9fafb; 
+  color: #333;
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
 const Tag = styled.span`
   display: inline-flex;
   align-items: center;
@@ -401,6 +415,12 @@ const InterRaterPage = () => {
   const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
+  const pretty = (data) => {
+    if (!data) return '';
+    if (typeof data === 'string') return data;
+    try { return JSON.stringify(data, null, 2); } catch { return String(data); }
+  };
+
   const [isTextModalOpen, setIsTextModalOpen] = useState(false);
   const [textModalTitle, setTextModalTitle] = useState('');
   const [textModalBody, setTextModalBody] = useState('');
@@ -520,6 +540,38 @@ const InterRaterPage = () => {
                         </p>
                         <p>
                           <Tag
+                            clickable={!!item.first_conversation_fine_tune_data}
+                            highlight={!!item.first_conversation_fine_tune_data}
+                            onClick={() => {
+                              if (item.first_conversation_fine_tune_data) {
+                                openTextModal(
+                                  'Fine-tuned Data',
+                                  pretty(item.first_conversation_fine_tune_data)
+                                );
+                              }
+                            }}
+                            title={
+                              item.first_conversation_fine_tune_data
+                                ? 'Click to view fine-tune data'
+                                : 'No fine-tune data available'
+                            }
+                          >
+                            Fine Tuned: {item.first_conversation_fine_tune_data ? 'True' : 'False'}
+                            {item.first_conversation_fine_tune_data && (
+                              <Icon
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </Icon>
+                            )}
+                          </Tag>
+                          <Tag
                             clickable={!!item.first_conversation_few_shot_template}
                             highlight={!!item.first_conversation_few_shot_template}
                             onClick={() => {
@@ -635,6 +687,38 @@ const InterRaterPage = () => {
                           {item.second_conversation_base_model_name || "-"}
                         </p>
                         <p>
+                        <Tag
+                          clickable={!!item.second_conversation_fine_tune_data}
+                          highlight={!!item.second_conversation_fine_tune_data}
+                          onClick={() => {
+                            if (item.second_conversation_fine_tune_data) {
+                              openTextModal(
+                                'Fine Tune Data',
+                                pretty(item.second_conversation_fine_tune_data)
+                              );
+                            }
+                          }}
+                          title={
+                            item.second_conversation_fine_tune_data
+                              ? 'Click to view fine-tune data'
+                              : 'No fine-tune data available'
+                          }
+                        >
+                          Fine Tuned: {item.second_conversation_fine_tune_data ? 'True' : 'False'}
+                          {item.second_conversation_fine_tune_data && (
+                            <Icon
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </Icon>
+                          )}
+                        </Tag>
                         <Tag
                             clickable={!!item.second_conversation_few_shot_template}
                             highlight={!!item.second_conversation_few_shot_template}
@@ -833,7 +917,7 @@ const InterRaterPage = () => {
       {isTextModalOpen && (
         <>
           <ModalOverlay onClick={() => setIsTextModalOpen(false)} />
-          <ModalContainer role="dialog" aria-modal="true" aria-label={textModalTitle}>
+          <ModalContainer role="dialog" aria-modal="true" aria-label={textModalTitle} style={{ maxWidth: '900px' }}>
             <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>{textModalTitle || 'Full content'}</span>
               <button
@@ -852,7 +936,9 @@ const InterRaterPage = () => {
               </button>
             </ModalHeader>
             <ModalContent>
-              <div style={{ whiteSpace: 'pre-wrap' }}>{textModalBody}</div>
+              <FineTuneContainer>
+                {textModalBody}
+              </FineTuneContainer>
             </ModalContent>
             <ModalFooter>
               <button onClick={() => setIsTextModalOpen(false)}>Close</button>
