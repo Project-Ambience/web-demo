@@ -16,6 +16,20 @@ const PageLayout = styled.div`
   margin: 0 auto;
 `;
 
+const SeeMoreButton = styled.button`
+  background: none;
+  border: none;
+  color: #005eb8;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+
+  &:hover {
+    color: #004199;
+  }
+`;
+
 const WhiteContainer = styled.div`
   background-color: #fff;
   padding: 2rem;
@@ -241,6 +255,20 @@ const ResponseBox = styled.div`
   }
 `;
 
+const FineTuneContainer = styled.div`
+  background-color: #f9fafb; 
+  color: #333;
+  border: 1px solid #dce3e8;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  font-family: monospace;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
 const Tag = styled.span`
   display: inline-flex;
   align-items: center;
@@ -387,6 +415,31 @@ const InterRaterPage = () => {
   const { data: model, isLoading: isModelLoading } = useGetAiModelByIdQuery(ai_model_id);
   const [createInterRater] = useAddInterRaterMutation();
 
+  const pretty = (data) => {
+    if (!data) return '';
+    if (typeof data === 'string') return data;
+    try { return JSON.stringify(data, null, 2); } catch { return String(data); }
+  };
+
+  const [isTextModalOpen, setIsTextModalOpen] = useState(false);
+  const [textModalTitle, setTextModalTitle] = useState('');
+  const [textModalBody, setTextModalBody] = useState('');
+
+  const PREVIEW_CHARS = 200;
+
+  const getPreview = (str = '', limit = PREVIEW_CHARS) => {
+    if (!str) return { preview: '', needsMore: false };
+    const needsMore = str.length > limit;
+    const preview = needsMore ? `${str.slice(0, limit).trimEnd()}…` : str;
+    return { preview, needsMore };
+  };
+
+  const openTextModal = (title, body) => {
+    setTextModalTitle(title);
+    setTextModalBody(body || '');
+    setIsTextModalOpen(true);
+  };
+
   const [createInterRaterFeedback] = useAddInterRaterFeedbackMutation();
   const totalItems = evaluations?.length || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
@@ -478,7 +531,7 @@ const InterRaterPage = () => {
                           {item.first_conversation_ai_model_name}
                         </p>
                         <p>
-                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          <strong>Task:</strong>{' '}
                           {item.first_conversation_ai_model_speciality || "-"}
                         </p>
                         <p>
@@ -486,6 +539,38 @@ const InterRaterPage = () => {
                           {item.first_conversation_base_model_name || "-"}
                         </p>
                         <p>
+                          <Tag
+                            clickable={!!item.first_conversation_fine_tune_data}
+                            highlight={!!item.first_conversation_fine_tune_data}
+                            onClick={() => {
+                              if (item.first_conversation_fine_tune_data) {
+                                openTextModal(
+                                  'Data',
+                                  pretty(item.first_conversation_fine_tune_data)
+                                );
+                              }
+                            }}
+                            title={
+                              item.first_conversation_fine_tune_data
+                                ? 'Click to view fine-tune data'
+                                : 'No fine-tune data available'
+                            }
+                          >
+                            Fine Tuned: {item.first_conversation_fine_tune_data ? 'True' : 'False'}
+                            {item.first_conversation_fine_tune_data && (
+                              <Icon
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <circle cx="12" cy="12" r="3" />
+                              </Icon>
+                            )}
+                          </Tag>
                           <Tag
                             clickable={!!item.first_conversation_few_shot_template}
                             highlight={!!item.first_conversation_few_shot_template}
@@ -519,7 +604,6 @@ const InterRaterPage = () => {
                           </Tag>
                         </p>
                         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
-                        <p><strong>Prompt:</strong> {item.first_conversation_base_prompt}</p>
                         <p>
                           <strong>File:</strong>{' '}
                           {item.first_conversation_file_url && item.first_conversation_file_name ? (
@@ -534,7 +618,59 @@ const InterRaterPage = () => {
                             'No file uploaded'
                           )}
                         </p>
-                        <p><strong>Response:</strong> {item.first_conversation_first_response}</p>
+                        <>
+                          <p><strong>Prompt:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.first_conversation_base_prompt);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Prompt`,
+                                          item.first_conversation_base_prompt
+                                        )
+                                      }
+                                      aria-label="See full prompt (first response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+
+                          <p><strong>Response:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.first_conversation_first_response);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Response`,
+                                          item.first_conversation_first_response
+                                        )
+                                      }
+                                      aria-label="See full response (first response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+                        </>
                       </ResponseBox>
                       <ResponseBox>
                         <h4>Second Response</h4>
@@ -543,7 +679,7 @@ const InterRaterPage = () => {
                           {item.second_conversation_ai_model_name}
                         </p>
                         <p>
-                          <strong>Fine-tuned Speciality:</strong>{' '}
+                          <strong>Task:</strong>{' '}
                           {item.second_conversation_ai_model_speciality || "-"}
                         </p>
                         <p>
@@ -551,6 +687,38 @@ const InterRaterPage = () => {
                           {item.second_conversation_base_model_name || "-"}
                         </p>
                         <p>
+                        <Tag
+                          clickable={!!item.second_conversation_fine_tune_data}
+                          highlight={!!item.second_conversation_fine_tune_data}
+                          onClick={() => {
+                            if (item.second_conversation_fine_tune_data) {
+                              openTextModal(
+                                'Fine Tune Data',
+                                pretty(item.second_conversation_fine_tune_data)
+                              );
+                            }
+                          }}
+                          title={
+                            item.second_conversation_fine_tune_data
+                              ? 'Click to view fine-tune data'
+                              : 'No fine-tune data available'
+                          }
+                        >
+                          Fine Tuned: {item.second_conversation_fine_tune_data ? 'True' : 'False'}
+                          {item.second_conversation_fine_tune_data && (
+                            <Icon
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                              <circle cx="12" cy="12" r="3" />
+                            </Icon>
+                          )}
+                        </Tag>
                         <Tag
                             clickable={!!item.second_conversation_few_shot_template}
                             highlight={!!item.second_conversation_few_shot_template}
@@ -584,7 +752,6 @@ const InterRaterPage = () => {
                           </Tag>
                         </p>
                         <hr style={{ margin: '1rem 0', border: 'none', borderTop: '1px solid #ccc' }} />
-                        <p><strong>Prompt:</strong> {item.second_conversation_base_prompt}</p>
                         <p>
                           <strong>File:</strong>{' '}
                           {item.second_conversation_file_url && item.second_conversation_file_name ? (
@@ -599,7 +766,59 @@ const InterRaterPage = () => {
                             'No file uploaded'
                           )}
                         </p>
-                        <p><strong>Response:</strong> {item.second_conversation_first_response}</p>
+                        <>
+                          <p><strong>Prompt:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.second_conversation_base_prompt);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Prompt`,
+                                          item.second_conversation_base_prompt
+                                        )
+                                      }
+                                      aria-label="See full prompt (second response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+
+                          <p><strong>Response:</strong></p>
+                          {(() => {
+                            const { preview, needsMore } = getPreview(item.second_conversation_first_response);
+                            return (
+                              <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                                {preview || '—'}
+                                {needsMore && (
+                                  <>
+                                    {' '}
+                                    <SeeMoreButton
+                                      onClick={() =>
+                                        openTextModal(
+                                          `Response`,
+                                          item.second_conversation_first_response
+                                        )
+                                      }
+                                      aria-label="See full response (second response)"
+                                    >
+                                      See more
+                                    </SeeMoreButton>
+                                  </>
+                                )}
+                              </p>
+                            );
+                          })()}
+                        </>
                       </ResponseBox>
                     </ResponseComparison>
                   </CardContent>
@@ -695,7 +914,38 @@ const InterRaterPage = () => {
           </ModalContainer>
         </>
       )}
-
+      {isTextModalOpen && (
+        <>
+          <ModalOverlay onClick={() => setIsTextModalOpen(false)} />
+          <ModalContainer role="dialog" aria-modal="true" aria-label={textModalTitle} style={{ maxWidth: '900px' }}>
+            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{textModalTitle || 'Full content'}</span>
+              <button
+                onClick={() => setIsTextModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </ModalHeader>
+            <ModalContent>
+              <FineTuneContainer>
+                {textModalBody}
+              </FineTuneContainer>
+            </ModalContent>
+            <ModalFooter>
+              <button onClick={() => setIsTextModalOpen(false)}>Close</button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
     </PageLayout>
   );
 };

@@ -87,22 +87,18 @@ const ConversationColumn = styled.div`
   flex-direction: column;
 `;
 
-const ResponseScrollArea = styled.div`
-  max-height: 400px;
-  overflow-y: auto;
+const SeeMoreButton = styled.button`
+  background: none;
+  border: none;
+  color: #005eb8;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
   margin-top: 0.5rem;
-  padding-right: 0.5rem;
+  text-decoration: underline;
 
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
-
-  &::-webkit-scrollbar {
-    width: 6px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #ccc;
-    border-radius: 6px;
+  &:hover {
+    color: #004199;
   }
 `;
 
@@ -409,6 +405,43 @@ const NewInferencePairPage = () => {
 
   const [createConversation] = useCreateConversationMutation();
 
+  const [isTextModalOpen, setIsTextModalOpen] = useState(false);
+  const [textModalTitle, setTextModalTitle] = useState('');
+  const [textModalBody, setTextModalBody] = useState('');
+
+  const [isFineTuneOpen, setIsFineTuneOpen] = useState(false);
+  const [fineTuneTitle, setFineTuneTitle] = useState('');
+  const [fineTuneBody, setFineTuneBody] = useState('');
+
+  const openFineTuneModal = (modelObj) => {
+    const title = `Data`;
+    let body = modelObj?.fine_tune_data;
+    if (body && typeof body === 'object') {
+      try {
+        body = JSON.stringify(body, null, 2);
+      } catch (_) {}
+    }
+
+    setFineTuneTitle(title);
+    setFineTuneBody(body || 'No fine-tune data available.');
+    setIsFineTuneOpen(true);
+  };
+
+  const PREVIEW_CHARS = 200;
+
+  const getPreview = (str = '', limit = PREVIEW_CHARS) => {
+    if (!str) return { preview: '', needsMore: false };
+    const needsMore = str.length > limit;
+    const preview = needsMore ? `${str.slice(0, limit).trimEnd()}…` : str;
+    return { preview, needsMore };
+  };
+
+  const openTextModal = (title, body) => {
+    setTextModalTitle(title);
+    setTextModalBody(body || '');
+    setIsTextModalOpen(true);
+  };
+
   const cable = useRef(null);
   const dispatch = useDispatch();
 
@@ -539,12 +572,39 @@ const NewInferencePairPage = () => {
                     <p><strong>ID:</strong> {convo1.id}</p>
                     <p><strong>Model:</strong> {convo1.ai_model?.name}</p>
                     <p>
-                      <strong>Fine-tuned Speciality:</strong> {convo1?.ai_model?.speciality || "-"}
+                      <strong>Task:</strong> {convo1?.ai_model?.speciality || "-"}
                     </p>
                     <p>
                       <strong>Base Model:</strong> {convo1?.ai_model?.base_model_name || "-"}
                     </p>
                     <p>
+                      <Tag
+                        clickable={!!convo1?.ai_model?.fine_tune_data}
+                        highlight={!!convo1?.ai_model?.fine_tune_data}
+                        onClick={() =>
+                          convo1?.ai_model?.fine_tune_data && openFineTuneModal(convo1.ai_model)
+                        }
+                        title={
+                          convo1?.ai_model?.fine_tune_data
+                            ? 'Click to view fine-tune data'
+                            : 'No fine-tune data available'
+                        }
+                      >
+                        Fine Tuned: {convo1?.ai_model?.fine_tune_data ? 'True' : 'False'}
+                        {convo1?.ai_model?.fine_tune_data && (
+                          <Icon
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </Icon>
+                        )}
+                      </Tag>
                       <Tag
                         clickable={convo1.few_shot_template?.examples?.length > 0}
                         highlight={convo1.few_shot_template?.examples?.length > 0}
@@ -574,11 +634,61 @@ const NewInferencePairPage = () => {
                       </Tag>
                     </p>
                     <hr style={{ margin: '1rem 0' }} />
-                    <p><strong>Prompt:</strong> {convo1.base_prompt}</p>
                     <p><strong>Files:</strong> {convo1.file_url ? <a href={convo1.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                    <ResponseScrollArea>
-                      <p><strong>Response:</strong> {convo1.first_response}</p>
-                    </ResponseScrollArea>
+                    <>
+                      <p><strong>Prompt:</strong></p>
+                      {(() => {
+                        const { preview, needsMore } = getPreview(convo1.base_prompt);
+                        return (
+                          <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                            {preview || '—'}
+                            {needsMore && (
+                              <>
+                                {' '}
+                                <SeeMoreButton
+                                  onClick={() =>
+                                    openTextModal(
+                                      `Prompt`,
+                                      convo1.base_prompt
+                                    )
+                                  }
+                                  aria-label={`See full prompt for conversation ${convo1.id}`}
+                                >
+                                  See more
+                                </SeeMoreButton>
+                              </>
+                            )}
+                          </p>
+                        );
+                      })()}
+                    </>
+                    <>
+                      <p><strong>Response:</strong></p>
+                      {(() => {
+                        const { preview, needsMore } = getPreview(convo1.first_response);
+                        return (
+                          <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                            {preview || '—'}
+                            {needsMore && (
+                              <>
+                                {' '}
+                                <SeeMoreButton
+                                  onClick={() =>
+                                    openTextModal(
+                                      `Response`,
+                                      convo1.first_response
+                                    )
+                                  }
+                                  aria-label={`See full response for conversation ${convo1.id}`}
+                                >
+                                  See more
+                                </SeeMoreButton>
+                              </>
+                            )}
+                          </p>
+                        );
+                      })()}
+                    </>
                   </>
                 ) : (
                   <p style={{ color: '#888' }}>No matching conversation found.</p>
@@ -607,12 +717,39 @@ const NewInferencePairPage = () => {
                     <p><strong>ID:</strong> {convo2.id}</p>
                     <p><strong>Model:</strong> {convo2.ai_model?.name}</p>
                     <p>
-                      <strong>Fine-tuned Speciality:</strong> {convo2?.ai_model?.speciality || "-"}
+                      <strong>Task:</strong> {convo2?.ai_model?.speciality || "-"}
                     </p>
                     <p>
                       <strong>Base Model:</strong> {convo2?.ai_model?.base_model_name || "-"}
                     </p>
                     <p>
+                      <Tag
+                        clickable={!!convo2?.ai_model?.fine_tune_data}
+                        highlight={!!convo2?.ai_model?.fine_tune_data}
+                        onClick={() =>
+                          convo2?.ai_model?.fine_tune_data && openFineTuneModal(convo2.ai_model)
+                        }
+                        title={
+                          convo2?.ai_model?.fine_tune_data
+                            ? 'Click to view fine-tune data'
+                            : 'No fine-tune data available'
+                        }
+                      >
+                        Fine Tuned: {convo2?.ai_model?.fine_tune_data ? 'True' : 'False'}
+                        {convo2?.ai_model?.fine_tune_data && (
+                          <Icon
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </Icon>
+                        )}
+                      </Tag>
                       <Tag
                         clickable={convo2.few_shot_template?.examples?.length > 0}
                         highlight={convo2.few_shot_template?.examples?.length > 0}
@@ -642,11 +779,61 @@ const NewInferencePairPage = () => {
                       </Tag>
                     </p>
                     <hr style={{ margin: '1rem 0' }} />
-                    <p><strong>Prompt:</strong> {convo2.base_prompt}</p>
                     <p><strong>Files:</strong> {convo2.file_url ? <a href={convo2.file_url} target="_blank" rel="noreferrer">Attached File</a> : 'No file uploaded'}</p>
-                    <ResponseScrollArea>
-                      <p><strong>Response:</strong> {convo2.first_response}</p>
-                    </ResponseScrollArea>
+                    <>
+                      <p><strong>Prompt:</strong></p>
+                      {(() => {
+                        const { preview, needsMore } = getPreview(convo2.base_prompt);
+                        return (
+                          <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                            {preview || '—'}
+                            {needsMore && (
+                              <>
+                                {' '}
+                                <SeeMoreButton
+                                  onClick={() =>
+                                    openTextModal(
+                                      `Prompt`,
+                                      convo2.base_prompt
+                                    )
+                                  }
+                                  aria-label={`See full prompt for conversation ${convo2.id}`}
+                                >
+                                  See more
+                                </SeeMoreButton>
+                              </>
+                            )}
+                          </p>
+                        );
+                      })()}
+                    </>
+                    <>
+                      <p><strong>Response:</strong></p>
+                      {(() => {
+                        const { preview, needsMore } = getPreview(convo2.first_response);
+                        return (
+                          <p style={{ whiteSpace: 'pre-wrap', marginTop: '0.25rem' }}>
+                            {preview || '—'}
+                            {needsMore && (
+                              <>
+                                {' '}
+                                <SeeMoreButton
+                                  onClick={() =>
+                                    openTextModal(
+                                      `Response`,
+                                      convo2.first_response
+                                    )
+                                  }
+                                  aria-label={`See full response for conversation ${convo2.id}`}
+                                >
+                                  See more
+                                </SeeMoreButton>
+                              </>
+                            )}
+                          </p>
+                        );
+                      })()}
+                    </>
                   </>
                 ) : (
                   <p style={{ color: '#888' }}>No matching conversation found.</p>
@@ -817,6 +1004,82 @@ const NewInferencePairPage = () => {
         </>
       )}
 
+      {isTextModalOpen && (
+        <>
+          <ModalOverlay onClick={() => setIsTextModalOpen(false)} />
+          <ModalContainer role="dialog" aria-modal="true" aria-label={textModalTitle}>
+            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{textModalTitle || 'Full content'}</span>
+              <button
+                onClick={() => setIsTextModalOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </ModalHeader>
+            <ModalContent>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{textModalBody}</div>
+            </ModalContent>
+            <ModalFooter>
+              <button onClick={() => setIsTextModalOpen(false)}>Close</button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
+      {isFineTuneOpen && (
+        <>
+          <ModalOverlay onClick={() => setIsFineTuneOpen(false)} />
+          <ModalContainer role="dialog" aria-modal="true" aria-label={fineTuneTitle} style={{ maxWidth: '900px' }}>
+            <ModalHeader style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span>{fineTuneTitle}</span>
+              <button
+                onClick={() => setIsFineTuneOpen(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.25rem',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  color: '#999',
+                }}
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </ModalHeader>
+            <ModalContent>
+              <div
+                style={{
+                  background: '#f9fafb',
+                  color: '#333',
+                  border: '1px solid #dce3e8', 
+                  borderRadius: '8px',
+                  padding: '1rem 1.25rem',
+                  overflowX: 'auto',
+                  fontFamily: 'monospace',
+                  fontSize: '0.9rem',
+                  lineHeight: '1.5',
+                }}
+              >
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                  {fineTuneBody}
+                </pre>
+              </div>
+            </ModalContent>
+            <ModalFooter>
+              <button onClick={() => setIsFineTuneOpen(false)}>Close</button>
+            </ModalFooter>
+          </ModalContainer>
+        </>
+      )}
     </PageLayout>
   );
 };
