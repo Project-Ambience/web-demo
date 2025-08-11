@@ -545,7 +545,7 @@ const InterRaterPage = () => {
                             onClick={() => {
                               if (item.first_conversation_fine_tune_data) {
                                 openTextModal(
-                                  'Fine-tuned Data',
+                                  'Fine-tune Data',
                                   pretty(item.first_conversation_fine_tune_data)
                                 );
                               }
