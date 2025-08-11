@@ -199,7 +199,6 @@ const ModelCataloguePage = () => {
     }}>
       <CatalogueLayout>
         <Sidebar>
-          <SidebarTitle>Clinicians</SidebarTitle>
           <SearchContainer>
             <SearchIcon />
             <SearchInput
