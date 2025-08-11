@@ -414,7 +414,7 @@ const NewInferencePairPage = () => {
   const [fineTuneBody, setFineTuneBody] = useState('');
 
   const openFineTuneModal = (modelObj) => {
-    const title = `Fine-tune Data`;
+    const title = `Data`;
     let body = modelObj?.fine_tune_data;
     if (body && typeof body === 'object') {
       try {
