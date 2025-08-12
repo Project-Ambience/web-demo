@@ -50,6 +50,8 @@ RSpec.describe ModelFineTuneRequest, type: :model do
     before do
       ENV["MODEL_FORMATTING_COMPLETE_CALLBACK_PATH"] = "http://example.com/formatting_callback"
       ENV["MODEL_FORMATTING_REQUEST_QUEUE_NAME"] = "formatting_requests"
+      ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"] = "fine_tune_requests"
+      ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"] = "http://example.com/fine_tune_callback"
     end
 
     it "sets default status to pending on initialization" do
@@ -57,29 +59,53 @@ RSpec.describe ModelFineTuneRequest, type: :model do
       expect(new_request.status).to eq("pending")
     end
 
-    it "publishes formatting request to RabbitMQ after creation" do
+    it "publishes fine tune request to RabbitMQ after creation" do
       allow(MessagePublisher).to receive(:publish)
       fine_tune_request.save
       expect(MessagePublisher).to have_received(:publish).with(
         hash_including(
           fine_tune_request_id: fine_tune_request.id,
-          callback_url: "http://example.com/formatting_callback"
+          callback_url: "http://example.com/fine_tune_callback"
         ),
-        "formatting_requests"
+        "fine_tune_requests"
       )
     end
 
-    it "updates status to waiting_for_formatting after publishing" do
+    it "updates status to waiting_for_fine_tune after publishing" do
       allow(MessagePublisher).to receive(:publish)
       fine_tune_request.save
-      expect(fine_tune_request.reload.status).to eq("waiting_for_formatting")
+      expect(fine_tune_request.reload.status).to eq("waiting_for_fine_tune")
     end
 
-    it "updates status to formatting_failed if publishing raises an error" do
+    it "updates status to fine_tuning_failed if publishing raises an error" do
       allow(MessagePublisher).to receive(:publish).and_raise("SOME ERROR")
       fine_tune_request.save
-      expect(fine_tune_request.reload.status).to eq("formatting_failed")
+      expect(fine_tune_request.reload.status).to eq("fine_tuning_failed")
     end
+
+    # it "publishes formatting request to RabbitMQ after creation" do
+    #   allow(MessagePublisher).to receive(:publish)
+    #   fine_tune_request.save
+    #   expect(MessagePublisher).to have_received(:publish).with(
+    #     hash_including(
+    #       fine_tune_request_id: fine_tune_request.id,
+    #       callback_url: "http://example.com/formatting_callback"
+    #     ),
+    #     "formatting_requests"
+    #   )
+    # end
+
+    # it "updates status to waiting_for_formatting after publishing" do
+    #   allow(MessagePublisher).to receive(:publish)
+    #   fine_tune_request.save
+    #   expect(fine_tune_request.reload.status).to eq("waiting_for_formatting")
+    # end
+
+    # it "updates status to formatting_failed if publishing raises an error" do
+    #   allow(MessagePublisher).to receive(:publish).and_raise("SOME ERROR")
+    #   fine_tune_request.save
+    #   expect(fine_tune_request.reload.status).to eq("formatting_failed")
+    # end
   end
 
   describe "scopes" do
@@ -88,6 +114,7 @@ RSpec.describe ModelFineTuneRequest, type: :model do
 
     before do
       allow_any_instance_of(ModelFineTuneRequest).to receive(:publish_formatting_request).and_return(true)
+      allow_any_instance_of(ModelFineTuneRequest).to receive(:publish_fine_tune_request).and_return(true)
     end
 
     let!(:completed_request) { create(:model_fine_tune_request, ai_model: tunable_model_1, status: :fine_tuning_completed, created_at: 1.day.ago) }

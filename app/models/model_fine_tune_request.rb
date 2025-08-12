@@ -30,7 +30,8 @@ class ModelFineTuneRequest < ApplicationRecord
   scope :search_by_name, ->(term) { where("name ILIKE ?", "%#{term}%") if term.present? }
 
   after_initialize :set_default_status, if: :new_record?
-  after_create :publish_formatting_request
+  after_create :publish_fine_tune_request
+  # after_create :publish_formatting_request
   after_commit :broadcast_status_update, on: [ :create, :update ]
 
   def reject_formatting!
@@ -63,6 +64,23 @@ class ModelFineTuneRequest < ApplicationRecord
       self.waiting_for_formatting!
     rescue => e
       self.update(status: :formatting_failed, error_message: e.message)
+    end
+  end
+
+  def publish_fine_tune_request
+    payload = {
+      fine_tune_request_id: self.id,
+      ai_model_path: self.ai_model.path,
+      parameters: self.parameters,
+      fine_tune_data: self.fine_tune_data,
+      callback_url: ENV["MODEL_FINE_TUNE_REQUEST_CALLBACK_PATH"]
+    }
+
+    begin
+      MessagePublisher.publish(payload, ENV["MODEL_FINE_TUNE_REQUEST_QUEUE_NAME"])
+      self.waiting_for_fine_tune!
+    rescue => e
+      self.update(status: :fine_tuning_failed, error_message: e.message)
     end
   end
 
