@@ -82,7 +82,7 @@ const ButtonWrapper = styled.div`
 const Row = styled.label`
   display: flex;
   align-items: center;
-  justify-content: space-between; /* ensures rightmost control cluster */
+  justify-content: space-between;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   cursor: pointer;
@@ -96,7 +96,7 @@ const Row = styled.label`
 const ClickableRow = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between; /* ensures rightmost control cluster */
+  justify-content: space-between;
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   cursor: pointer;
@@ -120,7 +120,7 @@ const SubMenuRight = styled.div`
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 20;
-  min-width: 220px; /* a bit wider so toggle + ? fit nicely */
+  min-width: 220px;
 `;
 
 const LabelWrapper = styled.div`
@@ -133,8 +133,8 @@ const ControlsWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-left: auto; /* push controls all the way to the right */
-  > *:last-child { /* make sure the last item (help) sits at the far right */
+  margin-left: auto;
+  > *:last-child {
     margin-right: 0;
   }
 `;
@@ -193,7 +193,6 @@ const AddContentPanel = ({
 
       <RAGWrapper>
         {supportsRAG ? (
-          /* MAIN MENU: no question mark here (per requirement) */
           <Row onClick={() => setIsRAGOpen(!isRAGOpen)}>
             <LabelWrapper>
               <span>📚 RAG</span>
@@ -210,10 +209,8 @@ const AddContentPanel = ({
 
         {supportsRAG && isRAGOpen && (
           <SubMenuRight>
-            {/* SUBMENU: help icon on the far right, to the right of the toggle */}
             <Row
               onClick={(e) => {
-                // keep row clickable for toggle, but don't toggle when clicking help
                 e.preventDefault();
                 onToggleRAG();
               }}
@@ -246,13 +243,11 @@ const AddContentPanel = ({
               <LabelWrapper>
                 <span>➕ Add data to RAG</span>
               </LabelWrapper>
-              {/* No help icon here by design */}
             </Row>
           </SubMenuRight>
         )}
       </RAGWrapper>
 
-      {/* CoT: help icon at the far right, to the right of the toggle */}
       <Row onClick={onToggleCoT}>
         <LabelWrapper>
           <span>💭 Enable Thinking</span>
@@ -272,7 +267,6 @@ const AddContentPanel = ({
         </ControlsWrapper>
       </Row>
 
-      {/* Few-shot: help icon at the far right */}
       <ClickableRow onClick={onAddFewShot}>
         <LabelWrapper>
           <span>✨ Add Few-Shot</span>
