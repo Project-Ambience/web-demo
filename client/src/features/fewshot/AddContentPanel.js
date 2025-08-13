@@ -6,8 +6,7 @@ import ToggleSwitch from '../../components/common/ToggleSwitch';
 const PanelContainer = styled.div`
   position: absolute;
   bottom: 100%;
-  left: 50%;
-  transform: translateX(-80%);
+  left: 0;
   margin-bottom: 0.5rem;
   background: white;
   border-radius: 8px;
@@ -79,7 +78,7 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const Row = styled.label`
+const Row = styled.div`
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -176,16 +175,31 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
 
+      <Row as="label" onClick={onToggleCoT}>
+        <LabelWrapper>
+          <span>💭 Enable Thinking</span>
+          <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowCoTInfo(); }}>
+            <MaterialIcon iconName="help_outline" />
+          </InfoIcon>
+        </LabelWrapper>
+        <ControlsWrapper>
+          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
+        </ControlsWrapper>
+      </Row>
+
       <RAGWrapper>
         {supportsRAG ? (
           <Row onClick={() => setIsRAGOpen(!isRAGOpen)}>
             <LabelWrapper>
               <span>📚 RAG</span>
+              <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowRagInfo(); }}>
+                <MaterialIcon iconName="help_outline" />
+              </InfoIcon>
             </LabelWrapper>
             <MaterialIcon iconName="chevron_right" />
           </Row>
         ) : (
-          <DisabledRow>
+          <DisabledRow as="div">
             <LabelWrapper>
               <span>📚 RAG (Not Supported)</span>
             </LabelWrapper>
@@ -194,21 +208,12 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
 
         {supportsRAG && isRAGOpen && (
           <SubMenuRight>
-            <Row onClick={onToggleRAG}>
+            <Row as="label" onClick={onToggleRAG}>
               <LabelWrapper>
                 <span>Enable</span>
               </LabelWrapper>
               <ControlsWrapper>
                 <ToggleSwitch isOn={isRAGEnabled} handleToggle={onToggleRAG} />
-                <InfoIcon
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    onShowRagInfo();
-                  }}
-                >
-                  <MaterialIcon iconName="help_outline" />
-                </InfoIcon>
               </ControlsWrapper>
             </Row>
             <Row
@@ -221,30 +226,16 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
               }}
             >
               <LabelWrapper>
-                <span>➕ Add data to RAG</span>
+                <span>Add data to RAG</span>
               </LabelWrapper>
             </Row>
           </SubMenuRight>
         )}
       </RAGWrapper>
 
-      <Row onClick={onToggleCoT}>
-        <LabelWrapper>
-          <span>💭 Enable Thinking</span>
-        </LabelWrapper>
-        <ControlsWrapper>
-          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
-          <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowCoTInfo(); }}>
-            <MaterialIcon iconName="help_outline" />
-          </InfoIcon>
-        </ControlsWrapper>
-      </Row>
-
       <ClickableRow onClick={onAddFewShot}>
         <LabelWrapper>
           <span>✨ Add Few-Shot</span>
-        </LabelWrapper>
-        <ControlsWrapper>
           <InfoIcon
             onClick={(e) => {
               e.stopPropagation();
@@ -253,7 +244,7 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
           >
             <MaterialIcon iconName="help_outline" />
           </InfoIcon>
-        </ControlsWrapper>
+        </LabelWrapper>
       </ClickableRow>
     </PanelContainer>
   );

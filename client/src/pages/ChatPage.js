@@ -1045,20 +1045,6 @@ const ChatPage = () => {
                       )}
                     </SelectionBubblesContainer>
                     <MessageInputForm onSubmit={handleSendMessage}>
-                        <MessageTextarea
-                            ref={textareaRef}
-                            value={input}
-                            onInput={handleTextareaInput}
-                            placeholder={activeConversation.status === 'awaiting_rejection_comment' ? "Please provide feedback for the rejection..." : "Enter a prompt here"}
-                            rows="1"
-                            disabled={!activeConversationId || isWaiting || (activeConversation.file_url && selectedFile)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault();
-                                    handleSendMessage(e);
-                                }
-                            }}
-                        />
                         {activeConversation.status === 'awaiting_prompt' && (
                             <AddContentWrapper ref={addContentRef}>
                                 <HiddenFileInput
@@ -1119,6 +1105,20 @@ const ChatPage = () => {
                                 )}
                             </AddContentWrapper>
                         )}
+                        <MessageTextarea
+                            ref={textareaRef}
+                            value={input}
+                            onInput={handleTextareaInput}
+                            placeholder={activeConversation.status === 'awaiting_rejection_comment' ? "Please provide feedback for the rejection..." : "Enter a prompt here"}
+                            rows="1"
+                            disabled={!activeConversationId || isWaiting || (activeConversation.file_url && selectedFile)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    handleSendMessage(e);
+                                }
+                            }}
+                        />
                         <SendButton type="submit" disabled={!input.trim() || !activeConversationId || isWaiting}>
                             <SendIcon />
                         </SendButton>
