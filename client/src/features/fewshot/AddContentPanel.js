@@ -6,8 +6,7 @@ import ToggleSwitch from '../../components/common/ToggleSwitch';
 const PanelContainer = styled.div`
   position: absolute;
   bottom: 100%;
-  left: 50%;
-  transform: translateX(-80%);
+  left: 0;
   margin-bottom: 0.5rem;
   background: white;
   border-radius: 8px;
