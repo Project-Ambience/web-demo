@@ -6,7 +6,8 @@ import ToggleSwitch from '../../components/common/ToggleSwitch';
 const PanelContainer = styled.div`
   position: absolute;
   bottom: 100%;
-  left: 0;
+  left: 50%;
+  transform: translateX(-80%);
   margin-bottom: 0.5rem;
   background: white;
   border-radius: 8px;
@@ -78,10 +79,10 @@ const ButtonWrapper = styled.div`
   }
 `;
 
-const Row = styled.div`
+const Row = styled.label`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between; /* ensures rightmost control cluster */
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   cursor: pointer;
@@ -95,7 +96,7 @@ const Row = styled.div`
 const ClickableRow = styled.div`
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: space-between; /* ensures rightmost control cluster */
   padding: 0.75rem 1rem;
   font-size: 0.9rem;
   cursor: pointer;
@@ -119,7 +120,7 @@ const SubMenuRight = styled.div`
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   z-index: 20;
-  min-width: 180px;
+  min-width: 220px; /* a bit wider so toggle + ? fit nicely */
 `;
 
 const LabelWrapper = styled.div`
@@ -132,6 +133,10 @@ const ControlsWrapper = styled.div`
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  margin-left: auto; /* push controls all the way to the right */
+  > *:last-child { /* make sure the last item (help) sits at the far right */
+    margin-right: 0;
+  }
 `;
 
 const InfoIcon = styled.span`
@@ -162,8 +167,19 @@ const DisabledRow = styled(Row)`
   cursor: not-allowed;
 `;
 
-const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT, onShowCoTInfo, onShowFewShotInfo, onShowRagInfo, isRAGEnabled, onToggleRAG, supportsRAG, onAddRagData }) => {
-
+const AddContentPanel = ({
+  onFileUpload,
+  onAddFewShot,
+  isCoTEnabled,
+  onToggleCoT,
+  onShowCoTInfo,
+  onShowFewShotInfo,
+  onShowRagInfo,
+  isRAGEnabled,
+  onToggleRAG,
+  supportsRAG,
+  onAddRagData
+}) => {
   const [isRAGOpen, setIsRAGOpen] = useState(false);
 
   return (
@@ -175,31 +191,17 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
         <TooltipText>Max 1 file, 100MB</TooltipText>
       </ButtonWrapper>
 
-      <Row as="label" onClick={onToggleCoT}>
-        <LabelWrapper>
-          <span>💭 Enable Thinking</span>
-          <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowCoTInfo(); }}>
-            <MaterialIcon iconName="help_outline" />
-          </InfoIcon>
-        </LabelWrapper>
-        <ControlsWrapper>
-          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
-        </ControlsWrapper>
-      </Row>
-
       <RAGWrapper>
         {supportsRAG ? (
+          /* MAIN MENU: no question mark here (per requirement) */
           <Row onClick={() => setIsRAGOpen(!isRAGOpen)}>
             <LabelWrapper>
               <span>📚 RAG</span>
-              <InfoIcon onClick={(e) => { e.preventDefault(); e.stopPropagation(); onShowRagInfo(); }}>
-                <MaterialIcon iconName="help_outline" />
-              </InfoIcon>
             </LabelWrapper>
             <MaterialIcon iconName="chevron_right" />
           </Row>
         ) : (
-          <DisabledRow as="div">
+          <DisabledRow>
             <LabelWrapper>
               <span>📚 RAG (Not Supported)</span>
             </LabelWrapper>
@@ -208,43 +210,85 @@ const AddContentPanel = ({ onFileUpload, onAddFewShot, isCoTEnabled, onToggleCoT
 
         {supportsRAG && isRAGOpen && (
           <SubMenuRight>
-            <Row as="label" onClick={onToggleRAG}>
+            {/* SUBMENU: help icon on the far right, to the right of the toggle */}
+            <Row
+              onClick={(e) => {
+                // keep row clickable for toggle, but don't toggle when clicking help
+                e.preventDefault();
+                onToggleRAG();
+              }}
+            >
               <LabelWrapper>
                 <span>Enable</span>
               </LabelWrapper>
               <ControlsWrapper>
                 <ToggleSwitch isOn={isRAGEnabled} handleToggle={onToggleRAG} />
+                <InfoIcon
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onShowRagInfo();
+                  }}
+                  aria-label="About RAG"
+                >
+                  <MaterialIcon iconName="help_outline" />
+                </InfoIcon>
               </ControlsWrapper>
             </Row>
+
             <Row
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (onAddRagData) {
-                  onAddRagData();
-                }
+                if (onAddRagData) onAddRagData();
               }}
             >
               <LabelWrapper>
-                <span>Add data to RAG</span>
+                <span>➕ Add data to RAG</span>
               </LabelWrapper>
+              {/* No help icon here by design */}
             </Row>
           </SubMenuRight>
         )}
       </RAGWrapper>
 
-      <ClickableRow onClick={onAddFewShot}>
+      {/* CoT: help icon at the far right, to the right of the toggle */}
+      <Row onClick={onToggleCoT}>
         <LabelWrapper>
-          <span>✨ Add Few-Shot</span>
+          <span>💭 Enable Thinking</span>
+        </LabelWrapper>
+        <ControlsWrapper>
+          <ToggleSwitch isOn={isCoTEnabled} handleToggle={onToggleCoT} />
           <InfoIcon
             onClick={(e) => {
+              e.preventDefault();
               e.stopPropagation();
-              onShowFewShotInfo();
+              onShowCoTInfo();
             }}
+            aria-label="About Thinking"
           >
             <MaterialIcon iconName="help_outline" />
           </InfoIcon>
+        </ControlsWrapper>
+      </Row>
+
+      {/* Few-shot: help icon at the far right */}
+      <ClickableRow onClick={onAddFewShot}>
+        <LabelWrapper>
+          <span>✨ Add Few-Shot</span>
         </LabelWrapper>
+        <ControlsWrapper>
+          <InfoIcon
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onShowFewShotInfo();
+            }}
+            aria-label="About Few-Shot"
+          >
+            <MaterialIcon iconName="help_outline" />
+          </InfoIcon>
+        </ControlsWrapper>
       </ClickableRow>
     </PanelContainer>
   );
