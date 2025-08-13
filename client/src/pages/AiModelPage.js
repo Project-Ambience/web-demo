@@ -347,7 +347,6 @@ const AiModelPage = () => {
               <h4>Model Evaluation</h4>
               <PrimaryButton
                 onClick={() => navigate(`/ai-models/${model.id}/evaluate`)}
-                disabled={!model.base_model}
               >
                 Evaluate Model
               </PrimaryButton>
