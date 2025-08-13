@@ -310,6 +310,7 @@ const MessageBubble = styled.div`
   line-height: 1.5;
   font-size: 1rem;
   overflow-wrap: break-word;
+  white-space: pre-line;
 
   &[data-role="user"] {
     background-color: #f0f4f8;
