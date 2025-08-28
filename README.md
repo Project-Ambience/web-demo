@@ -11,13 +11,13 @@ robust handling of long-running operations.
 
 ---
 
-# Architecture Diagram
+## Architecture Diagram
 
 <img width="504" height="239" alt="image" src="https://github.com/user-attachments/assets/d0574263-e168-4abb-9905-dfa557468f5b" />
 
 ---
 
-# Deploy
+## Deployment
 
 1. Clone both repos
 
@@ -60,7 +60,7 @@ The app will available at port 5090
 
 ---
 
-## Environment Variables
+## Environment Variables for web service
 
 Create a `.env` file in your project root:
 
