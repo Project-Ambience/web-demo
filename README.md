@@ -38,10 +38,8 @@ nano .env
 
 3. Run deploy script
 
-cd back to root
-
 ```
-cd endpoints
+cd ~/endpoints
 chmod +x ./admin/deploy_llmedic.sh
 ./admin/deploy_llmedic.sh dev
 ```
