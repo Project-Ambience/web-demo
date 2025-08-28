@@ -36,7 +36,7 @@ cd web-demo
 nano .env
 ```
 
-`copy and paste .env into your file`
+copy and paste .env into your file
 
 3. Run deploy script
 
@@ -82,4 +82,4 @@ RAG_DATA_ADDING_PATH=http://128.16.12.219:8000/documents/upload
 RAG_DATA_ADDING_API_KEY=
 ```
 
-`Note: in local change 128.16.12.219 into your host IP and also make change in REACT_APP_CABLE_URL (in docker-compose.dev.yml)`
+`Note:` in local change 128.16.12.219 into your host IP and also make change in REACT_APP_CABLE_URL (in docker-compose.dev.yml)
