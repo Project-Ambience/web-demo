@@ -29,14 +29,12 @@ git clone git@github.com:Project-Ambience/web-demo.git
 git clone git@github.com:Project-Ambience/endpoints.git
 ```
 
-2. Create .env
+2. Create .env (copy and paste .env into your file)
 
 ```
 cd web-demo
 nano .env
 ```
-
-copy and paste .env into your file
 
 3. Run deploy script
 
