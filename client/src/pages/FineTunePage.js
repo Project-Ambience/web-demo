@@ -498,40 +498,137 @@ const FineTunePage = () => {
   };
   
   const parseCsvToJson = (csvText) => {
-    const lines = csvText.trim().split(/\r?\n/);
-    if (lines.length < 2) return [];
-    const headers = lines[0].split(',').map(h => h.trim());
-    const result = [];
-    for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim() === '') continue;
-        const obj = {};
-        const currentline = lines[i].split(',');
-        for (let j = 0; j < headers.length; j++) {
-            obj[headers[j]] = currentline[j] ? currentline[j].trim().replace(/^"|"$/g, '') : '';
+    const parseRows = (text) => {
+      const rows = [];
+      let row = [];
+      let cur = "";
+      let inQuotes = false;
+
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        const next = text[i + 1];
+
+        if (ch === '"') {
+          if (inQuotes && next === '"') {
+            cur += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if ((ch === '\n' || ch === '\r') && !inQuotes) {
+          if (ch === '\r' && next === '\n') i++;
+          row.push(cur);
+          cur = "";
+          rows.push(row);
+          row = [];
+        } else if (ch === ',' && !inQuotes) {
+          row.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
         }
-        result.push(obj);
+      }
+
+      if (inQuotes) {
+        throw new Error("CSV parse error: unclosed quotes");
+      }
+      row.push(cur);
+      rows.push(row);
+
+      return rows;
+    };
+
+    csvText = (csvText ?? "").replace(/^\uFEFF/, "");
+    const rows = parseRows(csvText.trim());
+
+    if (rows.length < 2) return [];
+
+    const headers = rows[0].map(h => (h ?? "").trim().replace(/^"|"$/g, ""));
+
+    const idx = {
+      Instruction: headers.indexOf("Instruction"),
+      Input: headers.indexOf("Input"),
+      Response: headers.indexOf("Response"),
+    };
+
+    const missing = [];
+    if (idx.Instruction < 0) missing.push("Instruction");
+    if (idx.Response < 0) missing.push("Response");
+    if (missing.length > 0) {
+        throw new Error("CSV missing required header(s): " + missing.join(", "));
     }
+
+    const getCell = (cols, index) => {
+      if (index < 0) return "";
+      let v = (cols[index] ?? "").trim();
+      if (v.startsWith('"') && v.endsWith('"')) v = v.slice(1, -1);
+      return v;
+    };
+
+    const result = [];
+    for (let r = 1; r < rows.length; r++) {
+      const cols = rows[r];
+      if (cols.every(c => (c ?? "").trim() === "")) continue;
+
+      const instruction = getCell(cols, idx.Instruction);
+      const input = getCell(cols, idx.Input);
+      const response = getCell(cols, idx.Response);
+
+      const text =
+        `### Instruction:\n${instruction}\n` +
+        `### Input:\n${input}\n` +
+        `### Response:\n${response}`;
+
+      result.push({ text });
+    }
+
     return result;
   };
+
 
   const validateJsonData = (data) => {
     if (!Array.isArray(data) || data.length === 0) {
       return { isValid: false, message: 'Dataset must be a non-empty array of objects.' };
     }
+
+    const pattern = /^###\s*Instruction:\s*\r?\n([\s\S]*?)\r?\n###\s*Input:\s*\r?\n([\s\S]*?)\r?\n###\s*Response:\s*\r?\n([\s\S]*?)\s*$/;
+
     for (const [index, item] of data.entries()) {
+      const recordNum = index + 1;
+
       if (typeof item !== 'object' || item === null) {
-        return { isValid: false, message: `Record ${index + 1} is not a valid object.` };
+        return { isValid: false, message: `Record ${recordNum} is not a valid object.` };
       }
-      for (const key in item) {
-        const value = item[key];
-        if (value == null || (typeof value === 'string' && value.trim() === '')) {
-          const lineNumber = index + 2;
-          return { isValid: false, message: `Record ${index + 1} (line ${lineNumber}) has an empty value for field "${key}".` };
-        }
+
+      if (!Object.prototype.hasOwnProperty.call(item, 'text')) {
+        return { isValid: false, message: `Record ${recordNum} is missing required field "text".` };
+      }
+      if (typeof item.text !== 'string') {
+        return { isValid: false, message: `Record ${recordNum} field "text" must be a string.` };
+      }
+
+      const text = item.text;
+      const m = text.match(pattern);
+      if (!m) {
+        return {
+          isValid: false,
+          message: `Record ${recordNum} does not match required format. Expected sections in order: "### Instruction:", "### Input:", "### Response:".`
+        };
+      }
+
+      const [, instruction, input, response] = m;
+
+      if ((instruction ?? '').trim() === '') {
+        return { isValid: false, message: `Record ${recordNum} has an empty "Instruction" section.` };
+      }
+      if ((response ?? '').trim() === '') {
+        return { isValid: false, message: `Record ${recordNum} has an empty "Response" section.` };
       }
     }
+
     return { isValid: true };
   };
+
 
   const handleFileSelection = async (files) => {
     if (!files || files.length === 0) return;
