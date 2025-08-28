@@ -54,8 +54,6 @@ RAG_DATA_ADDING_PATH=http://128.16.12.219:8000/documents/upload
 RAG_DATA_ADDING_API_KEY=
 ```
 
-`Note:` in local change 128.16.12.219 into your host IP and also make change in REACT_APP_CABLE_URL (in docker-compose.dev.yml)
-
 3. Run deploy script
 
 ```
