@@ -591,7 +591,7 @@ const FineTunePage = () => {
       return { isValid: false, message: 'Dataset must be a non-empty array of objects.' };
     }
 
-    const pattern = /^###\s*Instruction:\s*\r?\n([\s\S]*?)\r?\n###\s*Input:\s*\r?\n([\s\S]*?)\r?\n###\s*Response:\s*\r?\n([\s\S]*?)\s*$/;
+    const pattern = /^###\s*Instruction:\s*(?:\r?\n)?([\s\S]*?)\r?\n###\s*Input:\s*(?:\r?\n)?([\s\S]*?)\r?\n###\s*Response:\s*(?:\r?\n)?([\s\S]*?)\s*$/;
 
     for (const [index, item] of data.entries()) {
       const recordNum = index + 1;
